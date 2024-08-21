@@ -74,6 +74,8 @@ class BCRAConnector:
             "User-Agent": "BCRAConnector/1.0"
         })
 
+import time
+
     def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Make a request to the BCRA API with retry logic.
