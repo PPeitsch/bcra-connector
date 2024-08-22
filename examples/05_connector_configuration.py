@@ -1,9 +1,13 @@
+import logging
 from bcra_connector import BCRAConnector, BCRAApiError
 from datetime import datetime, timedelta
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 def test_connection(connector, description):
-    print(f"\n{description}:")
+    logger.info(f"\n{description}:")
     try:
         # Fetch data for the last 30 days
         end_date = datetime.now()
@@ -11,11 +15,11 @@ def test_connection(connector, description):
 
         # Assuming ID 1 is for international reserves
         data = connector.get_datos_variable(1, start_date, end_date)
-        print(f"Successfully fetched {len(data)} data points.")
+        logger.info(f"Successfully fetched {len(data)} data points.")
         if data:
-            print(f"Latest data point: Date: {data[-1].fecha}, Value: {data[-1].valor}")
+            logger.info(f"Latest data point: Date: {data[-1].fecha}, Value: {data[-1].valor}")
     except BCRAApiError as e:
-        print(f"Error occurred: {str(e)}")
+        logger.error(f"Error occurred: {str(e)}")
 
 
 def main():

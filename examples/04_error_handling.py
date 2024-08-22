@@ -1,14 +1,18 @@
+import logging
 from bcra_connector import BCRAConnector
 from datetime import datetime, timedelta
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 def test_case(description, func):
-    print(f"\nTest case: {description}")
+    logger.info(f"\nTest case: {description}")
     try:
         func()
-        print("Unexpected success")
+        logger.warning("Unexpected success")
     except Exception as e:
-        print(f"Expected error occurred: {type(e).__name__}: {str(e)}")
+        logger.info(f"Expected error occurred: {type(e).__name__}: {str(e)}")
 
 
 def main():

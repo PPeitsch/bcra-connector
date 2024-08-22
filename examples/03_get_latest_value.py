@@ -1,5 +1,9 @@
+import logging
 from bcra_connector import BCRAConnector, BCRAApiError
 import matplotlib.pyplot as plt
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -11,23 +15,20 @@ def main():
     latest_values = []
     for id_variable in variable_ids:
         try:
-            print(f"Fetching latest value for variable ID {id_variable}...")
+            logger.info(f"Fetching latest value for variable ID {id_variable}...")
             latest = connector.get_latest_value(id_variable)
-            print(f"Latest value: {latest.valor} ({latest.fecha})")
+            logger.info(f"Latest value: {latest.valor} ({latest.fecha})")
             latest_values.append((id_variable, latest.valor))
-            print()
         except BCRAApiError as e:
-            print(f"Error occurred with SSL verification: {str(e)}")
-            print("Retrying without SSL verification...")
+            logger.error(f"Error occurred with SSL verification: {str(e)}")
+            logger.info("Retrying without SSL verification...")
             connector = BCRAConnector(verify_ssl=False)
             try:
                 latest = connector.get_latest_value(id_variable)
-                print(f"Latest value: {latest.valor} ({latest.fecha})")
+                logger.info(f"Latest value: {latest.valor} ({latest.fecha})")
                 latest_values.append((id_variable, latest.valor))
-                print()
             except BCRAApiError as e:
-                print(f"Error occurred even without SSL verification: {str(e)}")
-                print()
+                logger.error(f"Error occurred even without SSL verification: {str(e)}")
 
     # Plot the latest values
     if latest_values:
@@ -38,7 +39,7 @@ def main():
         plt.ylabel("Value")
         plt.tight_layout()
         plt.savefig("latest_values.png")
-        print("Plot saved as 'latest_values.png'")
+        logger.info("Plot saved as 'latest_values.png'")
 
 
 if __name__ == "__main__":
