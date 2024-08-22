@@ -106,8 +106,10 @@ class BCRAConnector:
 
         for attempt in range(self.MAX_RETRIES):
             try:
+                self.logger.debug(f"Making request to {url}")
                 response = self.session.get(url, params=params, verify=self.verify_ssl)
                 response.raise_for_status()
+                self.logger.debug("Request successful")
                 return response.json()
             except requests.RequestException as e:
                 self.logger.warning(f"Request failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}")
@@ -124,9 +126,10 @@ class BCRAConnector:
         
         :raises BCRAApiError: If the API request fails
         """
+        self.logger.info("Fetching principal variables")
         try:
             data = self._make_request("PrincipalesVariables")
-            return [
+            variables = [
                 PrincipalesVariables(
                     id_variable=item['idVariable'],
                     cd_serie=item['cdSerie'],
@@ -136,6 +139,8 @@ class BCRAConnector:
                 )
                 for item in data['results']
             ]
+            self.logger.info(f"Successfully fetched {len(variables)} principal variables")
+            return variables
         except KeyError as e:
             raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
 
@@ -156,6 +161,7 @@ class BCRAConnector:
         :raises BCRAApiError: If the API request fails or if the date range is invalid
         :raises ValueError: If the date range is invalid
         """
+        self.logger.info(f"Fetching data for variable {id_variable} from {desde.date()} to {hasta.date()}")
         if desde > hasta:
             raise ValueError("'desde' date must be earlier than or equal to 'hasta' date")
 
@@ -166,7 +172,7 @@ class BCRAConnector:
             data = self._make_request(
                 f"DatosVariable/{id_variable}/{desde.date()}/{hasta.date()}"
             )
-            return [
+            datos = [
                 DatosVariable(
                     id_variable=item['idVariable'],
                     fecha=item['fecha'],
@@ -174,6 +180,8 @@ class BCRAConnector:
                 )
                 for item in data['results']
             ]
+            self.logger.info(f"Successfully fetched {len(datos)} data points")
+            return datos
         except KeyError as e:
             raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
 
@@ -189,6 +197,7 @@ class BCRAConnector:
         
         :raises BCRAApiError: If the API request fails or if no data is available
         """
+        self.logger.info(f"Fetching latest value for variable {id_variable}")
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)  # Look back 30 days to ensure we get data
 
@@ -196,4 +205,6 @@ class BCRAConnector:
         if not data:
             raise BCRAApiError(f"No data available for variable {id_variable}")
 
-        return max(data, key=lambda x: datetime.strptime(x.fecha, "%Y-%m-%d"))
+        latest = max(data, key=lambda x: datetime.strptime(x.fecha, "%Y-%m-%d"))
+        self.logger.info(f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha})")
+        return latest
