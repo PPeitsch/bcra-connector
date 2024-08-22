@@ -1,4 +1,5 @@
 import requests
+import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
@@ -7,6 +8,7 @@ from dataclasses import dataclass
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class PrincipalesVariables:
@@ -26,6 +28,7 @@ class PrincipalesVariables:
     fecha: str
     valor: float
 
+
 @dataclass
 class DatosVariable:
     """
@@ -40,9 +43,11 @@ class DatosVariable:
     fecha: str
     valor: float
 
+
 class BCRAApiError(Exception):
     """Custom exception for BCRA API errors."""
     pass
+
 
 class BCRAConnector:
     """
@@ -60,7 +65,7 @@ class BCRAConnector:
     BASE_URL = "https://api.bcra.gob.ar/estadisticas/v2.0"
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
-    
+
     def __init__(self, language: str = "es-AR"):
         """
         Initialize the BCRAConnector.
@@ -73,8 +78,6 @@ class BCRAConnector:
             "Accept-Language": language,
             "User-Agent": "BCRAConnector/1.0"
         })
-
-import time
 
     def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -91,7 +94,7 @@ import time
             BCRAApiError: If the API request fails after retries.
         """
         url = f"{self.BASE_URL}/{endpoint}"
-        
+
         for attempt in range(self.MAX_RETRIES):
             try:
                 response = self.session.get(url, params=params)
@@ -146,10 +149,10 @@ import time
         """
         if desde > hasta:
             raise ValueError("'desde' date must be earlier than or equal to 'hasta' date")
-        
+
         if hasta - desde > timedelta(days=365):
             raise ValueError("Date range must not exceed 1 year")
-        
+
         try:
             data = self._make_request(
                 f"DatosVariable/{id_variable}/{desde.date()}/{hasta.date()}"
@@ -180,12 +183,13 @@ import time
         """
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)  # Look back 30 days to ensure we get data
-        
+
         data = self.get_datos_variable(id_variable, start_date, end_date)
         if not data:
             raise BCRAApiError(f"No data available for variable {id_variable}")
-        
+
         return max(data, key=lambda x: datetime.strptime(x.fecha, "%Y-%m-%d"))
+
 
 # Example usage
 if __name__ == "__main__":
