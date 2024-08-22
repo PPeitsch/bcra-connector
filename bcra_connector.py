@@ -4,10 +4,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
 from dataclasses import dataclass
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+import urllib3
 
 
 @dataclass
@@ -15,12 +12,16 @@ class PrincipalesVariables:
     """
     Represents a principal variable from the BCRA API.
 
-    Attributes:
-        id_variable (int): The ID of the variable.
-        cd_serie (int): The series code of the variable.
-        descripcion (str): The description of the variable.
-        fecha (str): The date of the variable's value.
-        valor (float): The value of the variable.
+    :param id_variable: The ID of the variable
+    :type id_variable: int
+    :param cd_serie: The series code of the variable
+    :type cd_serie: int
+    :param descripcion: The description of the variable
+    :type descripcion: str
+    :param fecha: The date of the variable's value
+    :type fecha: str
+    :param valor: The value of the variable
+    :type valor: float
     """
     id_variable: int
     cd_serie: int
@@ -34,10 +35,12 @@ class DatosVariable:
     """
     Represents historical data for a variable.
 
-    Attributes:
-        id_variable (int): The ID of the variable.
-        fecha (str): The date of the data point.
-        valor (float): The value of the variable on the given date.
+    :param id_variable: The ID of the variable
+    :type id_variable: int
+    :param fecha: The date of the data point
+    :type fecha: str
+    :param valor: The value of the variable on the given date
+    :type valor: float
     """
     id_variable: int
     fecha: str
@@ -56,52 +59,58 @@ class BCRAConnector:
     This class provides methods to interact with the BCRA API, including fetching principal
     variables and historical data for specific variables.
 
-    Attributes:
-        BASE_URL (str): The base URL for the BCRA API.
-        MAX_RETRIES (int): The maximum number of retries for API requests.
-        RETRY_DELAY (int): The delay (in seconds) between retries.
+    :param language: The language for API responses, defaults to "es-AR"
+    :type language: str, optional
+    :param verify_ssl: Whether to verify SSL certificates, defaults to True
+    :type verify_ssl: bool, optional
+    :param debug: Whether to enable debug logging, defaults to False
+    :type debug: bool, optional
     """
 
     BASE_URL = "https://api.bcra.gob.ar/estadisticas/v2.0"
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
 
-    def __init__(self, language: str = "es-AR"):
-        """
-        Initialize the BCRAConnector.
-        
-        Args:
-            language (str): The language for API responses. Defaults to "es-AR".
-        """
+    def __init__(self, language: str = "es-AR", verify_ssl: bool = True, debug: bool = False):
         self.session = requests.Session()
         self.session.headers.update({
             "Accept-Language": language,
             "User-Agent": "BCRAConnector/1.0"
         })
+        self.verify_ssl = verify_ssl
+
+        # Configure logging
+        log_level = logging.DEBUG if debug else logging.INFO
+        logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger(__name__)
+
+        if not self.verify_ssl:
+            self.logger.warning("SSL verification is disabled. This is not recommended for production use.")
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Make a request to the BCRA API with retry logic.
         
-        Args:
-            endpoint (str): The API endpoint to request.
-            params (Dict[str, Any], optional): Query parameters for the request.
+        :param endpoint: The API endpoint to request
+        :type endpoint: str
+        :param params: Query parameters for the request, defaults to None
+        :type params: Dict[str, Any], optional
         
-        Returns:
-            Dict[str, Any]: The JSON response from the API.
+        :return: The JSON response from the API
+        :rtype: Dict[str, Any]
         
-        Raises:
-            BCRAApiError: If the API request fails after retries.
+        :raises BCRAApiError: If the API request fails after retries
         """
         url = f"{self.BASE_URL}/{endpoint}"
 
         for attempt in range(self.MAX_RETRIES):
             try:
-                response = self.session.get(url, params=params)
+                response = self.session.get(url, params=params, verify=self.verify_ssl)
                 response.raise_for_status()
                 return response.json()
             except requests.RequestException as e:
-                logger.warning(f"Request failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}")
+                self.logger.warning(f"Request failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}")
                 if attempt == self.MAX_RETRIES - 1:
                     raise BCRAApiError(f"API request failed after {self.MAX_RETRIES} attempts: {str(e)}") from e
                 time.sleep(self.RETRY_DELAY * (2 ** attempt))  # Exponential backoff
@@ -110,11 +119,10 @@ class BCRAConnector:
         """
         Fetch the list of all variables published by BCRA.
         
-        Returns:
-            List[PrincipalesVariables]: A list of PrincipalesVariables objects.
+        :return: A list of PrincipalesVariables objects
+        :rtype: List[PrincipalesVariables]
         
-        Raises:
-            BCRAApiError: If the API request fails.
+        :raises BCRAApiError: If the API request fails
         """
         try:
             data = self._make_request("PrincipalesVariables")
@@ -135,17 +143,18 @@ class BCRAConnector:
         """
         Fetch the list of values for a variable within a specified date range.
         
-        Args:
-            id_variable (int): The ID of the desired variable.
-            desde (datetime): The start date of the range to query.
-            hasta (datetime): The end date of the range to query.
+        :param id_variable: The ID of the desired variable
+        :type id_variable: int
+        :param desde: The start date of the range to query
+        :type desde: datetime
+        :param hasta: The end date of the range to query
+        :type hasta: datetime
         
-        Returns:
-            List[DatosVariable]: A list of DatosVariable objects.
+        :return: A list of DatosVariable objects
+        :rtype: List[DatosVariable]
         
-        Raises:
-            BCRAApiError: If the API request fails or if the date range is invalid.
-            ValueError: If the date range is invalid.
+        :raises BCRAApiError: If the API request fails or if the date range is invalid
+        :raises ValueError: If the date range is invalid
         """
         if desde > hasta:
             raise ValueError("'desde' date must be earlier than or equal to 'hasta' date")
@@ -172,14 +181,13 @@ class BCRAConnector:
         """
         Fetch the latest value for a specific variable.
         
-        Args:
-            id_variable (int): The ID of the desired variable.
+        :param id_variable: The ID of the desired variable
+        :type id_variable: int
         
-        Returns:
-            DatosVariable: The latest data point for the specified variable.
+        :return: The latest data point for the specified variable
+        :rtype: DatosVariable
         
-        Raises:
-            BCRAApiError: If the API request fails or if no data is available.
+        :raises BCRAApiError: If the API request fails or if no data is available
         """
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)  # Look back 30 days to ensure we get data
@@ -189,35 +197,3 @@ class BCRAConnector:
             raise BCRAApiError(f"No data available for variable {id_variable}")
 
         return max(data, key=lambda x: datetime.strptime(x.fecha, "%Y-%m-%d"))
-
-
-# Example usage
-if __name__ == "__main__":
-    connector = BCRAConnector()
-
-    try:
-        # Get all principal variables
-        variables = connector.get_principales_variables()
-        print("Principal Variables:")
-        for var in variables[:5]:  # Print first 5 for brevity
-            print(f"{var.descripcion}: {var.valor} ({var.fecha})")
-
-        # Get data for a specific variable (e.g., Reservas Internacionales del BCRA)
-        id_variable = 1
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
-        datos = connector.get_datos_variable(id_variable, start_date, end_date)
-        print(f"\nData for Variable {id_variable}:")
-        for dato in datos[-5:]:  # Print last 5 for brevity
-            print(f"{dato.fecha}: {dato.valor}")
-
-        # Get the latest value for a variable
-        latest = connector.get_latest_value(id_variable)
-        print(f"\nLatest value for Variable {id_variable}: {latest.valor} ({latest.fecha})")
-
-    except BCRAApiError as e:
-        logger.error(f"API Error: {str(e)}")
-    except ValueError as e:
-        logger.error(f"Value Error: {str(e)}")
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")

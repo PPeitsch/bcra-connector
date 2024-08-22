@@ -1,2 +1,5 @@
 
 requests>=2.25.1
+matplotlib~=3.9.2
+setuptools~=68.2.0
+urllib3~=2.2.2

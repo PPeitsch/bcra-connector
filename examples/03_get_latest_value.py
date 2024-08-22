@@ -1,4 +1,4 @@
-from bcra_connector import BCRAConnector
+from bcra_connector import BCRAConnector, BCRAApiError
 
 
 def main():
@@ -8,10 +8,14 @@ def main():
     variable_ids = [1, 4, 5]  # Example variable IDs
 
     for id_variable in variable_ids:
-        print(f"Fetching latest value for variable ID {id_variable}...")
-        latest = connector.get_latest_value(id_variable)
-        print(f"Latest value: {latest.valor} ({latest.fecha})")
-        print()
+        try:
+            print(f"Fetching latest value for variable ID {id_variable}...")
+            latest = connector.get_latest_value(id_variable)
+            print(f"Latest value: {latest.valor} ({latest.fecha})")
+            print()
+        except BCRAApiError as e:
+            print(f"An error occurred for variable ID {id_variable}: {str(e)}")
+            print()
 
 
 if __name__ == "__main__":
