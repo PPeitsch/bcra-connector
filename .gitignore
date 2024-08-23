@@ -163,4 +163,4 @@ cython_debug/
 
 
 # Sphenix Documentation
-docs
+docs/build
