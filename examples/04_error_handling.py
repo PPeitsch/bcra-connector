@@ -1,10 +1,14 @@
+import os
+import sys
 import logging
 from bcra_connector import BCRAConnector
 from datetime import datetime, timedelta
 
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
 
 def test_case(description, func):
     logger.info(f"\nTest case: {description}")
@@ -13,7 +17,6 @@ def test_case(description, func):
         logger.warning("Unexpected success")
     except Exception as e:
         logger.info(f"Expected error occurred: {type(e).__name__}: {str(e)}")
-
 
 def main():
     connector = BCRAConnector(verify_ssl=False)  # Using verify_ssl=False to avoid SSL issues
@@ -38,7 +41,6 @@ def main():
 
     # Test case 4: Invalid language
     test_case("Invalid language", lambda: BCRAConnector(language="invalid"))
-
 
 if __name__ == "__main__":
     main()
