@@ -11,12 +11,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
 def save_plot(fig, filename):
     static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs/build/_static/images'))
     os.makedirs(static_dir, exist_ok=True)
     filepath = os.path.join(static_dir, filename)
     fig.savefig(filepath)
     logger.info(f"Plot saved as '{filepath}'")
+
 
 def main():
     connector = BCRAConnector()
@@ -53,6 +55,7 @@ def main():
     plt.xticks(rotation=45)
     plt.tight_layout()
     save_plot(fig, f"variable_{id_variable}_data.png")
+
 
 if __name__ == "__main__":
     main()

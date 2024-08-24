@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
 def test_connection(connector, description):
     logger.info(f"\n{description}:")
     try:
@@ -24,6 +25,7 @@ def test_connection(connector, description):
             logger.info(f"Latest data point: Date: {data[-1].fecha}, Value: {data[-1].valor}")
     except BCRAApiError as e:
         logger.error(f"Error occurred: {str(e)}")
+
 
 def main():
     # Default usage (SSL verification enabled)
@@ -41,6 +43,7 @@ def main():
     # Different language setting
     connector_en = BCRAConnector(verify_ssl=False, language="en-US")
     test_connection(connector_en, "Connector with English language setting")
+
 
 if __name__ == "__main__":
     main()
