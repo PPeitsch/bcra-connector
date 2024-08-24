@@ -6,8 +6,6 @@ A Python connector for the BCRA (Banco Central de la República Argentina) Estad
 
 - Fetch principal variables published by BCRA
 - Retrieve historical data for specific variables
-- Get the latest value for a variable
-- Bilingual support (Spanish and English)
 - Error handling with custom exceptions
 - Retry logic with exponential backoff
 - SSL verification (optional)
@@ -25,7 +23,7 @@ pip install bcra-api-connector
 from bcra_connector import BCRAConnector
 from datetime import datetime, timedelta
 
-# Initialize the connector (default language is Spanish)
+# Initialize the connector
 connector = BCRAConnector()
 
 # Get all principal variables
@@ -52,7 +50,7 @@ For detailed documentation, please visit our [Sphinx documentation](https://bcra
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! We encourage you to submit a Pull Request.
 
 ## License
 
