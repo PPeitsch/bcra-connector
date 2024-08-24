@@ -1,9 +1,22 @@
+import os
+import sys
 import logging
 from bcra_connector import BCRAConnector, BCRAApiError
 import matplotlib.pyplot as plt
 
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+def save_plot(fig, filename):
+    static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs/build/_static/images'))
+    os.makedirs(static_dir, exist_ok=True)
+    filepath = os.path.join(static_dir, filename)
+    fig.savefig(filepath)
+    logger.info(f"Plot saved as '{filepath}'")
 
 
 def main():
@@ -32,14 +45,13 @@ def main():
 
     # Plot the latest values
     if latest_values:
-        plt.figure(figsize=(10, 6))
-        plt.bar([f"Variable {id}" for id, _ in latest_values], [value for _, value in latest_values])
-        plt.title("Latest Values for Different Variables")
-        plt.xlabel("Variable ID")
-        plt.ylabel("Value")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.bar([f"Variable {id}" for id, _ in latest_values], [value for _, value in latest_values])
+        ax.set_title("Latest Values for Different Variables")
+        ax.set_xlabel("Variable ID")
+        ax.set_ylabel("Value")
         plt.tight_layout()
-        plt.savefig("latest_values.png")
-        logger.info("Plot saved as 'latest_values.png'")
+        save_plot(fig, "latest_values.png")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,11 @@
+import os
+import sys
 import logging
 from bcra_connector import BCRAConnector, BCRAApiError
 from datetime import datetime, timedelta
+
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

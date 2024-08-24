@@ -8,8 +8,8 @@ A Python connector for the BCRA (Banco Central de la República Argentina) Estad
 - Retrieve historical data for specific variables
 - Error handling with custom exceptions
 - Retry logic with exponential backoff
-- Type hinting for better code readability
-- Logging for easier debugging
+- SSL verification (optional)
+- Debug mode for detailed logging
 
 ## Installation
 
@@ -46,12 +46,7 @@ print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})
 
 ## Documentation
 
-For detailed documentation, use Python's built-in `help()` function or refer to the docstrings in the source code.
-
-```python
-from bcra_connector import BCRAConnector
-help(BCRAConnector)
-```
+For detailed documentation, please visit our [Sphinx documentation](https://bcra-api-connector.readthedocs.io/).
 
 ## Contributing
 
