@@ -51,7 +51,7 @@ For detailed documentation, please visit our [GitHub Pages](https://bcra-connect
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! We encourage you to submit a Pull Request.
 
 ## License
 
