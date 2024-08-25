@@ -12,7 +12,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/PPeitsch/bcra-connector",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests", "docs"]),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -26,5 +26,18 @@ setup(
     python_requires=">=3.7",
     install_requires=[
         "requests>=2.25.1",
+        "urllib3>=2.0.0,<3.0.0",
     ],
+    extras_require={
+        "dev": [
+            "matplotlib>=3.9.2,<4.0.0",
+            "pytest>=6.0.0",
+            "sphinx>=4.0.0",
+        ],
+    },
+    project_urls={
+        "Bug Reports": "https://github.com/PPeitsch/bcra-connector/issues",
+        "Source": "https://github.com/PPeitsch/bcra-connector",
+        "Documentation": "https://ppeitsch.github.io/bcra-connector/",
+    },
 )
