@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSL verification toggle
 - Debug mode for detailed logging
 
+### Requirements
+- Python 3.9 or higher
+
 ### Documentation
 - README with project overview and basic usage
 - Comprehensive API documentation
