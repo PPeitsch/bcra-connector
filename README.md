@@ -47,7 +47,7 @@ print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})
 
 ## Documentation
 
-For detailed documentation, please visit our [GitHub Pages](https://ppeitsch.github.io/bcra-connector/).
+For detailed documentation, please visit our [GitHub Pages](https://bcra-connector.readthedocs.io/).
 
 ## Contributing
 
