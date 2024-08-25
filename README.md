@@ -6,6 +6,7 @@ A Python connector for the BCRA (Banco Central de la República Argentina) Estad
 
 - Fetch principal variables published by BCRA
 - Retrieve historical data for specific variables
+- Get the latest value for a variable
 - Error handling with custom exceptions
 - Retry logic with exponential backoff
 - SSL verification (optional)
@@ -14,7 +15,7 @@ A Python connector for the BCRA (Banco Central de la República Argentina) Estad
 ## Installation
 
 ```bash
-pip install bcra-api-connector
+pip install bcra-connector
 ```
 
 ## Quick Start
@@ -46,7 +47,7 @@ print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})
 
 ## Documentation
 
-For detailed documentation, please visit our [Sphinx documentation](https://bcra-api-connector.readthedocs.io/).
+For detailed documentation, please visit our [GitHub Pages](https://bcra-connector.readthedocs.io/).
 
 ## Contributing
 
@@ -55,3 +56,7 @@ Contributions are welcome! We encourage you to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Disclaimer
+
+This project is not officially affiliated with or endorsed by the Banco Central de la República Argentina. Use at your own risk.
