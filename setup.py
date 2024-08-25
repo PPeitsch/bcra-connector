@@ -38,6 +38,6 @@ setup(
     project_urls={
         "Bug Reports": "https://github.com/PPeitsch/bcra-connector/issues",
         "Source": "https://github.com/PPeitsch/bcra-connector",
-        "Documentation": "https://ppeitsch.github.io/bcra-connector/",
+        "Documentation": "https://bcra-connector.readthedocs.io/bcra-connector/",
     },
 )
