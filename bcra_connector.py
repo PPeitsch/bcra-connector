@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 import logging
 import time
 import urllib3
-
+from scipy.stats import pearsonr
+import numpy as np
 from principales_variables import PrincipalesVariables, DatosVariable
 from cheques import Entidad, Cheque, ChequeDetalle
 from estadisticas_cambiarias import Divisa, CotizacionFecha, CotizacionDetalle
@@ -26,7 +27,6 @@ class BCRAConnector:
     BASE_URL = "https://api.bcra.gob.ar"
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
-
 
     def __init__(self, language: str = "es-AR", verify_ssl: bool = True, debug: bool = False):
         """
@@ -332,3 +332,129 @@ class BCRAConnector:
 
         cheque = self.get_cheque_denunciado(entity.codigo_entidad, check_number)
         return cheque.denunciado
+
+    def get_latest_quotations(self) -> Dict[str, float]:
+        """
+        Get the latest quotations for all currencies.
+
+        :return: A dictionary with currency codes as keys and their latest quotations as values
+        """
+        cotizaciones = self.get_cotizaciones()
+        return {detail.codigo_moneda: detail.tipo_cotizacion for detail in cotizaciones.detalle}
+
+    def get_currency_pair_evolution(self, base_currency: str, quote_currency: str, days: int = 30) -> List[Dict[str, Any]]:
+        """
+        Get the evolution of a currency pair for the last n days.
+
+        :param base_currency: The base currency code (e.g., 'USD')
+        :param quote_currency: The quote currency code (e.g., 'EUR')
+        :param days: The number of days to look back, defaults to 30
+        :return: A list of dictionaries containing the date and the exchange rate
+        """
+        base_evolution = self.get_currency_evolution(base_currency, days)
+        quote_evolution = self.get_currency_evolution(quote_currency, days)
+
+        base_dict = {cf.fecha: self._get_cotizacion_detalle(cf, base_currency).tipo_cotizacion for cf in base_evolution}
+        quote_dict = {cf.fecha: self._get_cotizacion_detalle(cf, quote_currency).tipo_cotizacion for cf in quote_evolution}
+
+        pair_evolution = []
+        for date in set(base_dict.keys()) & set(quote_dict.keys()):
+            if base_dict[date] != 0:
+                rate = quote_dict[date] / base_dict[date]
+                pair_evolution.append({"fecha": date.isoformat(), "tasa": rate})
+
+        return sorted(pair_evolution, key=lambda x: x["fecha"])
+
+    @staticmethod
+    def _get_cotizacion_detalle(cotizacion_fecha: CotizacionFecha, currency_code: str) -> CotizacionDetalle:
+        """
+        Helper method to get CotizacionDetalle for a specific currency from CotizacionFecha.
+
+        :param cotizacion_fecha: CotizacionFecha object
+        :param currency_code: The currency code to look for
+        :return: CotizacionDetalle for the specified currency
+        :raises ValueError: If the currency is not found in the CotizacionFecha
+        """
+        for detail in cotizacion_fecha.detalle:
+            if detail.codigo_moneda == currency_code:
+                return detail
+        raise ValueError(f"Currency {currency_code} not found in cotizacion for date {cotizacion_fecha.fecha}")
+
+    def get_variable_correlation(self, variable_name1: str, variable_name2: str, days: int = 30) -> float:
+        """
+        Calculate the correlation between two variables over the last n days.
+
+        :param variable_name1: The name of the first variable
+        :param variable_name2: The name of the second variable
+        :param days: The number of days to look back, defaults to 30
+        :return: The correlation coefficient between -1 and 1
+        :raises ValueError: If either variable is not found or if there's insufficient data
+        """
+
+        data1 = self.get_variable_history(variable_name1, days)
+        data2 = self.get_variable_history(variable_name2, days)
+
+        if not data1 or not data2:
+            raise ValueError("Insufficient data for correlation calculation")
+
+        dates1 = [d.fecha for d in data1]
+        dates2 = [d.fecha for d in data2]
+        values1 = [d.valor for d in data1]
+        values2 = [d.valor for d in data2]
+
+        # Create a date range covering both datasets
+        all_dates = sorted(set(dates1 + dates2))
+
+        # Interpolate missing values
+        interp_values1 = np.interp([d.toordinal() for d in all_dates],
+                                   [d.toordinal() for d in dates1], values1)
+        interp_values2 = np.interp([d.toordinal() for d in all_dates],
+                                   [d.toordinal() for d in dates2], values2)
+
+        # Calculate correlation
+        correlation, _ = pearsonr(interp_values1, interp_values2)
+        return correlation
+
+    def generate_variable_report(self, variable_name: str, days: int = 30) -> Dict[str, Any]:
+        """
+        Generate a comprehensive report for a given variable.
+
+        :param variable_name: The name of the variable
+        :param days: The number of days to look back, defaults to 30
+        :return: A dictionary containing various statistics and information about the variable
+        :raises ValueError: If the variable is not found
+        """
+        variable = self.get_variable_by_name(variable_name)
+        if not variable:
+            raise ValueError(f"Variable '{variable_name}' not found")
+
+        data = self.get_variable_history(variable_name, days)
+
+        if not data:
+            return {"error": "No data available for the specified period"}
+
+        values = [d.valor for d in data]
+        dates = [d.fecha for d in data]
+
+        report = {
+            "variable_name": variable_name,
+            "variable_id": variable.idVariable,
+            "description": variable.descripcion,
+            "period": f"Last {days} days",
+            "start_date": min(dates).isoformat(),
+            "end_date": max(dates).isoformat(),
+            "latest_value": values[-1],
+            "latest_date": dates[-1].isoformat(),
+            "min_value": min(values),
+            "max_value": max(values),
+            "mean_value": sum(values) / len(values),
+            "median_value": sorted(values)[len(values) // 2],
+            "data_points": len(values),
+            "percent_change": (values[-1] - values[0]) / values[0] * 100 if values[0] != 0 else None
+        }
+
+        # Add 'unit' to the report only if it's available in the variable
+        if hasattr(variable, 'unidad'):
+            report["unit"] = variable.unidad
+
+        return report
