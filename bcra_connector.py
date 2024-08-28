@@ -1,50 +1,13 @@
 import requests
-import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
-from dataclasses import dataclass
+import time
 import urllib3
 
-
-@dataclass
-class PrincipalesVariables:
-    """
-    Represents a principal variable from the BCRA API.
-
-    :param id_variable: The ID of the variable
-    :type id_variable: int
-    :param cd_serie: The series code of the variable
-    :type cd_serie: int
-    :param descripcion: The description of the variable
-    :type descripcion: str
-    :param fecha: The date of the variable's value
-    :type fecha: str
-    :param valor: The value of the variable
-    :type valor: float
-    """
-    id_variable: int
-    cd_serie: int
-    descripcion: str
-    fecha: str
-    valor: float
-
-
-@dataclass
-class DatosVariable:
-    """
-    Represents historical data for a variable.
-
-    :param id_variable: The ID of the variable
-    :type id_variable: int
-    :param fecha: The date of the data point
-    :type fecha: str
-    :param valor: The value of the variable on the given date
-    :type valor: float
-    """
-    id_variable: int
-    fecha: str
-    valor: float
+from principales_variables import PrincipalesVariables, DatosVariable
+from cheques import Entidad, Cheque, ChequeDetalle
+from estadisticas_cambiarias import Divisa, CotizacionFecha, CotizacionDetalle
 
 
 class BCRAApiError(Exception):
@@ -54,24 +17,25 @@ class BCRAApiError(Exception):
 
 class BCRAConnector:
     """
-    A connector for the BCRA (Banco Central de la República Argentina) Estadísticas API v2.0.
-    
-    This class provides methods to interact with the BCRA API, including fetching principal
-    variables and historical data for specific variables.
+    A connector for the BCRA (Banco Central de la República Argentina) APIs.
 
-    :param language: The language for API responses, defaults to "es-AR"
-    :type language: str, optional
-    :param verify_ssl: Whether to verify SSL certificates, defaults to True
-    :type verify_ssl: bool, optional
-    :param debug: Whether to enable debug logging, defaults to False
-    :type debug: bool, optional
+    This class provides methods to interact with various BCRA APIs, including
+    Principales Variables, Cheques, and Estadísticas Cambiarias.
     """
 
-    BASE_URL = "https://api.bcra.gob.ar/estadisticas/v2.0"
+    BASE_URL = "https://api.bcra.gob.ar"
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
 
+
     def __init__(self, language: str = "es-AR", verify_ssl: bool = True, debug: bool = False):
+        """
+        Initialize the BCRAConnector.
+
+        :param language: The language for API responses, defaults to "es-AR"
+        :param verify_ssl: Whether to verify SSL certificates, defaults to True
+        :param debug: Whether to enable debug logging, defaults to False
+        """
         self.session = requests.Session()
         self.session.headers.update({
             "Accept-Language": language,
@@ -91,15 +55,10 @@ class BCRAConnector:
     def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Make a request to the BCRA API with retry logic.
-        
+
         :param endpoint: The API endpoint to request
-        :type endpoint: str
         :param params: Query parameters for the request, defaults to None
-        :type params: Dict[str, Any], optional
-        
         :return: The JSON response from the API
-        :rtype: Dict[str, Any]
-        
         :raises BCRAApiError: If the API request fails after retries
         """
         url = f"{self.BASE_URL}/{endpoint}"
@@ -117,51 +76,57 @@ class BCRAConnector:
                     raise BCRAApiError(f"API request failed after {self.MAX_RETRIES} attempts: {str(e)}") from e
                 time.sleep(self.RETRY_DELAY * (2 ** attempt))  # Exponential backoff
 
+    # Principales Variables methods
     def get_principales_variables(self) -> List[PrincipalesVariables]:
         """
-        Fetch the list of all variables published by BCRA.
-        
+        Fetch the list of all principal variables published by BCRA.
+
         :return: A list of PrincipalesVariables objects
-        :rtype: List[PrincipalesVariables]
-        
-        :raises BCRAApiError: If the API request fails
+        :raises BCRAApiError: If the API request fails or returns unexpected data
         """
         self.logger.info("Fetching principal variables")
         try:
-            data = self._make_request("PrincipalesVariables")
-            variables = [
-                PrincipalesVariables(
-                    id_variable=item['idVariable'],
-                    cd_serie=item['cdSerie'],
-                    descripcion=item['descripcion'],
-                    fecha=item['fecha'],
-                    valor=item['valor']
-                )
-                for item in data['results']
-            ]
-            self.logger.info(f"Successfully fetched {len(variables)} principal variables")
+            data = self._make_request("estadisticas/v2.0/PrincipalesVariables")
+
+            if not isinstance(data, dict) or 'results' not in data:
+                raise BCRAApiError("Unexpected response format: 'results' key not found")
+
+            if not isinstance(data['results'], list):
+                raise BCRAApiError("Unexpected response format: 'results' is not a list")
+
+            variables = []
+            for item in data['results']:
+                try:
+                    variables.append(PrincipalesVariables.from_dict(item))
+                except (KeyError, ValueError) as e:
+                    self.logger.warning(f"Skipping invalid variable data: {str(e)}")
+
+            if not variables:
+                self.logger.warning("No valid variables found in the response")
+            else:
+                self.logger.info(f"Successfully fetched {len(variables)} principal variables")
+
             return variables
-        except KeyError as e:
-            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            error_msg = f"Error fetching principal variables: {str(e)}"
+            self.logger.error(error_msg)
+            raise BCRAApiError(error_msg) from e
 
     def get_datos_variable(self, id_variable: int, desde: datetime, hasta: datetime) -> List[DatosVariable]:
         """
         Fetch the list of values for a variable within a specified date range.
-        
+
         :param id_variable: The ID of the desired variable
-        :type id_variable: int
         :param desde: The start date of the range to query
-        :type desde: datetime
         :param hasta: The end date of the range to query
-        :type hasta: datetime
-        
         :return: A list of DatosVariable objects
-        :rtype: List[DatosVariable]
-        
-        :raises BCRAApiError: If the API request fails or if the date range is invalid
         :raises ValueError: If the date range is invalid
+        :raises BCRAApiError: If the API request fails
         """
         self.logger.info(f"Fetching data for variable {id_variable} from {desde.date()} to {hasta.date()}")
+
         if desde > hasta:
             raise ValueError("'desde' date must be earlier than or equal to 'hasta' date")
 
@@ -170,16 +135,9 @@ class BCRAConnector:
 
         try:
             data = self._make_request(
-                f"DatosVariable/{id_variable}/{desde.date()}/{hasta.date()}"
+                f"estadisticas/v2.0/DatosVariable/{id_variable}/{desde.date()}/{hasta.date()}"
             )
-            datos = [
-                DatosVariable(
-                    id_variable=item['idVariable'],
-                    fecha=item['fecha'],
-                    valor=item['valor']
-                )
-                for item in data['results']
-            ]
+            datos = [DatosVariable.from_dict(item) for item in data['results']]
             self.logger.info(f"Successfully fetched {len(datos)} data points")
             return datos
         except KeyError as e:
@@ -188,13 +146,9 @@ class BCRAConnector:
     def get_latest_value(self, id_variable: int) -> DatosVariable:
         """
         Fetch the latest value for a specific variable.
-        
+
         :param id_variable: The ID of the desired variable
-        :type id_variable: int
-        
         :return: The latest data point for the specified variable
-        :rtype: DatosVariable
-        
         :raises BCRAApiError: If the API request fails or if no data is available
         """
         self.logger.info(f"Fetching latest value for variable {id_variable}")
@@ -208,3 +162,173 @@ class BCRAConnector:
         latest = max(data, key=lambda x: datetime.strptime(x.fecha, "%Y-%m-%d"))
         self.logger.info(f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha})")
         return latest
+
+    # Cheques methods
+    def get_entidades(self) -> List[Entidad]:
+        """
+        Fetch the list of all financial entities.
+
+        :return: A list of Entidad objects
+        :raises BCRAApiError: If the API request fails
+        """
+        self.logger.info("Fetching financial entities")
+        try:
+            data = self._make_request("cheques/v1.0/entidades")
+            entities = [Entidad(**e) for e in data['results']]
+            self.logger.info(f"Successfully fetched {len(entities)} entities")
+            return entities
+        except KeyError as e:
+            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+
+    def get_cheque_denunciado(self, codigo_entidad: int, numero_cheque: int) -> Cheque:
+        """
+        Fetch information about a reported check.
+
+        :param codigo_entidad: The code of the financial entity
+        :param numero_cheque: The check number
+        :return: A Cheque object with the check's information
+        :raises BCRAApiError: If the API request fails or returns unexpected data
+        """
+        self.logger.info(f"Fetching information for check {numero_cheque} from entity {codigo_entidad}")
+        try:
+            data = self._make_request(f"cheques/v1.0/denunciados/{codigo_entidad}/{numero_cheque}")
+            result = data['results']
+            detalles = [ChequeDetalle(**d) for d in result.get('detalles', [])]
+            cheque = Cheque(**result, detalles=detalles)
+            self.logger.info(f"Successfully fetched information for check {numero_cheque}")
+            return cheque
+        except KeyError as e:
+            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+
+    # Estadísticas Cambiarias methods
+    def get_divisas(self) -> List[Divisa]:
+        """
+        Fetch the list of all currencies.
+
+        :return: A list of Divisa objects
+        :raises BCRAApiError: If the API request fails or returns unexpected data
+        """
+        self.logger.info("Fetching currencies")
+        try:
+            data = self._make_request("estadisticascambiarias/v1.0/Maestros/Divisas")
+            divisas = [Divisa(**d) for d in data['results']]
+            self.logger.info(f"Successfully fetched {len(divisas)} currencies")
+            return divisas
+        except KeyError as e:
+            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+
+    def get_cotizaciones(self, fecha: Optional[str] = None) -> CotizacionFecha:
+        """
+        Fetch currency quotations for a specific date.
+
+        :param fecha: The date for which to fetch quotations (format: YYYY-MM-DD), defaults to None (latest date)
+        :return: A CotizacionFecha object with the quotations
+        :raises BCRAApiError: If the API request fails or returns unexpected data
+        """
+        self.logger.info(f"Fetching quotations for date: {fecha if fecha else 'latest'}")
+        try:
+            params = {"fecha": fecha} if fecha else None
+            data = self._make_request("estadisticascambiarias/v1.0/Cotizaciones", params)
+            cotizacion = CotizacionFecha.from_dict(data['results'])
+            self.logger.info(f"Successfully fetched quotations for {cotizacion.fecha}")
+            return cotizacion
+        except KeyError as e:
+            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+
+    def get_evolucion_moneda(self, moneda: str, fecha_desde: Optional[str] = None,
+                             fecha_hasta: Optional[str] = None, limit: int = 1000, offset: int = 0) -> List[
+        CotizacionFecha]:
+        """
+        Fetch the evolution of a specific currency's quotation.
+
+        :param moneda: The currency code
+        :param fecha_desde: Start date (format: YYYY-MM-DD), defaults to None
+        :param fecha_hasta: End date (format: YYYY-MM-DD), defaults to None
+        :param limit: Maximum number of results to return (10-1000), defaults to 1000
+        :param offset: Number of results to skip, defaults to 0
+        :return: A list of CotizacionFecha objects with the currency's evolution data
+        :raises BCRAApiError: If the API request fails or returns unexpected data
+        :raises ValueError: If the limit is out of range
+        """
+        self.logger.info(f"Fetching evolution for currency: {moneda}")
+        if limit < 10 or limit > 1000:
+            raise ValueError("Limit must be between 10 and 1000")
+
+        try:
+            params = {
+                "fechaDesde": fecha_desde,
+                "fechaHasta": fecha_hasta,
+                "limit": limit,
+                "offset": offset
+            }
+            params = {k: v for k, v in params.items() if v is not None}
+            data = self._make_request(f"estadisticascambiarias/v1.0/Cotizaciones/{moneda}", params)
+            evolucion = [CotizacionFecha.from_dict(cf) for cf in data['results']]
+            self.logger.info(f"Successfully fetched {len(evolucion)} data points for {moneda}")
+            return evolucion
+        except KeyError as e:
+            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+
+    def get_variable_by_name(self, variable_name: str) -> Optional[PrincipalesVariables]:
+        """
+        Find a principal variable by its name.
+
+        :param variable_name: The name of the variable to find
+        :return: A PrincipalesVariables object if found, None otherwise
+        """
+        variables = self.get_principales_variables()
+        normalized_name = variable_name.lower().strip()
+        for variable in variables:
+            if normalized_name in variable.descripcion.lower():
+                return variable
+        return None
+
+    def get_variable_history(self, variable_name: str, days: int = 30) -> List[DatosVariable]:
+        """
+        Get the historical data for a variable by its name for the last n days.
+
+        :param variable_name: The name of the variable
+        :param days: The number of days to look back, defaults to 30
+        :return: A list of DatosVariable objects
+        :raises ValueError: If the variable is not found
+        """
+        variable = self.get_variable_by_name(variable_name)
+        if not variable:
+            raise ValueError(f"Variable '{variable_name}' not found")
+
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        return self.get_datos_variable(variable.idVariable, start_date, end_date)
+
+    def get_currency_evolution(self, currency_code: str, days: int = 30) -> List[CotizacionFecha]:
+        """
+        Get the evolution of a currency's quotation for the last n days.
+
+        :param currency_code: The currency code (e.g., 'USD', 'EUR')
+        :param days: The number of days to look back, defaults to 30
+        :return: A list of CotizacionFecha objects
+        """
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        return self.get_evolucion_moneda(
+            currency_code,
+            fecha_desde=start_date.strftime("%Y-%m-%d"),
+            fecha_hasta=end_date.strftime("%Y-%m-%d")
+        )
+
+    def check_denunciado(self, entity_name: str, check_number: int) -> bool:
+        """
+        Check if a check is reported as stolen or lost.
+
+        :param entity_name: The name of the financial entity
+        :param check_number: The check number
+        :return: True if the check is reported, False otherwise
+        :raises ValueError: If the entity is not found
+        """
+        entities = self.get_entidades()
+        entity = next((e for e in entities if e.denominacion.lower() == entity_name.lower()), None)
+        if not entity:
+            raise ValueError(f"Entity '{entity_name}' not found")
+
+        cheque = self.get_cheque_denunciado(entity.codigo_entidad, check_number)
+        return cheque.denunciado
