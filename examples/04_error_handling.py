@@ -11,13 +11,15 @@ from bcra_connector import BCRAConnector, BCRAApiError
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
 def test_case(description, func):
     logger.info(f"\nTest case: {description}")
     try:
-        func()
-        logger.info("Test passed without raising an exception")
+        result = func()
+        logger.info(f"Test passed. Result: {result}")
     except Exception as e:
-        logger.info(f"Exception raised: {type(e).__name__}: {str(e)}")
+        logger.error(f"Exception raised: {type(e).__name__}: {str(e)}")
+
 
 def main():
     connector = BCRAConnector(verify_ssl=False)  # Set to False for testing purposes
@@ -29,13 +31,15 @@ def main():
     def invalid_date_range():
         end_date = datetime.now()
         start_date = end_date - timedelta(days=366)  # More than 1 year
-        connector.get_datos_variable(1, start_date, end_date)
+        return connector.get_datos_variable(1, start_date, end_date)
+
     test_case("Invalid date range", invalid_date_range)
 
     # Test case 3: Future date
     def future_date():
         future_date = datetime.now() + timedelta(days=30)
-        connector.get_datos_variable(1, datetime.now(), future_date)
+        return connector.get_datos_variable(1, datetime.now(), future_date)
+
     test_case("Future date", future_date)
 
     # Test case 4: Non-existent variable name
@@ -44,8 +48,24 @@ def main():
     # Test case 5: API error simulation
     def simulate_api_error():
         # This assumes that ID -1 will cause an API error. Adjust if necessary.
-        connector.get_datos_variable(-1, datetime.now() - timedelta(days=30), datetime.now())
+        return connector.get_datos_variable(-1, datetime.now() - timedelta(days=30), datetime.now())
+
     test_case("API error simulation", simulate_api_error)
+
+    # Test case 6: Get currency evolution with invalid currency code
+    test_case("Invalid currency code", lambda: connector.get_currency_evolution("INVALID"))
+
+    # Test case 7: Get currency pair evolution with invalid currency codes
+    test_case("Invalid currency pair", lambda: connector.get_currency_pair_evolution("INVALID1", "INVALID2"))
+
+    # Test case 8: Generate report for non-existent variable
+    test_case("Generate report for non-existent variable",
+              lambda: connector.generate_variable_report("Non-existent Variable"))
+
+    # Test case 9: Get correlation between non-existent variables
+    test_case("Correlation between non-existent variables",
+              lambda: connector.get_variable_correlation("Non-existent Variable 1", "Non-existent Variable 2"))
+
 
 if __name__ == "__main__":
     main()
