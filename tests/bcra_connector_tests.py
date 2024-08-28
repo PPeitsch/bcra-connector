@@ -7,7 +7,7 @@ from bcra_connector import BCRAConnector, BCRAApiError, PrincipalesVariables, Da
 class TestBCRAConnector(unittest.TestCase):
 
     def setUp(self):
-        self.connector = BCRAConnector()
+        self.connector = BCRAConnector(verify_ssl=True)  # Use True for tests
 
     @patch('bcra_connector.requests.Session.get')
     def test_get_principales_variables(self, mock_get):
@@ -29,7 +29,7 @@ class TestBCRAConnector(unittest.TestCase):
 
         self.assertIsInstance(result, list)
         self.assertIsInstance(result[0], PrincipalesVariables)
-        self.assertEqual(result[0].id_variable, 1)
+        self.assertEqual(result[0].idVariable, 1)
         self.assertEqual(result[0].descripcion, "Test Variable")
 
     @patch('bcra_connector.requests.Session.get')
@@ -50,7 +50,7 @@ class TestBCRAConnector(unittest.TestCase):
 
         self.assertIsInstance(result, list)
         self.assertIsInstance(result[0], DatosVariable)
-        self.assertEqual(result[0].id_variable, 1)
+        self.assertEqual(result[0].idVariable, 1)
         self.assertEqual(result[0].fecha, "2024-03-05")
 
     def test_invalid_date_range(self):
@@ -67,6 +67,15 @@ class TestBCRAConnector(unittest.TestCase):
 
         with self.assertRaises(BCRAApiError):
             self.connector.get_principales_variables()
+
+    @patch('bcra_connector.BCRAConnector.get_principales_variables')
+    def test_get_variable_history(self, mock_get_principales_variables):
+        mock_get_principales_variables.return_value = [
+            PrincipalesVariables(idVariable=1, cdSerie=246, descripcion="Test Variable", fecha="2024-03-05",
+                                 valor=100.0)
+        ]
+        with self.assertRaises(ValueError):
+            self.connector.get_variable_history("Non-existent Variable")
 
 
 if __name__ == '__main__':
