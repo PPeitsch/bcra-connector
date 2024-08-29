@@ -5,7 +5,18 @@ All notable changes to the BCRA API Connector will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2024-08-25
+## [0.1.1] - 2024-08-29
+
+### Changed
+- Updated `requests` to version 2.32.0 or higher to address security vulnerability
+- Updated `matplotlib` to version 3.7.3 or higher
+- Updated `setuptools` to version 70.0.0 or higher
+- Updated `urllib3` to version 2.2.1 or higher
+
+### Fixed
+- Addressed potential SSL verification issue with `requests` library
+
+## [0.1.0] - 2024-08-23
 
 ### Added
 - Initial release of the BCRA API Connector
@@ -27,17 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usage examples for all main features
 - Installation guide
 
-### Examples
-- Scripts demonstrating various use cases:
-  - Fetching and visualizing principal variables
-  - Retrieving and plotting historical data
-  - Comparing latest values for multiple variables
-  - Error handling scenarios
-  - Different connector configurations
-
 ### Development
 - Project structure set up for future expansion
 - Basic error handling and logging implemented
 - Foundation laid for future testing framework
 
-[0.1.0]: https://github.com/yourusername/bcra-api-connector/releases/tag/v0.1.0
+[0.1.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/PPeitsch/bcra-connector/releases/tag/v0.1.0

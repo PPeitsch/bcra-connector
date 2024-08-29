@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="bcra-connector",
-    version="0.1.0",
+    version="0.1.1",
     author="Pablo Peitsch",
     author_email="pablo.peitsch@gmail.com",
     description="A Python connector for the BCRA Estadísticas API",
@@ -25,12 +25,13 @@ setup(
     ],
     python_requires=">=3.9",
     install_requires=[
-        "requests>=2.25.1,<3.0.0",
-        "urllib3>=2.0.0,<3.0.0",
+        "requests>=2.32.0,<2.33.0",
+        "urllib3>=2.2.1,<3.0.0",
     ],
     extras_require={
         "dev": [
-            "matplotlib>=3.9.2,<4.0.0",
+            "matplotlib>=3.7.3,<3.8.0",
+            "setuptools>=70.0.0,<71.0.0",
             "pytest>=6.0.0,<8.0.0",
             "sphinx>=4.0.0,<6.0.0",
         ],
