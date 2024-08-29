@@ -8,13 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.1] - 2024-08-29
 
 ### Changed
-- Updated `requests` to version 2.32.0 or higher to address security vulnerability
-- Updated `matplotlib` to version 3.7.3 or higher
+- Updated `requests` to version 2.32.0 or higher to address a security vulnerability related to SSL verification
+- Updated `matplotlib` to version 3.7.3 or higher for improved compatibility
 - Updated `setuptools` to version 70.0.0 or higher
 - Updated `urllib3` to version 2.2.1 or higher
 
 ### Fixed
-- Addressed potential SSL verification issue with `requests` library
+- Addressed potential SSL verification issue with `requests` library, improving overall security
+
+### Notes
+- This release focuses on security enhancements and dependency upgrades. All users are encouraged to update to this version.
 
 ## [0.1.0] - 2024-08-23
 
