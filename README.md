@@ -18,6 +18,14 @@ A Python connector for the BCRA (Banco Central de la República Argentina) Estad
 pip install bcra-connector
 ```
 
+## Requirements
+
+- Python 3.9 or higher
+- requests>=2.32.0,<2.33
+- matplotlib>=3.7.3,<3.8
+- setuptools>=70.0.0,<71
+- urllib3>=2.2.1,<3.0
+
 ## Quick Start
 
 ```python
@@ -56,6 +64,15 @@ Contributions are welcome! We encourage you to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Changelog
+
+For a detailed list of changes and version updates, please refer to the [CHANGELOG.rst](CHANGELOG.rst) file.
+
+## Version History
+
+- 0.1.0 (2024-08-23): Initial release
+- 0.1.1 (2024-08-29): Updated dependencies to address security vulnerabilities
 
 ## Disclaimer
 
