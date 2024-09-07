@@ -5,46 +5,56 @@ All notable changes to the BCRA API Connector will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.1] - 2024-08-29
+## [Unreleased]
+
+### Added
+- Support for new BCRA API endpoints (planned for future release)
 
 ### Changed
-- Updated `requests` to version 2.32.0 or higher to address a security vulnerability related to SSL verification
-- Updated `matplotlib` to version 3.7.3 or higher for improved compatibility
-- Updated `setuptools` to version 70.0.0 or higher
-- Updated `urllib3` to version 2.2.1 or higher
+- Improved error messages for better debugging (in progress)
+
+## [0.2.0] - 2024-09-15
+
+### Added
+- New `get_latest_value()` method for quick access to current data
+- Debug mode for detailed logging
+- Comprehensive documentation with usage examples and API reference
+
+### Changed
+- Improved error handling with custom `BCRAApiError` exception
+- Enhanced retry logic with exponential backoff
 
 ### Fixed
-- Addressed potential SSL verification issue with `requests` library, improving overall security
+- SSL verification issues in certain environments
 
-### Notes
-- This release focuses on security enhancements and dependency upgrades. All users are encouraged to update to this version.
-
-## [0.1.0] - 2024-08-23
+## [0.1.0] - 2024-08-25
 
 ### Added
 - Initial release of the BCRA API Connector
 - `BCRAConnector` class for interacting with the BCRA API
-- Functionality to fetch principal variables (`get_principales_variables`)
-- Historical data retrieval (`get_datos_variable`)
-- Latest value fetching (`get_latest_value`)
-- Custom exception `BCRAApiError` for error handling
-- Retry logic with exponential backoff
+- Methods to fetch principal variables (`get_principales_variables()`)
+- Historical data retrieval (`get_datos_variable()`)
+- Basic error handling and logging
 - SSL verification toggle
-- Debug mode for detailed logging
+- Bilingual support (Spanish and English)
 
 ### Requirements
 - Python 3.9 or higher
+- `requests` library for HTTP requests
 
 ### Documentation
 - README with project overview and basic usage
-- Comprehensive API documentation
-- Usage examples for all main features
+- Basic API documentation
 - Installation guide
 
-### Development
-- Project structure set up for future expansion
-- Basic error handling and logging implemented
-- Foundation laid for future testing framework
+## [0.0.1] - 2024-07-10
 
-[0.1.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/PPeitsch/bcra-connector/releases/tag/v0.1.0
+### Added
+- Project initialization
+- Basic project structure
+- Initial implementation of API connection
+
+[Unreleased]: https://github.com/yourusername/bcra-api-connector/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/yourusername/bcra-api-connector/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/yourusername/bcra-api-connector/compare/v0.0.1...v0.1.0
+[0.0.1]: https://github.com/yourusername/bcra-api-connector/releases/tag/v0.0.1

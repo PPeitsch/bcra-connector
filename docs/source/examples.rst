@@ -1,66 +1,92 @@
-Examples
-========
+# BCRA API Connector Examples
 
-This section provides detailed examples of how to use the BCRA API Connector for various tasks.
+This section provides in-depth examples of how to use the BCRA API Connector for various tasks, from basic data retrieval to more complex scenarios involving data analysis and visualization.
 
-Fetching Principal Variables
-----------------------------
+## 1. Fetching and Visualizing Principal Variables
 
-The following example demonstrates how to fetch and visualize the principal variables from the BCRA API.
+This example demonstrates how to fetch the principal variables and create a bar plot of the top 10.
 
-.. literalinclude:: ../../examples/01_get_principales_variables.py
-   :language: python
-   :lines: 11-
+```python
+{literalinclude} ../../examples/01_get_principales_variables.py
+:language: python
+:lines: 11-
+```
 
 This script will generate a bar plot of the top 10 principal variables:
 
-.. image:: /_static/images/principal_variables.png
-   :alt: Top 10 Principal Variables
+![Top 10 Principal Variables](/_static/images/principal_variables.png)
 
-Retrieving Historical Data
---------------------------
+**Key Takeaways:**
+- Use `get_principales_variables()` to fetch all main indicators.
+- Handle potential SSL issues by retrying without SSL verification.
+- Utilize matplotlib for creating informative visualizations.
 
-This example shows how to retrieve historical data for a specific variable and plot it.
+## 2. Retrieving and Plotting Historical Data
 
-.. literalinclude:: ../../examples/02_get_datos_variable.py
-   :language: python
-   :lines: 11-
+This example shows how to fetch historical data for a specific variable (e.g., International Reserves) and plot it over time.
+
+```python
+{literalinclude} ../../examples/02_get_datos_variable.py
+:language: python
+:lines: 11-
+```
 
 The script generates a line plot of the variable's values over time:
 
-.. image:: /_static/images/variable_1_data.png
-   :alt: Historical Data for Variable 1
+![Historical Data for Variable 1](/_static/images/variable_1_data.png)
 
-Getting Latest Values
----------------------
+**Key Takeaways:**
+- Use `get_datos_variable()` with specific date ranges.
+- Convert string dates to datetime objects for proper plotting.
+- Visualize trends over time using line plots.
 
-Here's how to fetch and compare the latest values for multiple variables.
+## 3. Comparing Latest Values for Multiple Variables
 
-.. literalinclude:: ../../examples/03_get_latest_value.py
-   :language: python
-   :lines: 11-
+This example demonstrates how to fetch and compare the latest values for multiple variables.
 
-This example creates a bar plot comparing the latest values:
+```python
+{literalinclude} ../../examples/03_get_latest_value.py
+:language: python
+:lines: 11-
+```
 
-.. image:: /_static/images/latest_values.png
-   :alt: Latest Values Comparison
+This script creates a bar plot comparing the latest values:
 
-Error Handling
---------------
+![Latest Values Comparison](/_static/images/latest_values.png)
 
-The following example demonstrates how the connector handles various error scenarios.
+**Key Takeaways:**
+- Use `get_latest_value()` for quick access to current data.
+- Compare multiple indicators side by side using bar plots.
+- Handle potential errors for each variable independently.
 
-.. literalinclude:: ../../examples/04_error_handling.py
-   :language: python
-   :lines: 11-
+## 4. Error Handling Scenarios
 
-Connector Configuration
------------------------
+This example showcases how the connector handles various error scenarios.
 
-This example showcases different configuration options for the BCRA API Connector.
+```python
+{literalinclude} ../../examples/04_error_handling.py
+:language: python
+:lines: 11-
+```
 
-.. literalinclude:: ../../examples/05_connector_configuration.py
-   :language: python
-   :lines: 11-
+**Key Takeaways:**
+- Test different error scenarios (invalid IDs, date ranges, etc.).
+- Use try-except blocks to catch and handle `BCRAApiError`.
+- Log errors and unexpected successes for debugging.
 
-These examples provide a comprehensive overview of the BCRA API Connector's capabilities and usage patterns.
+## 5. Exploring Connector Configurations
+
+This example demonstrates different configuration options for the BCRA API Connector.
+
+```python
+{literalinclude} ../../examples/05_connector_configuration.py
+:language: python
+:lines: 11-
+```
+
+**Key Takeaways:**
+- Experiment with different connector configurations (SSL, debug mode, language).
+- Compare behavior and performance across different settings.
+- Use debug mode for detailed logging when troubleshooting.
+
+These examples provide a comprehensive overview of the BCRA API Connector's capabilities and usage patterns. By studying and adapting these examples, you'll be well-equipped to integrate BCRA data into your own projects and analyses.
