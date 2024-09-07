@@ -1,78 +1,85 @@
-Usage
-=====
+# Using the BCRA API Connector
 
-This guide provides an overview of how to use the BCRA API Connector for various tasks.
+This guide will walk you through the main features of the BCRA API Connector, demonstrating how to retrieve and work with economic data from the Banco Central de la República Argentina.
 
-Initializing the Connector
---------------------------
+## Getting Started
 
-To start using the BCRA API Connector, first import the necessary classes and create an instance of the `BCRAConnector`:
+First, import the necessary classes and create an instance of the `BCRAConnector`:
 
-.. code-block:: python
+```python
+from bcra_connector import BCRAConnector
+from datetime import datetime, timedelta
 
-   from bcra_connector import BCRAConnector
-   from datetime import datetime, timedelta
+# Initialize the connector (default language is Spanish)
+connector = BCRAConnector()
 
-   # Initialize the connector (default language is Spanish)
-   connector = BCRAConnector()
+# For English responses, use:
+# connector = BCRAConnector(language="en-US")
+```
 
-   # For English responses, use:
-   # connector = BCRAConnector(language="en-US")
+## Fetching Principal Variables
 
-Fetching Principal Variables
-----------------------------
+To get an overview of the main economic indicators:
 
-To retrieve all principal variables published by BCRA:
+```python
+variables = connector.get_principales_variables()
 
-.. code-block:: python
+for var in variables[:5]:  # Display first 5 for brevity
+    print(f"{var.descripcion}: {var.valor} ({var.fecha})")
+```
 
-   variables = connector.get_principales_variables()
-   for var in variables[:5]:  # Print first 5 for brevity
-       print(f"{var.descripcion}: {var.valor} ({var.fecha})")
+This will return a list of `PrincipalesVariables` objects, each representing a key economic indicator.
 
-This will return a list of `PrincipalesVariables` objects, each containing information about a specific variable.
+## Retrieving Historical Data
 
-Retrieving Historical Data
---------------------------
+To analyze trends, you can fetch historical data for a specific variable:
 
-To fetch historical data for a specific variable:
+```python
+# Example: Fetch data for Reservas Internacionales del BCRA (usually ID 1)
+id_variable = 1
+end_date = datetime.now()
+start_date = end_date - timedelta(days=30)  # Last 30 days
 
-.. code-block:: python
+datos = connector.get_datos_variable(id_variable, start_date, end_date)
 
-   id_variable = 1  # e.g., Reservas Internacionales del BCRA
-   end_date = datetime.now()
-   start_date = end_date - timedelta(days=30)
-   datos = connector.get_datos_variable(id_variable, start_date, end_date)
-   for dato in datos[-5:]:  # Print last 5 for brevity
-       print(f"{dato.fecha}: {dato.valor}")
+for dato in datos[-5:]:  # Display last 5 data points
+    print(f"{dato.fecha}: {dato.valor}")
+```
 
-This returns a list of `DatosVariable` objects, each representing a data point for the specified variable within the given date range.
+This returns a list of `DatosVariable` objects, each representing a data point within the specified date range.
 
-Getting the Latest Value
-------------------------
+## Getting the Latest Value
 
-To retrieve the most recent value for a variable:
+For the most up-to-date information on a specific indicator:
 
-.. code-block:: python
+```python
+latest = connector.get_latest_value(id_variable)
+print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})")
+```
 
-   latest = connector.get_latest_value(id_variable)
-   print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})")
+## Error Handling
 
-Error Handling
---------------
+The connector uses custom exceptions for error handling. Always wrap your code in try-except blocks:
 
-The connector uses custom exceptions to handle errors. Always wrap your code in try-except blocks to handle potential `BCRAApiError` exceptions:
+```python
+from bcra_connector import BCRAApiError
 
-.. code-block:: python
+try:
+    variables = connector.get_principales_variables()
+except BCRAApiError as e:
+    print(f"An error occurred: {str(e)}")
+```
 
-   from bcra_connector import BCRAApiError
+## Advanced Usage Tips
 
-   try:
-       variables = connector.get_principales_variables()
-   except BCRAApiError as e:
-       print(f"An error occurred: {str(e)}")
+1. **Date Ranges**: When fetching historical data, ensure your date range doesn't exceed one year.
+2. **SSL Verification**: If you encounter SSL issues, you can disable verification (use with caution):
+   ```python
+   connector = BCRAConnector(verify_ssl=False)
+   ```
+3. **Debugging**: Enable debug mode for detailed logging:
+   ```python
+   connector = BCRAConnector(debug=True)
+   ```
 
-Advanced Usage
---------------
-
-For more advanced usage examples, including error handling, different configurations, and data visualization, please refer to the :doc:`examples` section.
+For more advanced usage examples, including data visualization and analysis, check out our [Examples](examples.rst) section.
