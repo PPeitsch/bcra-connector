@@ -71,3 +71,4 @@ To change these values, subclass `BCRAConnector`:
    connector = CustomBCRAConnector()
 
 This configuration provides more flexibility and control over the connector's behavior.
+
