@@ -55,11 +55,11 @@ print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})
 
 ## Documentation
 
-For detailed documentation, please visit our [Read The Docs Documentation](https://bcra-connector.readthedocs.io/).
+For detailed documentation, including usage examples and API reference, please visit our [Read The Docs Documentation](https://bcra-connector.readthedocs.io/).
 
 ## Contributing
 
-Contributions are welcome! We encourage you to submit a Pull Request.
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on how to submit pull requests, report issues, and suggest improvements.
 
 ## License
 
@@ -67,13 +67,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Changelog
 
-For a detailed list of changes and version updates, please refer to the [CHANGELOG.rst](CHANGELOG.rst) file.
-
-## Version History
-
-- 0.1.0 (2024-08-23): Initial release
-- 0.1.1 (2024-08-29): Updated dependencies to address security vulnerabilities
+For a detailed list of changes and version updates, please refer to the [Changelog](https://bcra-connector.readthedocs.io/en/latest/changelog.html).
 
 ## Disclaimer
 
 This project is not officially affiliated with or endorsed by the Banco Central de la República Argentina. Use at your own risk.
+
