@@ -1,92 +1,73 @@
-# Configuring the BCRA API Connector
+Configuration
+=============
 
-The BCRA API Connector offers various configuration options to tailor its behavior to your specific needs. This guide explains each option in detail and provides examples of when and how to use them.
+The BCRA API Connector offers several configuration options to customize its behavior. This guide explains each option and how to use it.
 
-## Initialization Options
+Initialization Options
+----------------------
 
-When creating a new instance of `BCRAConnector`, you can customize its behavior using the following parameters:
+When creating a new instance of the `BCRAConnector`, you can pass the following parameters:
 
-```python
-from bcra_connector import BCRAConnector
+.. code-block:: python
 
-connector = BCRAConnector(
-    language="es-AR",
-    verify_ssl=True,
-    debug=False
-)
-```
+   connector = BCRAConnector(
+       language="es-AR",
+       verify_ssl=True,
+       debug=False
+   )
 
-### Language Setting
+Language
+~~~~~~~~
 
-The `language` parameter determines the language for API responses.
+The `language` parameter sets the language for API responses. Available options are:
 
-- **Options**: 
-  - `"es-AR"` (default): Spanish (Argentina)
-  - `"en-US"`: English (United States)
+- `"es-AR"` (default): Spanish (Argentina)
+- `"en-US"`: English (United States)
 
-**Example:**
-```python
-connector = BCRAConnector(language="en-US")
-```
+Example:
 
-**Use case:** Set to "en-US" if you prefer English responses or are building an English-language application.
+.. code-block:: python
 
-### SSL Verification
+   connector = BCRAConnector(language="en-US")
 
-The `verify_ssl` parameter controls whether SSL certificates are verified during API requests.
+SSL Verification
+~~~~~~~~~~~~~~~~
 
-- **Options**:
-  - `True` (default): Verify SSL certificates
-  - `False`: Disable SSL verification
+The `verify_ssl` parameter determines whether SSL certificates should be verified during API requests. By default, it's set to `True`.
 
-**Example:**
-```python
-connector = BCRAConnector(verify_ssl=False)
-```
+To disable SSL verification (not recommended for production):
 
-**Warning:** Disabling SSL verification is not recommended for production use as it may expose you to security risks.
+.. code-block:: python
 
-**Use case:** Temporarily disable during development if encountering SSL-related issues, or when working in environments with self-signed certificates.
+   connector = BCRAConnector(verify_ssl=False)
 
-### Debug Mode
+Debug Mode
+~~~~~~~~~~
 
-The `debug` parameter enables detailed logging for troubleshooting.
+The `debug` parameter enables detailed logging when set to `True`. This is useful for troubleshooting.
 
-- **Options**:
-  - `False` (default): Normal logging
-  - `True`: Verbose debug logging
+Example:
 
-**Example:**
-```python
-connector = BCRAConnector(debug=True)
-```
+.. code-block:: python
 
-**Use case:** Enable when you need to diagnose issues or want to understand the connector's internal operations.
+   connector = BCRAConnector(debug=True)
 
-## Advanced Configuration
+Retry Behavior
+--------------
 
-For more advanced use cases, you can modify the connector's retry behavior by subclassing `BCRAConnector`:
-
-```python
-class CustomBCRAConnector(BCRAConnector):
-    MAX_RETRIES = 5
-    RETRY_DELAY = 2
-
-connector = CustomBCRAConnector()
-```
-
-### Retry Mechanism
+The connector implements a retry mechanism with exponential backoff. You can modify this behavior by changing the following class variables:
 
 - `MAX_RETRIES`: Maximum number of retry attempts (default: 3)
 - `RETRY_DELAY`: Initial delay between retries in seconds (default: 1)
 
-**Use case:** Increase `MAX_RETRIES` and `RETRY_DELAY` when working with unstable network connections or during high-traffic periods.
+To change these values, subclass `BCRAConnector`:
 
-## Best Practices
+.. code-block:: python
 
-1. **Production Settings:** Always use SSL verification in production environments.
-2. **Localization:** Choose the appropriate language setting based on your target audience.
-3. **Debugging:** Use debug mode sparingly, as it can generate large log files.
-4. **Retry Tuning:** Adjust retry settings based on your specific use case and the API's behavior.
+   class CustomBCRAConnector(BCRAConnector):
+       MAX_RETRIES = 5
+       RETRY_DELAY = 2
 
-By leveraging these configuration options, you can optimize the BCRA API Connector's performance and reliability for your specific use case.
+   connector = CustomBCRAConnector()
+
+This configuration provides more flexibility and control over the connector's behavior.
