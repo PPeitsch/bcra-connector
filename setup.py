@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="bcra-connector",
-    version="0.1.1",
+    version="0.2.0",
     author="Pablo Peitsch",
     author_email="pablo.peitsch@gmail.com",
     description="A Python connector for the BCRA Estadísticas API",
