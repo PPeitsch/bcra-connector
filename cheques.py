@@ -89,3 +89,63 @@ class Cheque:
                 } for d in self.detalles
             ]
         }
+
+
+@dataclass
+class EntidadResponse:
+    """
+    Represents the response for the Entidades endpoint.
+
+    :param status: The HTTP status code
+    :param results: List of Entidad objects
+    """
+    status: int
+    results: List[Entidad]
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'EntidadResponse':
+        """Create an EntidadResponse instance from a dictionary."""
+        return cls(
+            status=data['status'],
+            results=[Entidad.from_dict(e) for e in data['results']]
+        )
+
+
+@dataclass
+class ChequeResponse:
+    """
+    Represents the response for the Cheques Denunciados endpoint.
+
+    :param status: The HTTP status code
+    :param results: A Cheque object
+    """
+    status: int
+    results: Cheque
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ChequeResponse':
+        """Create a ChequeResponse instance from a dictionary."""
+        return cls(
+            status=data['status'],
+            results=Cheque.from_dict(data['results'])
+        )
+
+
+@dataclass
+class ErrorResponse:
+    """
+    Represents an error response from the API.
+
+    :param status: The HTTP status code
+    :param error_messages: List of error messages
+    """
+    status: int
+    error_messages: List[str]
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ErrorResponse':
+        """Create an ErrorResponse instance from a dictionary."""
+        return cls(
+            status=data['status'],
+            error_messages=data['errorMessages']
+        )

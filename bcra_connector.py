@@ -159,7 +159,7 @@ class BCRAConnector:
         if not data:
             raise BCRAApiError(f"No data available for variable {id_variable}")
 
-        latest = max(data, key=lambda x: datetime.strptime(x.fecha, "%Y-%m-%d"))
+        latest = max(data, key=lambda x: x.fecha)
         self.logger.info(f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha})")
         return latest
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import date
 
 
@@ -8,7 +8,7 @@ class Divisa:
     """
     Represents a currency.
 
-    :param codigo: The currency code
+    :param codigo: The currency code (ISO)
     :param denominacion: The currency name
     """
     codigo: str
@@ -57,21 +57,21 @@ class CotizacionFecha:
     :param fecha: The date of the quotations
     :param detalle: List of quotation details
     """
-    fecha: date
+    fecha: Optional[date]
     detalle: List[CotizacionDetalle]
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'CotizacionFecha':
         """Create a CotizacionFecha instance from a dictionary."""
         return cls(
-            fecha=date.fromisoformat(data['fecha']),
+            fecha=date.fromisoformat(data['fecha']) if data['fecha'] else None,
             detalle=[CotizacionDetalle.from_dict(d) for d in data['detalle']]
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the CotizacionFecha instance to a dictionary."""
         return {
-            'fecha': self.fecha.isoformat(),
+            'fecha': self.fecha.isoformat() if self.fecha else None,
             'detalle': [
                 {
                     'codigoMoneda': d.codigo_moneda,
@@ -81,3 +81,126 @@ class CotizacionFecha:
                 } for d in self.detalle
             ]
         }
+
+
+@dataclass
+class Resultset:
+    """
+    Represents metadata about the result set.
+
+    :param count: The number of results
+    :param offset: The offset of the results
+    :param limit: The limit of the results
+    """
+    count: int
+    offset: int
+    limit: int
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Resultset':
+        """Create a Resultset instance from a dictionary."""
+        return cls(
+            count=data['count'],
+            offset=data['offset'],
+            limit=data['limit']
+        )
+
+
+@dataclass
+class Metadata:
+    """
+    Represents metadata about the response.
+
+    :param resultset: The resultset metadata
+    """
+    resultset: Resultset
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Metadata':
+        """Create a Metadata instance from a dictionary."""
+        return cls(
+            resultset=Resultset.from_dict(data['resultset'])
+        )
+
+
+@dataclass
+class DivisaResponse:
+    """
+    Represents the response for the Divisas endpoint.
+
+    :param status: The HTTP status code
+    :param results: List of Divisa objects
+    """
+    status: int
+    results: List[Divisa]
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'DivisaResponse':
+        """Create a DivisaResponse instance from a dictionary."""
+        return cls(
+            status=data['status'],
+            results=[Divisa.from_dict(d) for d in data['results']]
+        )
+
+
+@dataclass
+class CotizacionResponse:
+    """
+    Represents the response for the Cotizaciones endpoint.
+
+    :param status: The HTTP status code
+    :param results: CotizacionFecha object
+    """
+    status: int
+    results: CotizacionFecha
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'CotizacionResponse':
+        """Create a CotizacionResponse instance from a dictionary."""
+        return cls(
+            status=data['status'],
+            results=CotizacionFecha.from_dict(data['results'])
+        )
+
+
+@dataclass
+class CotizacionesResponse:
+    """
+    Represents the response for the Cotizaciones/{codMoneda} endpoint.
+
+    :param status: The HTTP status code
+    :param metadata: Metadata about the response
+    :param results: List of CotizacionFecha objects
+    """
+    status: int
+    metadata: Metadata
+    results: List[CotizacionFecha]
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'CotizacionesResponse':
+        """Create a CotizacionesResponse instance from a dictionary."""
+        return cls(
+            status=data['status'],
+            metadata=Metadata.from_dict(data['metadata']),
+            results=[CotizacionFecha.from_dict(d) for d in data['results']]
+        )
+
+
+@dataclass
+class ErrorResponse:
+    """
+    Represents an error response from the API.
+
+    :param status: The HTTP status code
+    :param error_messages: List of error messages
+    """
+    status: int
+    error_messages: List[str]
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ErrorResponse':
+        """Create an ErrorResponse instance from a dictionary."""
+        return cls(
+            status=data['status'],
+            error_messages=data['errorMessages']
+        )
