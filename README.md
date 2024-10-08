@@ -18,6 +18,14 @@ A Python connector for the BCRA (Banco Central de la República Argentina) Estad
 pip install bcra-connector
 ```
 
+## Requirements
+
+- Python 3.9 or higher
+- requests>=2.32.0,<2.33
+- matplotlib>=3.7.3,<3.8
+- setuptools>=70.0.0,<71
+- urllib3>=2.2.1,<3.0
+
 ## Quick Start
 
 ```python
@@ -47,16 +55,21 @@ print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})
 
 ## Documentation
 
-For detailed documentation, please visit our [Read The Docs Documentation](https://bcra-connector.readthedocs.io/).
+For detailed documentation, including usage examples and API reference, please visit our [Read The Docs Documentation](https://bcra-connector.readthedocs.io/).
 
 ## Contributing
 
-Contributions are welcome! We encourage you to submit a Pull Request.
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on how to submit pull requests, report issues, and suggest improvements.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Changelog
+
+For a detailed list of changes and version updates, please refer to the [Changelog](https://bcra-connector.readthedocs.io/en/latest/changelog.html).
+
 ## Disclaimer
 
 This project is not officially affiliated with or endorsed by the Banco Central de la República Argentina. Use at your own risk.
+

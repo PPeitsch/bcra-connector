@@ -76,3 +76,4 @@ Advanced Usage
 --------------
 
 For more advanced usage examples, including error handling, different configurations, and data visualization, please refer to the :doc:`examples` section.
+

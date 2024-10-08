@@ -6,14 +6,17 @@ The BCRA API Connector is a Python library that provides a convenient interface 
 Features
 --------
 
-- Fetch principal variables published by BCRA
-- Retrieve historical data for specific variables
-- Get the latest value for a variable
-- Bilingual support (Spanish and English)
-- Error handling with custom exceptions
-- Retry logic with exponential backoff
-- SSL verification (optional)
-- Debug mode for detailed logging
+* Fetch principal variables published by BCRA
+* Retrieve historical data for specific variables
+* Get the latest value for a variable
+* Bilingual support (Spanish and English)
+* Error handling with custom exceptions
+* Retry logic with exponential backoff
+* SSL verification (optional)
+* Debug mode for detailed logging
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
@@ -25,6 +28,7 @@ Features
    configuration
    api_reference
    changelog
+   contributing
 
 Indices and tables
 ==================

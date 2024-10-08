@@ -64,3 +64,4 @@ This example showcases different configuration options for the BCRA API Connecto
    :lines: 11-
 
 These examples provide a comprehensive overview of the BCRA API Connector's capabilities and usage patterns.
+

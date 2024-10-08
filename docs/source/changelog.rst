@@ -1,43 +1,83 @@
-# Changelog
+Changelog
+=========
 
 All notable changes to the BCRA API Connector will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
+and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-## [0.1.0] - 2024-08-25
+0.2.0 - 2024-09-07
+------------------
 
-### Added
-- Initial release of the BCRA API Connector
-- `BCRAConnector` class for interacting with the BCRA API
-- Functionality to fetch principal variables (`get_principales_variables`)
-- Historical data retrieval (`get_datos_variable`)
-- Latest value fetching (`get_latest_value`)
-- Custom exception `BCRAApiError` for error handling
-- Retry logic with exponential backoff
-- SSL verification toggle
-- Debug mode for detailed logging
+Added
+^^^^^
+* Comprehensive revision of all documentation files for improved clarity and readability
+* Expanded installation guide covering various installation methods
+* Updated and improved usage examples
+* New contributing guidelines to encourage community participation
+* Enhanced API reference documentation with more detailed descriptions
 
-### Requirements
-- Python 3.9 or higher
+Changed
+^^^^^^^
+* Revised Read the Docs configuration for better documentation building
+* Updated project metadata and version information
 
-### Documentation
-- README with project overview and basic usage
-- Comprehensive API documentation
-- Usage examples for all main features
-- Installation guide
+Fixed
+^^^^^
+* Corrected inconsistencies in version numbering across project files
+* Fixed links and references in documentation files
 
-### Examples
-- Scripts demonstrating various use cases:
-  - Fetching and visualizing principal variables
-  - Retrieving and plotting historical data
-  - Comparing latest values for multiple variables
-  - Error handling scenarios
-  - Different connector configurations
+0.1.1 - 2024-08-29
+------------------
 
-### Development
-- Project structure set up for future expansion
-- Basic error handling and logging implemented
-- Foundation laid for future testing framework
+Security
+^^^^^^^^
+* Updated ``requests`` to version 2.32.0 or higher to address a security vulnerability
+* Addressed potential SSL verification issue with the ``requests`` library
 
-[0.1.0]: https://github.com/yourusername/bcra-api-connector/releases/tag/v0.1.0
+Changed
+^^^^^^^
+* Updated ``matplotlib`` to version 3.7.3 or higher
+* Updated ``setuptools`` to version 70.0.0 or higher
+* Updated ``urllib3`` to version 2.2.1 or higher
+
+0.1.0 - 2024-08-25
+------------------
+
+Added
+^^^^^
+* Initial release of the BCRA API Connector
+* ``BCRAConnector`` class for interacting with the BCRA API
+* Functionality to fetch principal variables (``get_principales_variables``)
+* Historical data retrieval (``get_datos_variable``)
+* Latest value fetching (``get_latest_value``)
+* Custom exception ``BCRAApiError`` for error handling
+* Retry logic with exponential backoff
+* SSL verification toggle
+* Debug mode for detailed logging
+
+Requirements
+^^^^^^^^^^^^
+* Python 3.9 or higher
+
+Documentation
+^^^^^^^^^^^^^
+* README with project overview and basic usage
+* Comprehensive API documentation
+* Usage examples for all main features
+* Installation guide
+
+Examples
+^^^^^^^^
+* Scripts demonstrating various use cases:
+    * Fetching and visualizing principal variables
+    * Retrieving and plotting historical data
+    * Comparing latest values for multiple variables
+    * Error handling scenarios
+    * Different connector configurations
+
+Development
+^^^^^^^^^^^
+* Project structure set up for future expansion
+* Basic error handling and logging implemented
+* Foundation laid for future testing framework
