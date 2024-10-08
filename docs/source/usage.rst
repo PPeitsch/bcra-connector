@@ -58,6 +58,57 @@ To retrieve the most recent value for a variable:
    latest = connector.get_latest_value(id_variable)
    print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})")
 
+Using the Cheques Module
+------------------------
+
+To fetch information about financial entities:
+
+.. code-block:: python
+
+   entities = connector.get_entidades()
+   for entity in entities[:5]:  # Print first 5 for brevity
+       print(f"{entity.codigo_entidad}: {entity.denominacion}")
+
+To check if a specific check is reported:
+
+.. code-block:: python
+
+   codigo_entidad = 11  # Example entity code
+   numero_cheque = 20377516  # Example check number
+   cheque = connector.get_cheque_denunciado(codigo_entidad, numero_cheque)
+   print(f"Check {cheque.numero_cheque} is {'reported' if cheque.denunciado else 'not reported'}")
+
+Using the Estadísticas Cambiarias Module
+----------------------------------------
+
+To fetch the list of all currencies:
+
+.. code-block:: python
+
+   currencies = connector.get_divisas()
+   for currency in currencies[:5]:  # Print first 5 for brevity
+       print(f"{currency.codigo}: {currency.denominacion}")
+
+To get currency quotations for a specific date:
+
+.. code-block:: python
+
+   fecha = "2024-06-12"  # Example date
+   quotations = connector.get_cotizaciones(fecha)
+   for detail in quotations.detalle[:5]:  # Print first 5 for brevity
+       print(f"{detail.codigo_moneda}: {detail.tipo_cotizacion}")
+
+To fetch the evolution of a specific currency:
+
+.. code-block:: python
+
+   moneda = "USD"
+   fecha_desde = "2024-06-01"
+   fecha_hasta = "2024-06-30"
+   evolution = connector.get_evolucion_moneda(moneda, fecha_desde, fecha_hasta)
+   for quotation in evolution[:5]:  # Print first 5 for brevity
+       print(f"{quotation.fecha}: {quotation.detalle[0].tipo_cotizacion}")
+
 Error Handling
 --------------
 
@@ -76,4 +127,3 @@ Advanced Usage
 --------------
 
 For more advanced usage examples, including error handling, different configurations, and data visualization, please refer to the :doc:`examples` section.
-

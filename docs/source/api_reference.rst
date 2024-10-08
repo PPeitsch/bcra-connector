@@ -53,6 +53,63 @@ Methods
    :rtype: DatosVariable
    :raises BCRAApiError: If the API request fails or if no data is available.
 
+.. py:method:: get_entidades()
+
+   Fetch the list of all financial entities.
+
+   :return: A list of financial entities.
+   :rtype: List[Entidad]
+   :raises BCRAApiError: If the API request fails.
+
+.. py:method:: get_cheque_denunciado(codigo_entidad: int, numero_cheque: int)
+
+   Fetch information about a reported check.
+
+   :param codigo_entidad: The code of the financial entity.
+   :type codigo_entidad: int
+   :param numero_cheque: The check number.
+   :type numero_cheque: int
+   :return: Information about the reported check.
+   :rtype: Cheque
+   :raises BCRAApiError: If the API request fails or returns unexpected data.
+
+.. py:method:: get_divisas()
+
+   Fetch the list of all currencies.
+
+   :return: A list of currencies.
+   :rtype: List[Divisa]
+   :raises BCRAApiError: If the API request fails or returns unexpected data.
+
+.. py:method:: get_cotizaciones(fecha: Optional[str] = None)
+
+   Fetch currency quotations for a specific date.
+
+   :param fecha: The date for which to fetch quotations (format: YYYY-MM-DD), defaults to None (latest date).
+   :type fecha: Optional[str]
+   :return: Currency quotations for the specified date.
+   :rtype: CotizacionFecha
+   :raises BCRAApiError: If the API request fails or returns unexpected data.
+
+.. py:method:: get_evolucion_moneda(moneda: str, fecha_desde: Optional[str] = None, fecha_hasta: Optional[str] = None, limit: int = 1000, offset: int = 0)
+
+   Fetch the evolution of a specific currency's quotation.
+
+   :param moneda: The currency code.
+   :type moneda: str
+   :param fecha_desde: Start date (format: YYYY-MM-DD), defaults to None.
+   :type fecha_desde: Optional[str]
+   :param fecha_hasta: End date (format: YYYY-MM-DD), defaults to None.
+   :type fecha_hasta: Optional[str]
+   :param limit: Maximum number of results to return (10-1000), defaults to 1000.
+   :type limit: int
+   :param offset: Number of results to skip, defaults to 0.
+   :type offset: int
+   :return: A list of currency quotations over time.
+   :rtype: List[CotizacionFecha]
+   :raises BCRAApiError: If the API request fails or returns unexpected data.
+   :raises ValueError: If the limit is out of range.
+
 Data Classes
 ------------
 
@@ -70,7 +127,7 @@ PrincipalesVariables
    :param descripcion: The description of the variable.
    :type descripcion: str
    :param fecha: The date of the variable's value.
-   :type fecha: str
+   :type fecha: date
    :param valor: The value of the variable.
    :type valor: float
 
@@ -84,9 +141,63 @@ DatosVariable
    :param id_variable: The ID of the variable.
    :type id_variable: int
    :param fecha: The date of the data point.
-   :type fecha: str
+   :type fecha: date
    :param valor: The value of the variable on the given date.
    :type valor: float
+
+Entidad
+^^^^^^^
+
+.. py:class:: Entidad
+
+   Represents a financial entity.
+
+   :param codigo_entidad: The entity's code.
+   :type codigo_entidad: int
+   :param denominacion: The entity's name.
+   :type denominacion: str
+
+Cheque
+^^^^^^
+
+.. py:class:: Cheque
+
+   Represents a reported check.
+
+   :param numero_cheque: The check number.
+   :type numero_cheque: int
+   :param denunciado: Whether the check is reported.
+   :type denunciado: bool
+   :param fecha_procesamiento: The processing date.
+   :type fecha_procesamiento: date
+   :param denominacion_entidad: The name of the entity.
+   :type denominacion_entidad: str
+   :param detalles: List of check details.
+   :type detalles: List[ChequeDetalle]
+
+Divisa
+^^^^^^
+
+.. py:class:: Divisa
+
+   Represents a currency.
+
+   :param codigo: The currency code (ISO).
+   :type codigo: str
+   :param denominacion: The currency name.
+   :type denominacion: str
+
+CotizacionFecha
+^^^^^^^^^^^^^^^
+
+.. py:class:: CotizacionFecha
+
+   Represents currency quotations for a specific date.
+
+   :param fecha: The date of the quotations.
+   :type fecha: Optional[date]
+   :param detalle: List of quotation details.
+   :type detalle: List[CotizacionDetalle]
 
 Exceptions
 ----------
