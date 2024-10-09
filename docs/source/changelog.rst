@@ -6,7 +6,25 @@ All notable changes to the BCRA API Connector will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-0.3.1 - 2024-10-10
+0.3.1 - 2024-10-08
+------------------
+
+Added
+^^^^^
+* Bilingual README (English and Spanish)
+
+Changed
+^^^^^^^
+* Updated API reference documentation to include detailed information about Cheques and Estadísticas Cambiarias modules
+* Enhanced usage guide with examples for all modules
+* Revised main documentation page to reflect the full range of features
+
+Fixed
+^^^^^
+* Corrected inconsistencies in documentation
+* Improved clarity and readability throughout the documentation
+
+0.3.0 - 2024-10-07
 ------------------
 
 Changed
