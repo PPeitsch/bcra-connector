@@ -1,12 +1,15 @@
 # BCRA API Connector
 
-A Python connector for the BCRA (Banco Central de la República Argentina) Estadísticas API v2.0.
+A Python connector for the BCRA (Banco Central de la República Argentina) APIs, including Estadísticas v2.0, Cheques, and Estadísticas Cambiarias.
 
 ## Features
 
 - Fetch principal variables published by BCRA
 - Retrieve historical data for specific variables
 - Get the latest value for a variable
+- Access information about reported checks
+- Retrieve currency exchange rate data
+- Bilingual support (Spanish and English)
 - Error handling with custom exceptions
 - Retry logic with exponential backoff
 - SSL verification (optional)
@@ -25,6 +28,8 @@ pip install bcra-connector
 - matplotlib>=3.7.3,<3.8
 - setuptools>=70.0.0,<71
 - urllib3>=2.2.1,<3.0
+- numpy~=1.26.4,<1.27
+- scipy~=1.14.1,<1.15
 
 ## Quick Start
 
@@ -51,6 +56,17 @@ for dato in datos[-5:]:  # Print last 5 for brevity
 # Get the latest value for a variable
 latest = connector.get_latest_value(id_variable)
 print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})")
+
+# Get information about reported checks
+entities = connector.get_entidades()
+cheque = connector.get_cheque_denunciado(entities[0].codigo_entidad, 12345678)
+print(f"Check status: {'Reported' if cheque.denunciado else 'Not reported'}")
+
+# Get currency exchange rates
+currencies = connector.get_divisas()
+quotations = connector.get_cotizaciones()
+for detail in quotations.detalle[:5]:  # Print first 5 for brevity
+    print(f"{detail.codigo_moneda}: {detail.tipo_cotizacion}")
 ```
 
 ## Documentation
@@ -72,4 +88,3 @@ For a detailed list of changes and version updates, please refer to the [Changel
 ## Disclaimer
 
 This project is not officially affiliated with or endorsed by the Banco Central de la República Argentina. Use at your own risk.
-
