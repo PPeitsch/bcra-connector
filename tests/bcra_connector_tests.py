@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, Mock
 from datetime import datetime, date
-from bcra_connector import BCRAConnector, BCRAApiError, PrincipalesVariables, DatosVariable
+from src.bcra_connector import BCRAConnector, BCRAApiError, PrincipalesVariables, DatosVariable
 
 
 class TestBCRAConnector(unittest.TestCase):

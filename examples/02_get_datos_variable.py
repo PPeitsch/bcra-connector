@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from bcra_connector import BCRAConnector, BCRAApiError
+from src.bcra_connector import BCRAConnector, BCRAApiError
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

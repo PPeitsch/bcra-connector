@@ -1,6 +1,6 @@
 import unittest
 from datetime import date
-from cheques import Entidad, ChequeDetalle, Cheque, EntidadResponse, ChequeResponse, ErrorResponse
+from src.cheques import Entidad, ChequeDetalle, Cheque, EntidadResponse, ChequeResponse, ErrorResponse
 
 
 class TestCheques(unittest.TestCase):

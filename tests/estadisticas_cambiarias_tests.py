@@ -1,6 +1,6 @@
 import unittest
 from datetime import date
-from estadisticas_cambiarias import (
+from src.estadisticas_cambiarias import (
     Divisa, CotizacionDetalle, CotizacionFecha, Resultset, Metadata,
     DivisaResponse, CotizacionResponse, CotizacionesResponse, ErrorResponse
 )

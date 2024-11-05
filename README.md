@@ -34,7 +34,7 @@ pip install bcra-connector
 ## Quick Start
 
 ```python
-from bcra_connector import BCRAConnector
+from src.bcra_connector import BCRAConnector
 from datetime import datetime, timedelta
 
 # Initialize the connector
