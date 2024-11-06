@@ -1,6 +1,7 @@
 from ._version import __version__, version_info
 from .bcra_connector import BCRAConnector, BCRAApiError
 from .rate_limiter import RateLimitConfig
+from .timeout_config import TimeoutConfig
 from .principales_variables import (
     PrincipalesVariables,
     DatosVariable,
@@ -32,6 +33,7 @@ __all__ = [
     "BCRAConnector",
     "BCRAApiError",
     "RateLimitConfig",
+    "TimeoutConfig",
     # Principales Variables
     "PrincipalesVariables",
     "DatosVariable",
