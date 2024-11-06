@@ -53,6 +53,10 @@ Changelog = "https://github.com/PPeitsch/bcra-connector/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
 path = "src/bcra_connector/_version.py"
+pattern = '__version__ = "(?P<version>[^"]+)"'
+
+[tool.hatch.build.hooks.version]
+path = "src/bcra_connector/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bcra_connector"]

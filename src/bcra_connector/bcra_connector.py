@@ -1,5 +1,5 @@
 import requests
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Union, Any, Optional
 from datetime import datetime, timedelta
 import logging
 import time
@@ -9,6 +9,8 @@ import numpy as np
 from .principales_variables import PrincipalesVariables, DatosVariable
 from .cheques import Entidad, Cheque, ChequeDetalle
 from .estadisticas_cambiarias import Divisa, CotizacionFecha, CotizacionDetalle
+from .rate_limiter import RateLimiter, RateLimitConfig
+from .timeout_config import TimeoutConfig
 
 
 class BCRAApiError(Exception):
@@ -27,14 +29,29 @@ class BCRAConnector:
     BASE_URL = "https://api.bcra.gob.ar"
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
+    DEFAULT_RATE_LIMIT = RateLimitConfig(
+        calls=10,  # 10 calls
+        period=1.0,  # per second
+        burst=20  # allowing up to 20 calls
+    )
+    DEFAULT_TIMEOUT = TimeoutConfig.default()
 
-    def __init__(self, language: str = "es-AR", verify_ssl: bool = True, debug: bool = False):
-        """
-        Initialize the BCRAConnector.
+    def __init__(
+            self,
+            language: str = "es-AR",
+            verify_ssl: bool = True,
+            debug: bool = False,
+            rate_limit: Optional[RateLimitConfig] = None,
+            timeout: Optional[Union[TimeoutConfig, float]] = None
+    ):
+        """Initialize the BCRAConnector.
 
         :param language: The language for API responses, defaults to "es-AR"
         :param verify_ssl: Whether to verify SSL certificates, defaults to True
         :param debug: Whether to enable debug logging, defaults to False
+        :param rate_limit: Rate limiting configuration, defaults to DEFAULT_RATE_LIMIT
+        :param timeout: Request timeout configuration, can be TimeoutConfig or float,
+                      defaults to DEFAULT_TIMEOUT
         """
         self.session = requests.Session()
         self.session.headers.update({
@@ -42,6 +59,17 @@ class BCRAConnector:
             "User-Agent": "BCRAConnector/1.0"
         })
         self.verify_ssl = verify_ssl
+
+        # Configure timeouts
+        if isinstance(timeout, (int, float)):
+            self.timeout = TimeoutConfig.from_total(float(timeout))
+        elif isinstance(timeout, TimeoutConfig):
+            self.timeout = timeout
+        else:
+            self.timeout = self.DEFAULT_TIMEOUT
+
+        # Initialize rate limiter
+        self.rate_limiter = RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT)
 
         # Configure logging
         log_level = logging.DEBUG if debug else logging.INFO
@@ -53,8 +81,7 @@ class BCRAConnector:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Make a request to the BCRA API with retry logic.
+        """Make a request to the BCRA API with retry logic and rate limiting.
 
         :param endpoint: The API endpoint to request
         :param params: Query parameters for the request, defaults to None
@@ -65,11 +92,26 @@ class BCRAConnector:
 
         for attempt in range(self.MAX_RETRIES):
             try:
+                # Apply rate limiting
+                delay = self.rate_limiter.acquire()
+                if delay > 0:
+                    self.logger.debug(f"Rate limit applied. Waited {delay:.2f} seconds")
+
                 self.logger.debug(f"Making request to {url}")
-                response = self.session.get(url, params=params, verify=self.verify_ssl)
+                response = self.session.get(
+                    url,
+                    params=params,
+                    verify=self.verify_ssl,
+                    timeout=self.timeout.as_tuple
+                )
                 response.raise_for_status()
                 self.logger.debug("Request successful")
                 return response.json()
+            except requests.Timeout as e:
+                self.logger.error(f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}")
+                if attempt == self.MAX_RETRIES - 1:
+                    raise BCRAApiError(f"Request timed out after {self.MAX_RETRIES} attempts") from e
+                time.sleep(self.RETRY_DELAY * (2 ** attempt))
             except requests.RequestException as e:
                 self.logger.warning(f"Request failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}")
                 if attempt == self.MAX_RETRIES - 1:
@@ -237,7 +279,7 @@ class BCRAConnector:
 
     def get_evolucion_moneda(self, moneda: str, fecha_desde: Optional[str] = None,
                              fecha_hasta: Optional[str] = None, limit: int = 1000, offset: int = 0) -> List[
-        CotizacionFecha]:
+            CotizacionFecha]:
         """
         Fetch the evolution of a specific currency's quotation.
 
@@ -342,7 +384,8 @@ class BCRAConnector:
         cotizaciones = self.get_cotizaciones()
         return {detail.codigo_moneda: detail.tipo_cotizacion for detail in cotizaciones.detalle}
 
-    def get_currency_pair_evolution(self, base_currency: str, quote_currency: str, days: int = 30) -> List[Dict[str, Any]]:
+    def get_currency_pair_evolution(self, base_currency: str, quote_currency: str, days: int = 30) -> List[
+            Dict[str, Any]]:
         """
         Get the evolution of a currency pair for the last n days.
 
@@ -355,7 +398,8 @@ class BCRAConnector:
         quote_evolution = self.get_currency_evolution(quote_currency, days)
 
         base_dict = {cf.fecha: self._get_cotizacion_detalle(cf, base_currency).tipo_cotizacion for cf in base_evolution}
-        quote_dict = {cf.fecha: self._get_cotizacion_detalle(cf, quote_currency).tipo_cotizacion for cf in quote_evolution}
+        quote_dict = {cf.fecha: self._get_cotizacion_detalle(cf, quote_currency).tipo_cotizacion for cf in
+                      quote_evolution}
 
         pair_evolution = []
         for date in set(base_dict.keys()) & set(quote_dict.keys()):
