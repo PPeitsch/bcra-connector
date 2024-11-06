@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, Mock
 from datetime import datetime, date
-from src.bcra_connector import BCRAConnector, BCRAApiError, PrincipalesVariables, DatosVariable
+from bcra_connector import BCRAConnector, BCRAApiError, PrincipalesVariables, DatosVariable
 
 
 class TestBCRAConnector(unittest.TestCase):
@@ -11,7 +11,7 @@ class TestBCRAConnector(unittest.TestCase):
         """Set up a BCRAConnector instance for each test."""
         self.connector = BCRAConnector(verify_ssl=True)
 
-    @patch('bcra_connector.requests.Session.get')
+    @patch('bcra_connector.bcra_connector.requests.Session.get')
     def test_get_principales_variables(self, mock_get):
         """Test fetching principal variables."""
         mock_response = Mock()
@@ -37,7 +37,7 @@ class TestBCRAConnector(unittest.TestCase):
         self.assertEqual(result[0].fecha, date(2024, 3, 5))
         self.assertEqual(result[0].valor, 100.0)
 
-    @patch('bcra_connector.requests.Session.get')
+    @patch('bcra_connector.bcra_connector.requests.Session.get')
     def test_get_datos_variable(self, mock_get):
         """Test fetching data for a specific variable."""
         mock_response = Mock()
@@ -70,7 +70,7 @@ class TestBCRAConnector(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.connector.get_datos_variable(1, datetime(2024, 1, 1), datetime(2025, 1, 2))
 
-    @patch('bcra_connector.requests.Session.get')
+    @patch('bcra_connector.bcra_connector.requests.Session.get')
     def test_api_error(self, mock_get):
         """Test handling of API errors."""
         mock_get.side_effect = BCRAApiError("API Error")

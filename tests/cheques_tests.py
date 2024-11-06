@@ -1,6 +1,8 @@
 import unittest
 from datetime import date
-from src.cheques import Entidad, ChequeDetalle, Cheque, EntidadResponse, ChequeResponse, ErrorResponse
+from bcra_connector.cheques import (
+    Entidad, ChequeDetalle, Cheque, EntidadResponse, ChequeResponse, ErrorResponse
+)
 
 
 class TestCheques(unittest.TestCase):

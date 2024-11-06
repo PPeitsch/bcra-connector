@@ -1,9 +1,10 @@
 import unittest
 from datetime import date
-from src.estadisticas_cambiarias import (
+from bcra_connector.estadisticas_cambiarias import (
     Divisa, CotizacionDetalle, CotizacionFecha, Resultset, Metadata,
     DivisaResponse, CotizacionResponse, CotizacionesResponse, ErrorResponse
 )
+
 
 class TestEstadisticasCambiarias(unittest.TestCase):
 
@@ -167,7 +168,8 @@ class TestEstadisticasCambiarias(unittest.TestCase):
         response = ErrorResponse.from_dict(data)
         self.assertEqual(response.status, 400)
         self.assertEqual(len(response.error_messages), 1)
-        self.assertEqual(response.error_messages[0], "Parámetro erróneo: La fecha desde no puede ser mayor a la fecha hasta.")
+        self.assertEqual(response.error_messages[0],
+                         "Parámetro erróneo: La fecha desde no puede ser mayor a la fecha hasta.")
 
     def test_cotizacion_fecha_with_null_date(self):
         data = {
@@ -177,6 +179,7 @@ class TestEstadisticasCambiarias(unittest.TestCase):
         cotizacion = CotizacionFecha.from_dict(data)
         self.assertIsNone(cotizacion.fecha)
         self.assertEqual(len(cotizacion.detalle), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
