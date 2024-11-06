@@ -6,26 +6,48 @@ from .principales_variables import (
 )
 from .cheques import (
     Entidad,
-    Cheque,
     ChequeDetalle,
+    Cheque,
+    EntidadResponse,
+    ChequeResponse,
+    ErrorResponse as ChequesErrorResponse,
 )
 from .estadisticas_cambiarias import (
     Divisa,
     CotizacionDetalle,
     CotizacionFecha,
+    Resultset,
+    Metadata,
+    DivisaResponse,
+    CotizacionResponse,
+    CotizacionesResponse,
+    ErrorResponse as CambiariasErrorResponse,
 )
 
 __all__ = [
     "__version__",
     "version_info",
+    # Core
     "BCRAConnector",
     "BCRAApiError",
+    # Principales Variables
     "PrincipalesVariables",
     "DatosVariable",
+    # Cheques
     "Entidad",
-    "Cheque",
     "ChequeDetalle",
+    "Cheque",
+    "EntidadResponse",
+    "ChequeResponse",
+    "ChequesErrorResponse",
+    # Estadísticas Cambiarias
     "Divisa",
     "CotizacionDetalle",
     "CotizacionFecha",
+    "Resultset",
+    "Metadata",
+    "DivisaResponse",
+    "CotizacionResponse",
+    "CotizacionesResponse",
+    "CambiariasErrorResponse",
 ]
