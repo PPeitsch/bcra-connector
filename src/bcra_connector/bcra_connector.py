@@ -6,9 +6,9 @@ import time
 import urllib3
 from scipy.stats import pearsonr
 import numpy as np
-from principales_variables import PrincipalesVariables, DatosVariable
-from cheques import Entidad, Cheque, ChequeDetalle
-from estadisticas_cambiarias import Divisa, CotizacionFecha, CotizacionDetalle
+from .principales_variables import PrincipalesVariables, DatosVariable
+from .cheques import Entidad, Cheque, ChequeDetalle
+from .estadisticas_cambiarias import Divisa, CotizacionFecha, CotizacionDetalle
 
 
 class BCRAApiError(Exception):

@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bcra-connector"
+dynamic = ["version"]
+description = "A Python connector for the BCRA (Banco Central de la República Argentina) APIs"
+readme = "README.md"
+authors = [
+    { name = "Pablo Peitsch", email = "pablo.peitsch@gmail.com" },
+]
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["bcra", "api", "connector", "argentina", "banco-central", "financial", "currency", "exchange-rates"]
+dependencies = [
+    "requests>=2.32.0,<2.33.0",
+    "urllib3>=2.2.1,<3.0.0",
+    "numpy~=1.26.4,<1.27.0",
+    "scipy~=1.14.1,<1.15.0",
+]
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = [
+    "matplotlib>=3.7.3,<3.8.0",
+    "setuptools>=70.0.0,<71.0.0",
+    "pytest>=6.0.0,<8.0.0",
+    "sphinx>=4.0.0,<6.0.0",
+    "black>=23.0.0",
+    "isort>=5.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/PPeitsch/bcra-connector"
+Documentation = "https://bcra-connector.readthedocs.io/"
+Repository = "https://github.com/PPeitsch/bcra-connector.git"
+"Bug Tracker" = "https://github.com/PPeitsch/bcra-connector/issues"
+Changelog = "https://github.com/PPeitsch/bcra-connector/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/bcra_connector/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bcra_connector"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
