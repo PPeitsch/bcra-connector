@@ -9,6 +9,7 @@ import numpy as np
 from .principales_variables import PrincipalesVariables, DatosVariable
 from .cheques import Entidad, Cheque, ChequeDetalle
 from .estadisticas_cambiarias import Divisa, CotizacionFecha, CotizacionDetalle
+from .rate_limiter import RateLimiter, RateLimitConfig
 
 
 class BCRAApiError(Exception):
@@ -27,14 +28,25 @@ class BCRAConnector:
     BASE_URL = "https://api.bcra.gob.ar"
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
+    DEFAULT_RATE_LIMIT = RateLimitConfig(
+        calls=10,  # 10 llamadas
+        period=1.0,  # por segundo
+        burst=20  # permitir ráfagas de hasta 20 llamadas
+    )
 
-    def __init__(self, language: str = "es-AR", verify_ssl: bool = True, debug: bool = False):
-        """
-        Initialize the BCRAConnector.
+    def __init__(
+            self,
+            language: str = "es-AR",
+            verify_ssl: bool = True,
+            debug: bool = False,
+            rate_limit: Optional[RateLimitConfig] = None
+    ):
+        """Initialize the BCRAConnector.
 
         :param language: The language for API responses, defaults to "es-AR"
         :param verify_ssl: Whether to verify SSL certificates, defaults to True
         :param debug: Whether to enable debug logging, defaults to False
+        :param rate_limit: Rate limiting configuration, defaults to DEFAULT_RATE_LIMIT
         """
         self.session = requests.Session()
         self.session.headers.update({
@@ -42,6 +54,9 @@ class BCRAConnector:
             "User-Agent": "BCRAConnector/1.0"
         })
         self.verify_ssl = verify_ssl
+
+        # Initialize rate limiter
+        self.rate_limiter = RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT)
 
         # Configure logging
         log_level = logging.DEBUG if debug else logging.INFO
@@ -53,8 +68,7 @@ class BCRAConnector:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Make a request to the BCRA API with retry logic.
+        """Make a request to the BCRA API with retry logic and rate limiting.
 
         :param endpoint: The API endpoint to request
         :param params: Query parameters for the request, defaults to None
@@ -65,6 +79,11 @@ class BCRAConnector:
 
         for attempt in range(self.MAX_RETRIES):
             try:
+                # Apply rate limiting
+                delay = self.rate_limiter.acquire()
+                if delay > 0:
+                    self.logger.debug(f"Rate limit applied. Waited {delay:.2f} seconds")
+
                 self.logger.debug(f"Making request to {url}")
                 response = self.session.get(url, params=params, verify=self.verify_ssl)
                 response.raise_for_status()

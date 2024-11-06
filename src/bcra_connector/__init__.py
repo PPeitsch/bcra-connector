@@ -1,5 +1,6 @@
 from ._version import __version__, version_info
 from .bcra_connector import BCRAConnector, BCRAApiError
+from .rate_limiter import RateLimitConfig
 from .principales_variables import (
     PrincipalesVariables,
     DatosVariable,
@@ -30,6 +31,7 @@ __all__ = [
     # Core
     "BCRAConnector",
     "BCRAApiError",
+    "RateLimitConfig",
     # Principales Variables
     "PrincipalesVariables",
     "DatosVariable",
