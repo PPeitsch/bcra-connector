@@ -7,15 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.2] - 2024-11-06
 
-### Added
-- Rate limiting implementation
-- Request timeout configuration
-- Enhanced error handling for API timeouts
-
 ### Changed
 - Improved code organization and modularity
-- Enhanced version management system
-- Updated package configuration
+- Enhanced version management system with better validation
+- Updated package configuration and structure
+- Removed deprecated setup.py in favor of pyproject.toml
+
+### Added
+- Comprehensive CHANGELOG.md following Keep a Changelog format
+- Enhanced project structure documentation
+- Improved package metadata
+
+### Fixed
+- Directory structure inconsistencies
+- Package configuration organization
 
 ## [0.3.1] - 2024-10-08
 
