@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2024-11-06
+
+### Added
+- Rate limiting functionality with configurable limits and burst support
+- Flexible request timeout configuration
+- New `RateLimitConfig` class for customizing API rate limits
+- New `TimeoutConfig` class for fine-grained timeout control
+
+### Enhanced
+- Improved error handling for timeouts and rate limits
+- Better logging for request timing and rate limiting events
+- Added extensive test coverage for new features
+
+### Changed
+- Updated default timeout values for better reliability
+- Improved request handling with separate connect and read timeouts
+
 ## [0.3.2] - 2024-11-06
 
 ### Changed
@@ -101,6 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usage examples for all main features
 - Installation guide
 
+
+[0.3.3]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.2.0...v0.3.0

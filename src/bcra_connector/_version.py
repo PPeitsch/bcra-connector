@@ -9,7 +9,7 @@ MAJOR.MINOR.PATCH
 """
 
 import re
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 
 class Version(NamedTuple):
@@ -64,7 +64,7 @@ class Version(NamedTuple):
         return self.major == other.major
 
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 version_info = Version.from_str(__version__)
 
 # Useful constants for version comparison
