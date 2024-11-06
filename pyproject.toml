@@ -12,17 +12,44 @@ authors = [
 ]
 license = { file = "LICENSE" }
 classifiers = [
+    # Development Status
     "Development Status :: 4 - Beta",
+
+    # Audience
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Information Technology",
+
+    # License
     "License :: OSI Approved :: MIT License",
+
+    # Operating System
     "Operating System :: OS Independent",
+
+    # Python versions
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only",
+
+    # Framework
+    "Framework :: Pytest",
+
+    # Topics
     "Topic :: Office/Business :: Financial",
+    "Topic :: Office/Business :: Financial :: Investment",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+
+    # Natural Language
+    "Natural Language :: English",
+    "Natural Language :: Spanish",
+
+    # Environment
+    "Environment :: Console",
+    "Typing :: Typed",
 ]
 keywords = ["bcra", "api", "connector", "argentina", "banco-central", "financial", "currency", "exchange-rates"]
 dependencies = [
