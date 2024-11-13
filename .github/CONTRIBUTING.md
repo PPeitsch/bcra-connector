@@ -19,7 +19,7 @@
 
 ## :balance_scale: Our Standards
 
-Please review our [Code of Conduct](.github/CODE_OF_CONDUCT.md). It is in effect at all times. We expect it to be honored by everyone who contributes to this project. Acting like an asshole will not be tolerated.
+Please review our [Code of Conduct](CODE_OF_CONDUCT.md). It is in effect at all times. We expect it to be honored by everyone who contributes to this project. Acting like an asshole will not be tolerated.
 
 ## :thinking: Getting Help
 
@@ -31,7 +31,7 @@ Before [creating an issue](https://help.github.com/en/github/managing-your-work-
 
 ### :shield: Security Issues
 
-Review our [Security Policy](.github/SECURITY.md). **Do not** file public issues for security vulnerabilities.
+Review our [Security Policy](SECURITY.md). **Do not** file public issues for security vulnerabilities.
 
 ### :bug: Bug Reports
 

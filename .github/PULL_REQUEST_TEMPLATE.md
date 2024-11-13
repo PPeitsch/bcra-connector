@@ -1,4 +1,4 @@
-⚡ *Have you read the [Contributing Guidelines](../CONTRIBUTING.md)?*
+⚡ *Have you read the [Contributing Guidelines](CONTRIBUTING.md)?*
 
 Fixes #
 
