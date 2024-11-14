@@ -1,7 +1,7 @@
 """Timeout configuration for API requests."""
 
 from dataclasses import dataclass
-from typing import Union, Tuple
+from typing import Tuple, Union
 
 
 @dataclass

@@ -1,6 +1,7 @@
 import unittest
 from datetime import date
-from bcra_connector.principales_variables import PrincipalesVariables, DatosVariable
+
+from bcra_connector.principales_variables import DatosVariable, PrincipalesVariables
 
 
 class TestPrincipalesVariables(unittest.TestCase):

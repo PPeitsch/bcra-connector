@@ -1,6 +1,7 @@
 """Tests for timeout configuration."""
 
 import unittest
+
 from bcra_connector.timeout_config import TimeoutConfig
 
 

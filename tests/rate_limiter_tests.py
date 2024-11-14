@@ -1,8 +1,9 @@
 """Tests for the rate limiting functionality."""
 
-import unittest
 import time
-from bcra_connector.rate_limiter import RateLimiter, RateLimitConfig
+import unittest
+
+from bcra_connector.rate_limiter import RateLimitConfig, RateLimiter
 
 
 class TestRateLimiter(unittest.TestCase):

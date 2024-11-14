@@ -1,11 +1,12 @@
 import unittest
-from unittest.mock import patch, Mock
-from datetime import datetime, date
+from datetime import date, datetime
+from unittest.mock import Mock, patch
+
 from bcra_connector import (
-    BCRAConnector,
     BCRAApiError,
-    PrincipalesVariables,
+    BCRAConnector,
     DatosVariable,
+    PrincipalesVariables,
 )
 
 

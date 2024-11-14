@@ -1,15 +1,17 @@
-import requests
-from typing import List, Dict, Union, Any, Optional
-from datetime import datetime, timedelta
 import logging
 import time
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
+import requests
 import urllib3
 from scipy.stats import pearsonr
-import numpy as np
-from .principales_variables import PrincipalesVariables, DatosVariable
-from .cheques import Entidad, Cheque, ChequeDetalle
-from .estadisticas_cambiarias import Divisa, CotizacionFecha, CotizacionDetalle
-from .rate_limiter import RateLimiter, RateLimitConfig
+
+from .cheques import Cheque, ChequeDetalle, Entidad
+from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
+from .principales_variables import DatosVariable, PrincipalesVariables
+from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
 
 

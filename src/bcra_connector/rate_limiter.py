@@ -3,8 +3,8 @@
 import time
 from collections import deque
 from dataclasses import dataclass
-from typing import Deque, Optional
 from threading import Lock
+from typing import Deque, Optional
 
 
 @dataclass
