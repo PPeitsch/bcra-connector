@@ -15,6 +15,7 @@ from .timeout_config import TimeoutConfig
 
 class BCRAApiError(Exception):
     """Custom exception for BCRA API errors."""
+
     pass
 
 
@@ -32,17 +33,17 @@ class BCRAConnector:
     DEFAULT_RATE_LIMIT = RateLimitConfig(
         calls=10,  # 10 calls
         period=1.0,  # per second
-        burst=20  # allowing up to 20 calls
+        burst=20,  # allowing up to 20 calls
     )
     DEFAULT_TIMEOUT = TimeoutConfig.default()
 
     def __init__(
-            self,
-            language: str = "es-AR",
-            verify_ssl: bool = True,
-            debug: bool = False,
-            rate_limit: Optional[RateLimitConfig] = None,
-            timeout: Optional[Union[TimeoutConfig, float]] = None
+        self,
+        language: str = "es-AR",
+        verify_ssl: bool = True,
+        debug: bool = False,
+        rate_limit: Optional[RateLimitConfig] = None,
+        timeout: Optional[Union[TimeoutConfig, float]] = None,
     ):
         """Initialize the BCRAConnector.
 
@@ -54,10 +55,9 @@ class BCRAConnector:
                       defaults to DEFAULT_TIMEOUT
         """
         self.session = requests.Session()
-        self.session.headers.update({
-            "Accept-Language": language,
-            "User-Agent": "BCRAConnector/1.0"
-        })
+        self.session.headers.update(
+            {"Accept-Language": language, "User-Agent": "BCRAConnector/1.0"}
+        )
         self.verify_ssl = verify_ssl
 
         # Configure timeouts
@@ -73,14 +73,21 @@ class BCRAConnector:
 
         # Configure logging
         log_level = logging.DEBUG if debug else logging.INFO
-        logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logging.basicConfig(
+            level=log_level,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        )
         self.logger = logging.getLogger(__name__)
 
         if not self.verify_ssl:
-            self.logger.warning("SSL verification is disabled. This is not recommended for production use.")
+            self.logger.warning(
+                "SSL verification is disabled. This is not recommended for production use."
+            )
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _make_request(
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Make a request to the BCRA API with retry logic and rate limiting.
 
         :param endpoint: The API endpoint to request
@@ -102,21 +109,29 @@ class BCRAConnector:
                     url,
                     params=params,
                     verify=self.verify_ssl,
-                    timeout=self.timeout.as_tuple
+                    timeout=self.timeout.as_tuple,
                 )
                 response.raise_for_status()
                 self.logger.debug("Request successful")
                 return response.json()
             except requests.Timeout as e:
-                self.logger.error(f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}")
+                self.logger.error(
+                    f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
+                )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(f"Request timed out after {self.MAX_RETRIES} attempts") from e
-                time.sleep(self.RETRY_DELAY * (2 ** attempt))
+                    raise BCRAApiError(
+                        f"Request timed out after {self.MAX_RETRIES} attempts"
+                    ) from e
+                time.sleep(self.RETRY_DELAY * (2**attempt))
             except requests.RequestException as e:
-                self.logger.warning(f"Request failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}")
+                self.logger.warning(
+                    f"Request failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
+                )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(f"API request failed after {self.MAX_RETRIES} attempts: {str(e)}") from e
-                time.sleep(self.RETRY_DELAY * (2 ** attempt))  # Exponential backoff
+                    raise BCRAApiError(
+                        f"API request failed after {self.MAX_RETRIES} attempts: {str(e)}"
+                    ) from e
+                time.sleep(self.RETRY_DELAY * (2**attempt))  # Exponential backoff
 
     # Principales Variables methods
     def get_principales_variables(self) -> List[PrincipalesVariables]:
@@ -130,14 +145,18 @@ class BCRAConnector:
         try:
             data = self._make_request("estadisticas/v2.0/PrincipalesVariables")
 
-            if not isinstance(data, dict) or 'results' not in data:
-                raise BCRAApiError("Unexpected response format: 'results' key not found")
+            if not isinstance(data, dict) or "results" not in data:
+                raise BCRAApiError(
+                    "Unexpected response format: 'results' key not found"
+                )
 
-            if not isinstance(data['results'], list):
-                raise BCRAApiError("Unexpected response format: 'results' is not a list")
+            if not isinstance(data["results"], list):
+                raise BCRAApiError(
+                    "Unexpected response format: 'results' is not a list"
+                )
 
             variables = []
-            for item in data['results']:
+            for item in data["results"]:
                 try:
                     variables.append(PrincipalesVariables.from_dict(item))
                 except (KeyError, ValueError) as e:
@@ -146,7 +165,9 @@ class BCRAConnector:
             if not variables:
                 self.logger.warning("No valid variables found in the response")
             else:
-                self.logger.info(f"Successfully fetched {len(variables)} principal variables")
+                self.logger.info(
+                    f"Successfully fetched {len(variables)} principal variables"
+                )
 
             return variables
         except BCRAApiError:
@@ -156,7 +177,9 @@ class BCRAConnector:
             self.logger.error(error_msg)
             raise BCRAApiError(error_msg) from e
 
-    def get_datos_variable(self, id_variable: int, desde: datetime, hasta: datetime) -> List[DatosVariable]:
+    def get_datos_variable(
+        self, id_variable: int, desde: datetime, hasta: datetime
+    ) -> List[DatosVariable]:
         """
         Fetch the list of values for a variable within a specified date range.
 
@@ -167,10 +190,14 @@ class BCRAConnector:
         :raises ValueError: If the date range is invalid
         :raises BCRAApiError: If the API request fails
         """
-        self.logger.info(f"Fetching data for variable {id_variable} from {desde.date()} to {hasta.date()}")
+        self.logger.info(
+            f"Fetching data for variable {id_variable} from {desde.date()} to {hasta.date()}"
+        )
 
         if desde > hasta:
-            raise ValueError("'desde' date must be earlier than or equal to 'hasta' date")
+            raise ValueError(
+                "'desde' date must be earlier than or equal to 'hasta' date"
+            )
 
         if hasta - desde > timedelta(days=365):
             raise ValueError("Date range must not exceed 1 year")
@@ -179,7 +206,7 @@ class BCRAConnector:
             data = self._make_request(
                 f"estadisticas/v2.0/DatosVariable/{id_variable}/{desde.date()}/{hasta.date()}"
             )
-            datos = [DatosVariable.from_dict(item) for item in data['results']]
+            datos = [DatosVariable.from_dict(item) for item in data["results"]]
             self.logger.info(f"Successfully fetched {len(datos)} data points")
             return datos
         except KeyError as e:
@@ -195,14 +222,18 @@ class BCRAConnector:
         """
         self.logger.info(f"Fetching latest value for variable {id_variable}")
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)  # Look back 30 days to ensure we get data
+        start_date = end_date - timedelta(
+            days=30
+        )  # Look back 30 days to ensure we get data
 
         data = self.get_datos_variable(id_variable, start_date, end_date)
         if not data:
             raise BCRAApiError(f"No data available for variable {id_variable}")
 
         latest = max(data, key=lambda x: x.fecha)
-        self.logger.info(f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha})")
+        self.logger.info(
+            f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha})"
+        )
         return latest
 
     # Cheques methods
@@ -216,7 +247,7 @@ class BCRAConnector:
         self.logger.info("Fetching financial entities")
         try:
             data = self._make_request("cheques/v1.0/entidades")
-            entities = [Entidad(**e) for e in data['results']]
+            entities = [Entidad(**e) for e in data["results"]]
             self.logger.info(f"Successfully fetched {len(entities)} entities")
             return entities
         except KeyError as e:
@@ -231,13 +262,19 @@ class BCRAConnector:
         :return: A Cheque object with the check's information
         :raises BCRAApiError: If the API request fails or returns unexpected data
         """
-        self.logger.info(f"Fetching information for check {numero_cheque} from entity {codigo_entidad}")
+        self.logger.info(
+            f"Fetching information for check {numero_cheque} from entity {codigo_entidad}"
+        )
         try:
-            data = self._make_request(f"cheques/v1.0/denunciados/{codigo_entidad}/{numero_cheque}")
-            result = data['results']
-            detalles = [ChequeDetalle(**d) for d in result.get('detalles', [])]
+            data = self._make_request(
+                f"cheques/v1.0/denunciados/{codigo_entidad}/{numero_cheque}"
+            )
+            result = data["results"]
+            detalles = [ChequeDetalle(**d) for d in result.get("detalles", [])]
             cheque = Cheque(**result, detalles=detalles)
-            self.logger.info(f"Successfully fetched information for check {numero_cheque}")
+            self.logger.info(
+                f"Successfully fetched information for check {numero_cheque}"
+            )
             return cheque
         except KeyError as e:
             raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
@@ -253,7 +290,7 @@ class BCRAConnector:
         self.logger.info("Fetching currencies")
         try:
             data = self._make_request("estadisticascambiarias/v1.0/Maestros/Divisas")
-            divisas = [Divisa(**d) for d in data['results']]
+            divisas = [Divisa(**d) for d in data["results"]]
             self.logger.info(f"Successfully fetched {len(divisas)} currencies")
             return divisas
         except KeyError as e:
@@ -267,19 +304,28 @@ class BCRAConnector:
         :return: A CotizacionFecha object with the quotations
         :raises BCRAApiError: If the API request fails or returns unexpected data
         """
-        self.logger.info(f"Fetching quotations for date: {fecha if fecha else 'latest'}")
+        self.logger.info(
+            f"Fetching quotations for date: {fecha if fecha else 'latest'}"
+        )
         try:
             params = {"fecha": fecha} if fecha else None
-            data = self._make_request("estadisticascambiarias/v1.0/Cotizaciones", params)
-            cotizacion = CotizacionFecha.from_dict(data['results'])
+            data = self._make_request(
+                "estadisticascambiarias/v1.0/Cotizaciones", params
+            )
+            cotizacion = CotizacionFecha.from_dict(data["results"])
             self.logger.info(f"Successfully fetched quotations for {cotizacion.fecha}")
             return cotizacion
         except KeyError as e:
             raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
 
-    def get_evolucion_moneda(self, moneda: str, fecha_desde: Optional[str] = None,
-                             fecha_hasta: Optional[str] = None, limit: int = 1000, offset: int = 0) -> List[
-            CotizacionFecha]:
+    def get_evolucion_moneda(
+        self,
+        moneda: str,
+        fecha_desde: Optional[str] = None,
+        fecha_hasta: Optional[str] = None,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> List[CotizacionFecha]:
         """
         Fetch the evolution of a specific currency's quotation.
 
@@ -301,17 +347,23 @@ class BCRAConnector:
                 "fechaDesde": fecha_desde,
                 "fechaHasta": fecha_hasta,
                 "limit": limit,
-                "offset": offset
+                "offset": offset,
             }
             params = {k: v for k, v in params.items() if v is not None}
-            data = self._make_request(f"estadisticascambiarias/v1.0/Cotizaciones/{moneda}", params)
-            evolucion = [CotizacionFecha.from_dict(cf) for cf in data['results']]
-            self.logger.info(f"Successfully fetched {len(evolucion)} data points for {moneda}")
+            data = self._make_request(
+                f"estadisticascambiarias/v1.0/Cotizaciones/{moneda}", params
+            )
+            evolucion = [CotizacionFecha.from_dict(cf) for cf in data["results"]]
+            self.logger.info(
+                f"Successfully fetched {len(evolucion)} data points for {moneda}"
+            )
             return evolucion
         except KeyError as e:
             raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
 
-    def get_variable_by_name(self, variable_name: str) -> Optional[PrincipalesVariables]:
+    def get_variable_by_name(
+        self, variable_name: str
+    ) -> Optional[PrincipalesVariables]:
         """
         Find a principal variable by its name.
 
@@ -325,7 +377,9 @@ class BCRAConnector:
                 return variable
         return None
 
-    def get_variable_history(self, variable_name: str, days: int = 30) -> List[DatosVariable]:
+    def get_variable_history(
+        self, variable_name: str, days: int = 30
+    ) -> List[DatosVariable]:
         """
         Get the historical data for a variable by its name for the last n days.
 
@@ -342,7 +396,9 @@ class BCRAConnector:
         start_date = end_date - timedelta(days=days)
         return self.get_datos_variable(variable.idVariable, start_date, end_date)
 
-    def get_currency_evolution(self, currency_code: str, days: int = 30) -> List[CotizacionFecha]:
+    def get_currency_evolution(
+        self, currency_code: str, days: int = 30
+    ) -> List[CotizacionFecha]:
         """
         Get the evolution of a currency's quotation for the last n days.
 
@@ -355,7 +411,7 @@ class BCRAConnector:
         return self.get_evolucion_moneda(
             currency_code,
             fecha_desde=start_date.strftime("%Y-%m-%d"),
-            fecha_hasta=end_date.strftime("%Y-%m-%d")
+            fecha_hasta=end_date.strftime("%Y-%m-%d"),
         )
 
     def check_denunciado(self, entity_name: str, check_number: int) -> bool:
@@ -368,7 +424,9 @@ class BCRAConnector:
         :raises ValueError: If the entity is not found
         """
         entities = self.get_entidades()
-        entity = next((e for e in entities if e.denominacion.lower() == entity_name.lower()), None)
+        entity = next(
+            (e for e in entities if e.denominacion.lower() == entity_name.lower()), None
+        )
         if not entity:
             raise ValueError(f"Entity '{entity_name}' not found")
 
@@ -382,10 +440,14 @@ class BCRAConnector:
         :return: A dictionary with currency codes as keys and their latest quotations as values
         """
         cotizaciones = self.get_cotizaciones()
-        return {detail.codigo_moneda: detail.tipo_cotizacion for detail in cotizaciones.detalle}
+        return {
+            detail.codigo_moneda: detail.tipo_cotizacion
+            for detail in cotizaciones.detalle
+        }
 
-    def get_currency_pair_evolution(self, base_currency: str, quote_currency: str, days: int = 30) -> List[
-            Dict[str, Any]]:
+    def get_currency_pair_evolution(
+        self, base_currency: str, quote_currency: str, days: int = 30
+    ) -> List[Dict[str, Any]]:
         """
         Get the evolution of a currency pair for the last n days.
 
@@ -397,9 +459,14 @@ class BCRAConnector:
         base_evolution = self.get_currency_evolution(base_currency, days)
         quote_evolution = self.get_currency_evolution(quote_currency, days)
 
-        base_dict = {cf.fecha: self._get_cotizacion_detalle(cf, base_currency).tipo_cotizacion for cf in base_evolution}
-        quote_dict = {cf.fecha: self._get_cotizacion_detalle(cf, quote_currency).tipo_cotizacion for cf in
-                      quote_evolution}
+        base_dict = {
+            cf.fecha: self._get_cotizacion_detalle(cf, base_currency).tipo_cotizacion
+            for cf in base_evolution
+        }
+        quote_dict = {
+            cf.fecha: self._get_cotizacion_detalle(cf, quote_currency).tipo_cotizacion
+            for cf in quote_evolution
+        }
 
         pair_evolution = []
         for date in set(base_dict.keys()) & set(quote_dict.keys()):
@@ -410,7 +477,9 @@ class BCRAConnector:
         return sorted(pair_evolution, key=lambda x: x["fecha"])
 
     @staticmethod
-    def _get_cotizacion_detalle(cotizacion_fecha: CotizacionFecha, currency_code: str) -> CotizacionDetalle:
+    def _get_cotizacion_detalle(
+        cotizacion_fecha: CotizacionFecha, currency_code: str
+    ) -> CotizacionDetalle:
         """
         Helper method to get CotizacionDetalle for a specific currency from CotizacionFecha.
 
@@ -422,9 +491,13 @@ class BCRAConnector:
         for detail in cotizacion_fecha.detalle:
             if detail.codigo_moneda == currency_code:
                 return detail
-        raise ValueError(f"Currency {currency_code} not found in cotizacion for date {cotizacion_fecha.fecha}")
+        raise ValueError(
+            f"Currency {currency_code} not found in cotizacion for date {cotizacion_fecha.fecha}"
+        )
 
-    def get_variable_correlation(self, variable_name1: str, variable_name2: str, days: int = 30) -> float:
+    def get_variable_correlation(
+        self, variable_name1: str, variable_name2: str, days: int = 30
+    ) -> float:
         """
         Calculate the correlation between two variables over the last n days.
 
@@ -450,16 +523,20 @@ class BCRAConnector:
         all_dates = sorted(set(dates1 + dates2))
 
         # Interpolate missing values
-        interp_values1 = np.interp([d.toordinal() for d in all_dates],
-                                   [d.toordinal() for d in dates1], values1)
-        interp_values2 = np.interp([d.toordinal() for d in all_dates],
-                                   [d.toordinal() for d in dates2], values2)
+        interp_values1 = np.interp(
+            [d.toordinal() for d in all_dates], [d.toordinal() for d in dates1], values1
+        )
+        interp_values2 = np.interp(
+            [d.toordinal() for d in all_dates], [d.toordinal() for d in dates2], values2
+        )
 
         # Calculate correlation
         correlation, _ = pearsonr(interp_values1, interp_values2)
         return correlation
 
-    def generate_variable_report(self, variable_name: str, days: int = 30) -> Dict[str, Any]:
+    def generate_variable_report(
+        self, variable_name: str, days: int = 30
+    ) -> Dict[str, Any]:
         """
         Generate a comprehensive report for a given variable.
 
@@ -494,11 +571,13 @@ class BCRAConnector:
             "mean_value": sum(values) / len(values),
             "median_value": sorted(values)[len(values) // 2],
             "data_points": len(values),
-            "percent_change": (values[-1] - values[0]) / values[0] * 100 if values[0] != 0 else None
+            "percent_change": (
+                (values[-1] - values[0]) / values[0] * 100 if values[0] != 0 else None
+            ),
         }
 
         # Add 'unit' to the report only if it's available in the variable
-        if hasattr(variable, 'unidad'):
+        if hasattr(variable, "unidad"):
             report["unit"] = variable.unidad
 
         return report

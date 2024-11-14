@@ -1,9 +1,3 @@
-from .principales_variables import (
-    PrincipalesVariables,
-    DatosVariable
-)
+from .principales_variables import PrincipalesVariables, DatosVariable
 
-__all__ = [
-    "PrincipalesVariables",
-    "DatosVariable"
-]
+__all__ = ["PrincipalesVariables", "DatosVariable"]

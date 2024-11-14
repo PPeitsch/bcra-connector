@@ -7,7 +7,7 @@ from .estadisticas_cambiarias import (
     DivisaResponse,
     CotizacionResponse,
     CotizacionesResponse,
-    ErrorResponse
+    ErrorResponse,
 )
 
 __all__ = [
@@ -19,5 +19,5 @@ __all__ = [
     "DivisaResponse",
     "CotizacionResponse",
     "CotizacionesResponse",
-    "ErrorResponse"
+    "ErrorResponse",
 ]

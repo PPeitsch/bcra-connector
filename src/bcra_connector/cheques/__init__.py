@@ -4,7 +4,7 @@ from .cheques import (
     Cheque,
     EntidadResponse,
     ChequeResponse,
-    ErrorResponse
+    ErrorResponse,
 )
 
 __all__ = [
@@ -13,5 +13,5 @@ __all__ = [
     "Cheque",
     "EntidadResponse",
     "ChequeResponse",
-    "ErrorResponse"
+    "ErrorResponse",
 ]

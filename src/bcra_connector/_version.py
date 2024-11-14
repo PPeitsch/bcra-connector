@@ -14,6 +14,7 @@ from typing import NamedTuple
 
 class Version(NamedTuple):
     """Version information as a named tuple."""
+
     major: int
     minor: int
     patch: int
@@ -23,20 +24,20 @@ class Version(NamedTuple):
         return f"{self.major}.{self.minor}.{self.patch}"
 
     @classmethod
-    def from_str(cls, version_str: str) -> 'Version':
+    def from_str(cls, version_str: str) -> "Version":
         """Create a Version instance from a string."""
         if not cls.is_valid(version_str):
             raise ValueError(
                 f"Invalid version format: {version_str}. "
                 "Version must follow semantic versioning X.Y.Z"
             )
-        major, minor, patch = map(int, version_str.split('.'))
+        major, minor, patch = map(int, version_str.split("."))
         return cls(major, minor, patch)
 
     @staticmethod
     def is_valid(version_str: str) -> bool:
         """Check if a version string is valid."""
-        pattern = r'^\d+\.\d+\.\d+$'
+        pattern = r"^\d+\.\d+\.\d+$"
         return bool(re.match(pattern, version_str))
 
     def to_dev_version(self) -> str:
@@ -47,19 +48,19 @@ class Version(NamedTuple):
         """Convert to a release candidate version string."""
         return f"{self}rc{rc_number}"
 
-    def increment_major(self) -> 'Version':
+    def increment_major(self) -> "Version":
         """Create a new Version with incremented major version."""
         return Version(self.major + 1, 0, 0)
 
-    def increment_minor(self) -> 'Version':
+    def increment_minor(self) -> "Version":
         """Create a new Version with incremented minor version."""
         return Version(self.major, self.minor + 1, 0)
 
-    def increment_patch(self) -> 'Version':
+    def increment_patch(self) -> "Version":
         """Create a new Version with incremented patch version."""
         return Version(self.major, self.minor, self.patch + 1)
 
-    def is_compatible_with(self, other: 'Version') -> bool:
+    def is_compatible_with(self, other: "Version") -> bool:
         """Check if this version is compatible with another version."""
         return self.major == other.major
 

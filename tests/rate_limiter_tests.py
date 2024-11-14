@@ -69,9 +69,9 @@ class TestRateLimiter(unittest.TestCase):
         """Test invalid configuration handling."""
         with self.assertRaises(ValueError):
             RateLimitConfig(calls=0, period=1.0)
-        
+
         with self.assertRaises(ValueError):
             RateLimitConfig(calls=1, period=0)
-        
+
         with self.assertRaises(ValueError):
             RateLimitConfig(calls=2, period=1.0, burst=1)

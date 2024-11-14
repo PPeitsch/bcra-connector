@@ -11,16 +11,14 @@ class Divisa:
     :param codigo: The currency code (ISO)
     :param denominacion: The currency name
     """
+
     codigo: str
     denominacion: str
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Divisa':
+    def from_dict(cls, data: Dict[str, Any]) -> "Divisa":
         """Create a Divisa instance from a dictionary."""
-        return cls(
-            codigo=data['codigo'],
-            denominacion=data['denominacion']
-        )
+        return cls(codigo=data["codigo"], denominacion=data["denominacion"])
 
 
 @dataclass
@@ -33,19 +31,20 @@ class CotizacionDetalle:
     :param tipo_pase: The exchange rate
     :param tipo_cotizacion: The quotation type
     """
+
     codigo_moneda: str
     descripcion: str
     tipo_pase: float
     tipo_cotizacion: float
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CotizacionDetalle':
+    def from_dict(cls, data: Dict[str, Any]) -> "CotizacionDetalle":
         """Create a CotizacionDetalle instance from a dictionary."""
         return cls(
-            codigo_moneda=data['codigoMoneda'],
-            descripcion=data['descripcion'],
-            tipo_pase=float(data['tipoPase']),
-            tipo_cotizacion=float(data['tipoCotizacion'])
+            codigo_moneda=data["codigoMoneda"],
+            descripcion=data["descripcion"],
+            tipo_pase=float(data["tipoPase"]),
+            tipo_cotizacion=float(data["tipoCotizacion"]),
         )
 
 
@@ -57,29 +56,31 @@ class CotizacionFecha:
     :param fecha: The date of the quotations
     :param detalle: List of quotation details
     """
+
     fecha: Optional[date]
     detalle: List[CotizacionDetalle]
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CotizacionFecha':
+    def from_dict(cls, data: Dict[str, Any]) -> "CotizacionFecha":
         """Create a CotizacionFecha instance from a dictionary."""
         return cls(
-            fecha=date.fromisoformat(data['fecha']) if data['fecha'] else None,
-            detalle=[CotizacionDetalle.from_dict(d) for d in data['detalle']]
+            fecha=date.fromisoformat(data["fecha"]) if data["fecha"] else None,
+            detalle=[CotizacionDetalle.from_dict(d) for d in data["detalle"]],
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the CotizacionFecha instance to a dictionary."""
         return {
-            'fecha': self.fecha.isoformat() if self.fecha else None,
-            'detalle': [
+            "fecha": self.fecha.isoformat() if self.fecha else None,
+            "detalle": [
                 {
-                    'codigoMoneda': d.codigo_moneda,
-                    'descripcion': d.descripcion,
-                    'tipoPase': d.tipo_pase,
-                    'tipoCotizacion': d.tipo_cotizacion
-                } for d in self.detalle
-            ]
+                    "codigoMoneda": d.codigo_moneda,
+                    "descripcion": d.descripcion,
+                    "tipoPase": d.tipo_pase,
+                    "tipoCotizacion": d.tipo_cotizacion,
+                }
+                for d in self.detalle
+            ],
         }
 
 
@@ -92,18 +93,15 @@ class Resultset:
     :param offset: The offset of the results
     :param limit: The limit of the results
     """
+
     count: int
     offset: int
     limit: int
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Resultset':
+    def from_dict(cls, data: Dict[str, Any]) -> "Resultset":
         """Create a Resultset instance from a dictionary."""
-        return cls(
-            count=data['count'],
-            offset=data['offset'],
-            limit=data['limit']
-        )
+        return cls(count=data["count"], offset=data["offset"], limit=data["limit"])
 
 
 @dataclass
@@ -113,14 +111,13 @@ class Metadata:
 
     :param resultset: The resultset metadata
     """
+
     resultset: Resultset
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Metadata':
+    def from_dict(cls, data: Dict[str, Any]) -> "Metadata":
         """Create a Metadata instance from a dictionary."""
-        return cls(
-            resultset=Resultset.from_dict(data['resultset'])
-        )
+        return cls(resultset=Resultset.from_dict(data["resultset"]))
 
 
 @dataclass
@@ -131,15 +128,16 @@ class DivisaResponse:
     :param status: The HTTP status code
     :param results: List of Divisa objects
     """
+
     status: int
     results: List[Divisa]
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'DivisaResponse':
+    def from_dict(cls, data: Dict[str, Any]) -> "DivisaResponse":
         """Create a DivisaResponse instance from a dictionary."""
         return cls(
-            status=data['status'],
-            results=[Divisa.from_dict(d) for d in data['results']]
+            status=data["status"],
+            results=[Divisa.from_dict(d) for d in data["results"]],
         )
 
 
@@ -151,15 +149,15 @@ class CotizacionResponse:
     :param status: The HTTP status code
     :param results: CotizacionFecha object
     """
+
     status: int
     results: CotizacionFecha
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CotizacionResponse':
+    def from_dict(cls, data: Dict[str, Any]) -> "CotizacionResponse":
         """Create a CotizacionResponse instance from a dictionary."""
         return cls(
-            status=data['status'],
-            results=CotizacionFecha.from_dict(data['results'])
+            status=data["status"], results=CotizacionFecha.from_dict(data["results"])
         )
 
 
@@ -172,17 +170,18 @@ class CotizacionesResponse:
     :param metadata: Metadata about the response
     :param results: List of CotizacionFecha objects
     """
+
     status: int
     metadata: Metadata
     results: List[CotizacionFecha]
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CotizacionesResponse':
+    def from_dict(cls, data: Dict[str, Any]) -> "CotizacionesResponse":
         """Create a CotizacionesResponse instance from a dictionary."""
         return cls(
-            status=data['status'],
-            metadata=Metadata.from_dict(data['metadata']),
-            results=[CotizacionFecha.from_dict(d) for d in data['results']]
+            status=data["status"],
+            metadata=Metadata.from_dict(data["metadata"]),
+            results=[CotizacionFecha.from_dict(d) for d in data["results"]],
         )
 
 
@@ -194,13 +193,11 @@ class ErrorResponse:
     :param status: The HTTP status code
     :param error_messages: List of error messages
     """
+
     status: int
     error_messages: List[str]
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ErrorResponse':
+    def from_dict(cls, data: Dict[str, Any]) -> "ErrorResponse":
         """Create an ErrorResponse instance from a dictionary."""
-        return cls(
-            status=data['status'],
-            error_messages=data['errorMessages']
-        )
+        return cls(status=data["status"], error_messages=data["errorMessages"])

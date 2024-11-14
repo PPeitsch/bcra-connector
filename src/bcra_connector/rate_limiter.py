@@ -10,11 +10,12 @@ from threading import Lock
 @dataclass
 class RateLimitConfig:
     """Configuration for rate limiting.
-    
+
     :param calls: Maximum number of calls allowed in the time period
     :param period: Time period in seconds
     :param burst: Maximum number of calls allowed in quick succession (burst limit)
     """
+
     calls: int
     period: float
     burst: Optional[int] = None
@@ -29,7 +30,7 @@ class RateLimitConfig:
             raise ValueError("burst must be greater than 0")
         if self.burst is not None and self.burst < self.calls:
             raise ValueError("burst must be greater than or equal to calls")
-        
+
         # If burst is not set, use calls as burst limit
         if self.burst is None:
             self.burst = self.calls
@@ -40,7 +41,7 @@ class RateLimiter:
 
     def __init__(self, config: RateLimitConfig):
         """Initialize the rate limiter.
-        
+
         :param config: Rate limit configuration
         """
         self.config = config
@@ -77,7 +78,7 @@ class RateLimiter:
 
     def acquire(self) -> float:
         """Acquire permission to make a request.
-        
+
         :return: Time spent waiting (in seconds)
         """
         with self._lock:

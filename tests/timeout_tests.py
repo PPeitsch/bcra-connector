@@ -34,7 +34,7 @@ class TestTimeoutConfig(unittest.TestCase):
         """Test creating TimeoutConfig from total timeout."""
         config = TimeoutConfig.from_total(10.0)
         self.assertEqual(config.connect, 1.0)  # 10% of total
-        self.assertEqual(config.read, 9.0)    # 90% of total
+        self.assertEqual(config.read, 9.0)  # 90% of total
 
     def test_invalid_total(self):
         """Test invalid total timeout values."""
