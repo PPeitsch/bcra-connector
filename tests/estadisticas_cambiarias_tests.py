@@ -15,7 +15,6 @@ from bcra_connector.estadisticas_cambiarias import (
 
 
 class TestEstadisticasCambiarias(unittest.TestCase):
-
     def test_divisa(self):
         data = {"codigo": "USD", "denominacion": "DOLAR ESTADOUNIDENSE"}
         divisa = Divisa.from_dict(data)

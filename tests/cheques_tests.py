@@ -12,7 +12,6 @@ from bcra_connector.cheques import (
 
 
 class TestCheques(unittest.TestCase):
-
     def test_entidad(self):
         data = {"codigoEntidad": 11, "denominacion": "BANCO DE LA NACION ARGENTINA"}
         entidad = Entidad.from_dict(data)
