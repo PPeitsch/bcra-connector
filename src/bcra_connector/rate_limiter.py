@@ -9,33 +9,29 @@ from typing import Deque, Optional
 
 @dataclass
 class RateLimitConfig:
-    """Configuration for rate limiting.
-
-    :param calls: Maximum number of calls allowed in the time period
-    :param period: Time period in seconds
-    :param burst: Maximum number of calls allowed in quick succession (burst limit)
-    """
-
     calls: int
     period: float
-    burst: Optional[int] = None
+    _burst: Optional[int] = None
 
-    def __post_init__(self):
-        """Validate and set defaults for rate limit configuration."""
+    @property
+    def burst(self) -> int:
+        """Burst limit is always an int after initialization."""
+        assert self._burst is not None
+        return self._burst
+
+    def __post_init__(self) -> None:
         if self.calls <= 0:
             raise ValueError("calls must be greater than 0")
         if self.period <= 0:
             raise ValueError("period must be greater than 0")
-        if self.burst is not None and self.burst <= 0:
+        if self._burst is not None and self._burst <= 0:
             raise ValueError("burst must be greater than 0")
-        if self.burst is not None and self.burst < self.calls:
+        if self._burst is not None and self._burst < self.calls:
             raise ValueError("burst must be greater than or equal to calls")
 
-        # If burst is not set, use calls as burst limit
-        if self.burst is None:
-            self.burst = self.calls
-
-        self.burst: int  # type: ignore[no-redef]
+        # Si burst no está establecido, usar calls como límite
+        if self._burst is None:
+            self._burst = self.calls
 
 
 class RateLimiter:
