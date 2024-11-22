@@ -1,4 +1,4 @@
-"""Tests for timeout configuration."""
+"""Unit tests for request timeout configuration."""
 
 import unittest
 

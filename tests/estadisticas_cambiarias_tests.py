@@ -1,3 +1,5 @@
+"""Unit tests for the BCRA Currency Exchange Statistics models."""
+
 import unittest
 from datetime import date
 

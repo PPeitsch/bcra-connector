@@ -1,3 +1,8 @@
+"""
+Example of different BCRA connector configurations.
+Demonstrates timeout settings, SSL verification, and debug mode.
+"""
+
 import sys
 import os
 import logging

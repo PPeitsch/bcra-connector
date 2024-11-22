@@ -1,3 +1,5 @@
+"""Unit tests for the main BCRA connector functionality."""
+
 import unittest
 from datetime import date, datetime
 from unittest.mock import Mock, patch

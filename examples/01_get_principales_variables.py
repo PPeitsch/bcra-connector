@@ -1,3 +1,8 @@
+"""
+Example demonstrating how to fetch and analyze principal variables from BCRA.
+Shows basic usage, error handling, and data visualization.
+"""
+
 import logging
 import os
 import sys

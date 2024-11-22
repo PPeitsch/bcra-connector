@@ -1,3 +1,5 @@
+"""Unit tests for the BCRA Checks API data models."""
+
 import unittest
 from datetime import date
 

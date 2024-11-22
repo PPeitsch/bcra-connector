@@ -1,4 +1,4 @@
-"""Tests for the rate limiting functionality."""
+"""Unit tests for the rate limiting functionality."""
 
 import time
 import unittest

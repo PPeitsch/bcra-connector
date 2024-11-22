@@ -1,3 +1,5 @@
+"""Unit tests for the BCRA Principal Variables models."""
+
 import unittest
 from datetime import date
 
