@@ -1,4 +1,13 @@
-test:
+name: Test and Publish
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
     name: Tests - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
