@@ -4,7 +4,6 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bcra-connector"
-version = "0.3.3"
 dynamic = ["version"]
 description = "A Python connector for the BCRA (Banco Central de la República Argentina) APIs"
 readme = "README.md"
@@ -84,7 +83,7 @@ Changelog = "https://github.com/PPeitsch/bcra-connector/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
 path = "src/bcra_connector/_version.py"
-pattern = '__version__ = "(?P<version>[^"]+)"'
+pattern = '__version__ = VERSION = "(?P<version>[^"]+)"'
 
 [tool.hatch.build.hooks.version]
 path = "src/bcra_connector/_version.py"
