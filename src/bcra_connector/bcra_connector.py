@@ -473,7 +473,7 @@ class BCRAConnector:
 
         pair_evolution = []
         for date in set(base_dict.keys()) & set(quote_dict.keys()):
-            if base_dict[date] != 0:
+            if base_dict[date] != 0 and date is not None:
                 rate = quote_dict[date] / base_dict[date]
                 pair_evolution.append({"fecha": date.isoformat(), "tasa": rate})
 
