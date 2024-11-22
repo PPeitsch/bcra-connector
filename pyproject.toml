@@ -54,8 +54,8 @@ dev = [
     "black>=23.0.0",
     "isort>=5.0.0",
     "mypy>=1.0.0",
-    "types-requests>=2.31.0.20240125",
-    "types-urllib3>=2.0.0.20240125",
+    "types-requests>=2.31.0",
+    "types-urllib3>=1.26.0",
     "numpy>=1.26.4",
     "scipy>=1.13.1",
 ]
@@ -105,6 +105,6 @@ module = ["scipy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = "--cov=bcra_connector --cov-report=xml"
+addopts = "--cov-report=term --cov-report=xml"
 testpaths = ["tests"]
 python_files = "*_tests.py"
