@@ -35,7 +35,7 @@ class BCRAConnector:
     DEFAULT_RATE_LIMIT = RateLimitConfig(
         calls=10,  # 10 calls
         period=1.0,  # per second
-        burst=20,  # allowing up to 20 calls
+        _burst=20,  # allowing up to 20 calls
     )
     DEFAULT_TIMEOUT = TimeoutConfig.default()
 
@@ -134,6 +134,7 @@ class BCRAConnector:
                         f"API request failed after {self.MAX_RETRIES} attempts: {str(e)}"
                     ) from e
                 time.sleep(self.RETRY_DELAY * (2**attempt))  # Exponential backoff
+        raise BCRAApiError("The request could not be completed")
 
     # Principales Variables methods
     def get_principales_variables(self) -> List[PrincipalesVariables]:
@@ -534,7 +535,7 @@ class BCRAConnector:
 
         # Calculate correlation
         correlation, _ = pearsonr(interp_values1, interp_values2)
-        return correlation
+        return float(correlation)
 
     def generate_variable_report(
         self, variable_name: str, days: int = 30
