@@ -95,6 +95,15 @@ jobs:
       - name: Build package
         run: hatch build
 
+      - name: Verify version
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PACKAGE_VERSION=$(python -c "from bcra_connector import __version__; print(__version__)")
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Version mismatch: Tag version ($TAG_VERSION) != Package version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+
       - name: Publish to PyPI
         env:
           HATCH_INDEX_USER: __token__
