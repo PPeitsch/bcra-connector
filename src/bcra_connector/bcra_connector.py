@@ -115,7 +115,7 @@ class BCRAConnector:
                 )
                 response.raise_for_status()
                 self.logger.debug("Request successful")
-                return response.json()
+                return dict(response.json())
             except requests.Timeout as e:
                 self.logger.error(
                     f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
