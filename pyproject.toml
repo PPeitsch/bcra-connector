@@ -4,6 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bcra-connector"
+version = "0.3.3"
 dynamic = ["version"]
 description = "A Python connector for the BCRA (Banco Central de la República Argentina) APIs"
 readme = "README.md"
