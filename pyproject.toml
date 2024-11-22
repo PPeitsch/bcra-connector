@@ -56,6 +56,8 @@ dev = [
     "mypy>=1.0.0",
     "types-requests>=2.31.0",
     "types-urllib3>=1.26.0",
+    "numpy>=1.26.4",
+    "scipy>=1.13.1",
 ]
 
 [project.urls]
