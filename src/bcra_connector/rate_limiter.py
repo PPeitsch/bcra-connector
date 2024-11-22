@@ -9,29 +9,34 @@ from typing import Deque, Optional
 
 @dataclass
 class RateLimitConfig:
+    """Configuration for rate limiting.
+
+    :param calls: Number of calls allowed per period
+    :param period: Time period in seconds
+    :param _burst: Maximum number of calls allowed in burst (internal)
+    """
     calls: int
     period: float
     _burst: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        """Validate rate limit configuration."""
+        if self.calls <= 0:
+            raise ValueError("calls must be greater than 0")
+        if self.period <= 0:
+            raise ValueError("period must be greater than 0")
+        if self._burst is not None and self._burst < self.calls:
+            raise ValueError("burst must be greater than or equal to calls")
+
+        # If burst is not specified, use calls as the burst limit
+        if self._burst is None:
+            self._burst = self.calls
 
     @property
     def burst(self) -> int:
         """Burst limit is always an int after initialization."""
         assert self._burst is not None
         return self._burst
-
-    def __post_init__(self) -> None:
-        if self.calls <= 0:
-            raise ValueError("calls must be greater than 0")
-        if self.period <= 0:
-            raise ValueError("period must be greater than 0")
-        if self._burst is not None and self._burst <= 0:
-            raise ValueError("burst must be greater than 0")
-        if self._burst is not None and self._burst < self.calls:
-            raise ValueError("burst must be greater than or equal to calls")
-
-        # Si burst no está establecido, usar calls como límite
-        if self._burst is None:
-            self._burst = self.calls
 
 
 class RateLimiter:
@@ -54,23 +59,19 @@ class RateLimiter:
             self._window.popleft()
 
     def _get_delay(self) -> float:
-        """Calculate the required delay before the next request."""
-        if not self._window:
-            return 0.0
+        """Calculate the required delay before the next request.
 
+        :return: Required delay in seconds
+        """
         now = time.monotonic()
         self._clean_old_timestamps()
 
-        # If we haven't hit the burst limit, no delay needed
         if len(self._window) < self.config.burst:
             return 0.0
 
-        # If we've hit the rate limit, calculate delay
         if len(self._window) >= self.config.calls:
-            oldest_timestamp = self._window[-self.config.calls]
-            next_available = oldest_timestamp + self.config.period
-            delay = next_available - now
-            return max(0.0, delay)
+            next_available = self._window[-self.config.calls] + self.config.period
+            return max(0.0, next_available - now)
 
         return 0.0
 
@@ -84,8 +85,7 @@ class RateLimiter:
             if delay > 0:
                 time.sleep(delay)
 
-            now = time.monotonic()
-            self._window.append(now)
+            self._window.append(time.monotonic())
             return delay
 
     def reset(self) -> None:
