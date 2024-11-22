@@ -1,9 +1,8 @@
 """Tests for the rate limiting functionality."""
 
-import time
 import unittest
-
-from bcra_connector.rate_limiter import RateLimitConfig, RateLimiter
+import time
+from bcra_connector.rate_limiter import RateLimiter, RateLimitConfig
 
 
 class TestRateLimiter(unittest.TestCase):
@@ -11,7 +10,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_basic_rate_limiting(self):
         """Test basic rate limiting functionality."""
-        config = RateLimitConfig(calls=3, period=1.0, burst=3)
+        config = RateLimitConfig(calls=3, period=1.0, _burst=3)
         limiter = RateLimiter(config)
 
         # First 3 calls should be immediate
@@ -28,7 +27,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_burst_handling(self):
         """Test burst handling functionality."""
-        config = RateLimitConfig(calls=2, period=1.0, burst=4)
+        config = RateLimitConfig(calls=2, period=1.0, _burst=4)
         limiter = RateLimiter(config)
 
         # First 4 calls should be immediate (burst limit)
@@ -75,4 +74,22 @@ class TestRateLimiter(unittest.TestCase):
             RateLimitConfig(calls=1, period=0)
 
         with self.assertRaises(ValueError):
-            RateLimitConfig(calls=2, period=1.0, burst=1)
+            RateLimitConfig(calls=2, period=1.0, _burst=1)
+
+    def test_current_usage(self):
+        """Test current usage property."""
+        config = RateLimitConfig(calls=3, period=1.0, _burst=5)
+        limiter = RateLimiter(config)
+
+        self.assertEqual(limiter.current_usage, 0)
+
+        # Make some requests
+        limiter.acquire()
+        self.assertEqual(limiter.current_usage, 1)
+
+        limiter.acquire()
+        self.assertEqual(limiter.current_usage, 2)
+
+        # Wait for period to expire
+        time.sleep(1.1)
+        self.assertEqual(limiter.current_usage, 0)
