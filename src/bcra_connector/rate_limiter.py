@@ -35,6 +35,7 @@ class RateLimitConfig:
         if self.burst is None:
             self.burst = self.calls
 
+        self.burst: int     # type: ignore[no-redef]
 
 class RateLimiter:
     """Rate limiter using token bucket algorithm with sliding window."""
