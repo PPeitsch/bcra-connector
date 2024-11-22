@@ -15,7 +15,7 @@ We take the security of BCRA API Connector seriously. If you believe you have fo
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to pablo.peitsch@gmail.com.
+Instead, please report them via email to [pablo.peitsch@gmail.com](mailto:pablo.peitsch@gmail.com).
 
 You should receive a response within 48 hours. If for some reason you do not, please follow up via email to ensure we received your original message.
 
