@@ -80,22 +80,6 @@ packages = ["src/bcra_connector"]
 [tool.black]
 line-length = 88
 target-version = ["py39"]
-exclude = '''
-(
-  /(
-      \.git
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | src/bcra_connector/_version.py
-  )/
-)
-'''
 
 [tool.isort]
 profile = "black"
