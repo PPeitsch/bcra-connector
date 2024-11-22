@@ -12,42 +12,25 @@ authors = [
 ]
 license = { file = "LICENSE" }
 classifiers = [
-    # Development Status
     "Development Status :: 4 - Beta",
-
-    # Audience
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Information Technology",
-
-    # License
     "License :: OSI Approved :: MIT License",
-
-    # Operating System
     "Operating System :: OS Independent",
-
-    # Python versions
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3 :: Only",
-
-    # Framework
     "Framework :: Pytest",
-
-    # Topics
     "Topic :: Office/Business :: Financial",
     "Topic :: Office/Business :: Financial :: Investment",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
-
-    # Natural Language
     "Natural Language :: English",
     "Natural Language :: Spanish",
-
-    # Environment
     "Environment :: Console",
     "Typing :: Typed",
 ]
@@ -66,12 +49,15 @@ dev = [
     "matplotlib>=3.7.3,<3.8.0",
     "setuptools>=70.0.0,<71.0.0",
     "pytest>=6.0.0,<8.0.0",
+    "pytest-cov>=4.1.0",
     "sphinx>=4.0.0,<6.0.0",
     "black>=23.0.0",
     "isort>=5.0.0",
     "mypy>=1.0.0",
-    "types-requests",
-    "types-urllib3",
+    "types-requests>=2.31.0.20240125",
+    "types-urllib3>=2.0.0.20240125",
+    "numpy>=1.26.4",
+    "scipy>=1.13.1",
 ]
 
 [project.urls]
@@ -104,7 +90,21 @@ multi_line_output = 3
 python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
 
 [[tool.mypy.overrides]]
 module = ["scipy.*"]
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "--cov=bcra_connector --cov-report=xml"
+testpaths = ["tests"]
+python_files = "*_tests.py"
