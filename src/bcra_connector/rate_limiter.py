@@ -1,4 +1,6 @@
-"""Rate limiting functionality for API requests."""
+"""
+Rate limiting functionality for API requests.
+"""
 
 import time
 from collections import deque
@@ -15,6 +17,7 @@ class RateLimitConfig:
     :param period: Time period in seconds
     :param _burst: Maximum number of calls allowed in burst (internal)
     """
+
     calls: int
     period: float
     _burst: Optional[int] = None

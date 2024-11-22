@@ -1,3 +1,8 @@
+"""
+Data models for the BCRA Currency Exchange Statistics API.
+Provides classes for currency quotations, historical data, and response handling.
+"""
+
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Dict, List, Optional

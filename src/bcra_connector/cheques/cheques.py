@@ -1,3 +1,8 @@
+"""
+Data models and types for the BCRA Checks API.
+Defines classes for handling bank entities, check details, and API responses.
+"""
+
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Dict, List

@@ -1,3 +1,9 @@
+"""
+BCRA API client implementation for accessing financial data from Argentina's Central Bank.
+Provides interfaces for variables, checks, and currency exchange rate data endpoints.
+Handles rate limiting, retries, and error cases.
+"""
+
 import logging
 import time
 from datetime import datetime, timedelta

@@ -1,3 +1,8 @@
+"""
+Data models for BCRA's Principal Variables API.
+Defines classes for handling economic indicators and their historical data.
+"""
+
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Dict
