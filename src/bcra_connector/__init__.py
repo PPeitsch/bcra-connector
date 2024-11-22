@@ -1,4 +1,4 @@
-from ._version import __version__, version_info
+from ._version import __version__
 from .bcra_connector import BCRAApiError, BCRAConnector
 from .cheques import Cheque, ChequeDetalle, ChequeResponse, Entidad, EntidadResponse
 from .cheques import ErrorResponse as ChequesErrorResponse
@@ -18,7 +18,6 @@ from .timeout_config import TimeoutConfig
 
 __all__ = [
     "__version__",
-    "version_info",
     # Core
     "BCRAConnector",
     "BCRAApiError",
