@@ -25,7 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install .[dev]
       - name: Check formatting with Black
-        run: black --check src/bcra_connector tests
+        run: black --check src/bcra_connector tests --exclude "_version.py"
 
       - name: Check imports with isort
         run: isort --check-only src/bcra_connector tests
