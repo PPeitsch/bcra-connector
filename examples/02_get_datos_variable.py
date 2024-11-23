@@ -1,3 +1,8 @@
+"""
+Example showing how to retrieve historical data for specific BCRA variables.
+Includes date range handling and time series visualization.
+"""
+
 import os
 import sys
 import logging

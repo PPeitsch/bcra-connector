@@ -1,18 +1,24 @@
+"""Unit tests for the BCRA Currency Exchange Statistics models."""
+
 import unittest
 from datetime import date
+
 from bcra_connector.estadisticas_cambiarias import (
-    Divisa, CotizacionDetalle, CotizacionFecha, Resultset, Metadata,
-    DivisaResponse, CotizacionResponse, CotizacionesResponse, ErrorResponse
+    CotizacionDetalle,
+    CotizacionesResponse,
+    CotizacionFecha,
+    CotizacionResponse,
+    Divisa,
+    DivisaResponse,
+    ErrorResponse,
+    Metadata,
+    Resultset,
 )
 
 
 class TestEstadisticasCambiarias(unittest.TestCase):
-
     def test_divisa(self):
-        data = {
-            "codigo": "USD",
-            "denominacion": "DOLAR ESTADOUNIDENSE"
-        }
+        data = {"codigo": "USD", "denominacion": "DOLAR ESTADOUNIDENSE"}
         divisa = Divisa.from_dict(data)
         self.assertEqual(divisa.codigo, "USD")
         self.assertEqual(divisa.denominacion, "DOLAR ESTADOUNIDENSE")
@@ -22,7 +28,7 @@ class TestEstadisticasCambiarias(unittest.TestCase):
             "codigoMoneda": "USD",
             "descripcion": "DOLAR ESTADOUNIDENSE",
             "tipoPase": 1.0,
-            "tipoCotizacion": 43.6862
+            "tipoCotizacion": 43.6862,
         }
         detalle = CotizacionDetalle.from_dict(data)
         self.assertEqual(detalle.codigo_moneda, "USD")
@@ -38,9 +44,9 @@ class TestEstadisticasCambiarias(unittest.TestCase):
                     "codigoMoneda": "USD",
                     "descripcion": "DOLAR ESTADOUNIDENSE",
                     "tipoPase": 1.0,
-                    "tipoCotizacion": 43.6862
+                    "tipoCotizacion": 43.6862,
                 }
-            ]
+            ],
         }
         cotizacion = CotizacionFecha.from_dict(data)
         self.assertEqual(cotizacion.fecha, date(2024, 6, 12))
@@ -55,34 +61,24 @@ class TestEstadisticasCambiarias(unittest.TestCase):
                     codigo_moneda="USD",
                     descripcion="DOLAR ESTADOUNIDENSE",
                     tipo_pase=1.0,
-                    tipo_cotizacion=43.6862
+                    tipo_cotizacion=43.6862,
                 )
-            ]
+            ],
         )
         data = cotizacion.to_dict()
-        self.assertEqual(data['fecha'], "2024-06-12")
-        self.assertEqual(len(data['detalle']), 1)
-        self.assertEqual(data['detalle'][0]['codigoMoneda'], "USD")
+        self.assertEqual(data["fecha"], "2024-06-12")
+        self.assertEqual(len(data["detalle"]), 1)
+        self.assertEqual(data["detalle"][0]["codigoMoneda"], "USD")
 
     def test_resultset(self):
-        data = {
-            "count": 1,
-            "offset": 0,
-            "limit": 1000
-        }
+        data = {"count": 1, "offset": 0, "limit": 1000}
         resultset = Resultset.from_dict(data)
         self.assertEqual(resultset.count, 1)
         self.assertEqual(resultset.offset, 0)
         self.assertEqual(resultset.limit, 1000)
 
     def test_metadata(self):
-        data = {
-            "resultset": {
-                "count": 1,
-                "offset": 0,
-                "limit": 1000
-            }
-        }
+        data = {"resultset": {"count": 1, "offset": 0, "limit": 1000}}
         metadata = Metadata.from_dict(data)
         self.assertEqual(metadata.resultset.count, 1)
         self.assertEqual(metadata.resultset.offset, 0)
@@ -92,15 +88,9 @@ class TestEstadisticasCambiarias(unittest.TestCase):
         data = {
             "status": 200,
             "results": [
-                {
-                    "codigo": "USD",
-                    "denominacion": "DOLAR ESTADOUNIDENSE"
-                },
-                {
-                    "codigo": "EUR",
-                    "denominacion": "EURO"
-                }
-            ]
+                {"codigo": "USD", "denominacion": "DOLAR ESTADOUNIDENSE"},
+                {"codigo": "EUR", "denominacion": "EURO"},
+            ],
         }
         response = DivisaResponse.from_dict(data)
         self.assertEqual(response.status, 200)
@@ -118,10 +108,10 @@ class TestEstadisticasCambiarias(unittest.TestCase):
                         "codigoMoneda": "USD",
                         "descripcion": "DOLAR ESTADOUNIDENSE",
                         "tipoPase": 1.0,
-                        "tipoCotizacion": 43.6862
+                        "tipoCotizacion": 43.6862,
                     }
-                ]
-            }
+                ],
+            },
         }
         response = CotizacionResponse.from_dict(data)
         self.assertEqual(response.status, 200)
@@ -132,13 +122,7 @@ class TestEstadisticasCambiarias(unittest.TestCase):
     def test_cotizaciones_response(self):
         data = {
             "status": 200,
-            "metadata": {
-                "resultset": {
-                    "count": 1,
-                    "offset": 0,
-                    "limit": 1000
-                }
-            },
+            "metadata": {"resultset": {"count": 1, "offset": 0, "limit": 1000}},
             "results": [
                 {
                     "fecha": "2024-06-12",
@@ -147,11 +131,11 @@ class TestEstadisticasCambiarias(unittest.TestCase):
                             "codigoMoneda": "USD",
                             "descripcion": "DOLAR ESTADOUNIDENSE",
                             "tipoPase": 1.0,
-                            "tipoCotizacion": 43.6862
+                            "tipoCotizacion": 43.6862,
                         }
-                    ]
+                    ],
                 }
-            ]
+            ],
         }
         response = CotizacionesResponse.from_dict(data)
         self.assertEqual(response.status, 200)
@@ -163,23 +147,24 @@ class TestEstadisticasCambiarias(unittest.TestCase):
     def test_error_response(self):
         data = {
             "status": 400,
-            "errorMessages": ["Parámetro erróneo: La fecha desde no puede ser mayor a la fecha hasta."]
+            "errorMessages": [
+                "Parámetro erróneo: La fecha desde no puede ser mayor a la fecha hasta."
+            ],
         }
         response = ErrorResponse.from_dict(data)
         self.assertEqual(response.status, 400)
         self.assertEqual(len(response.error_messages), 1)
-        self.assertEqual(response.error_messages[0],
-                         "Parámetro erróneo: La fecha desde no puede ser mayor a la fecha hasta.")
+        self.assertEqual(
+            response.error_messages[0],
+            "Parámetro erróneo: La fecha desde no puede ser mayor a la fecha hasta.",
+        )
 
     def test_cotizacion_fecha_with_null_date(self):
-        data = {
-            "fecha": None,
-            "detalle": []
-        }
+        data = {"fecha": None, "detalle": []}
         cotizacion = CotizacionFecha.from_dict(data)
         self.assertIsNone(cotizacion.fecha)
         self.assertEqual(len(cotizacion.detalle), 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

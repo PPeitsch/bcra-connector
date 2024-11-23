@@ -1,3 +1,8 @@
+"""
+Example of proper error handling for common BCRA API scenarios.
+Shows how to handle timeouts, rate limits, and API errors.
+"""
+
 import os
 import sys
 import logging

@@ -1,3 +1,8 @@
+"""
+Example of fetching and comparing latest values for multiple BCRA variables.
+Demonstrates multi-variable analysis and visualization.
+"""
+
 import os
 import sys
 import logging
