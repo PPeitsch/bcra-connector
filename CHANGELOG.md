@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2024-11-23
+
+### Added
+- Contributor Covenant Code of Conduct
+- Structured issue templates for bugs, features, and documentation
+- Security policy document
+- Pull request template
+- GitHub Actions workflow for testing and publishing
+- Comprehensive community guidelines
+- Automated testing and publishing process
+
+### Enhanced
+- Updated README with new badges and improved organization
+- Improved contributing guidelines with clear standards
+- Enhanced example scripts documentation
+- Better error handling and logging
+- Project structure and organization
+- Documentation system
+- Streamlined contribution process
+
+### Fixed
+- CI/CD badge display in README
+- Documentation inconsistencies
+- Build process reliability
+- Version tracking system
+
 ## [0.3.3] - 2024-11-06
 
 ### Added
@@ -119,6 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[0.4.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.0...v0.3.1

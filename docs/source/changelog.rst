@@ -6,6 +6,36 @@ All notable changes to the BCRA API Connector will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+0.4.0 - 2024-11-23
+------------------
+
+Added
+^^^^^
+* Contributor Covenant Code of Conduct
+* Structured issue templates
+* Security policy document
+* Pull request template
+* GitHub Actions workflow for testing and publishing
+* Comprehensive community guidelines
+* Automated testing and publishing process
+
+Enhanced
+^^^^^^^^
+* Updated README with new badges and improved organization
+* Improved contributing guidelines with clear standards
+* Enhanced example scripts documentation
+* Better error handling and logging
+* Project structure and organization
+* Documentation system
+* Streamlined contribution process
+
+Fixed
+^^^^^
+* CI/CD badge display in README
+* Documentation inconsistencies
+* Build process reliability
+* Version tracking system
+
 0.3.1 - 2024-10-08
 ------------------
 
