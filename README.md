@@ -5,7 +5,7 @@
 [![Documentation Status](https://readthedocs.org/projects/bcra-connector/badge/?version=latest)](https://bcra-connector.readthedocs.io/en/latest/?badge=latest)
 [![Coverage](https://codecov.io/gh/PPeitsch/bcra-connector/branch/main/graph/badge.svg)](https://codecov.io/gh/PPeitsch/bcra-connector)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI/CD](https://github.com/PPeitsch/bcra-connector/workflows/BCRA%20Connector%20CI/CD/badge.svg)](https://github.com/PPeitsch/bcra-connector/actions)
+[![Tests](https://github.com/PPeitsch/bcra-connector/workflows/Test%20and%20Publish/badge.svg)](https://github.com/PPeitsch/bcra-connector/actions/workflows/test-and-publish.yaml)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](.github/CODE_OF_CONDUCT.md)
 
 A Python connector for the BCRA (Banco Central de la República Argentina) APIs, including Estadísticas v2.0, Cheques, and Estadísticas Cambiarias.
