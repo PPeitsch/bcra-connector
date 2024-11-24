@@ -24,6 +24,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install .[dev]
+
       - name: Check formatting with Black
         run: black --check src/bcra_connector tests --exclude "_version.py"
 
@@ -92,11 +93,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install hatch
 
+      - name: Configure PyPI credentials
+        run: |
+          mkdir -p ~/.config/hatch
+          echo "shell.color = true
+
+          [publish.index]
+          repo = 'main'
+
+          [publish.repo.main]
+          url = 'https://upload.pypi.org/legacy/'
+          auth = '${{ secrets.PYPI_API_TOKEN }}'
+          " > ~/.config/hatch/config.toml
+
       - name: Build package
         run: hatch build
 
       - name: Publish to PyPI
-        env:
-          HATCH_INDEX_USER: __token__
-          HATCH_INDEX_AUTH: ${{ secrets.PYPI_API_TOKEN }}
-        run: hatch publish
+        run: hatch publish --no-prompt
