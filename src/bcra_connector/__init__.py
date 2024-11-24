@@ -1,4 +1,4 @@
-from ._version import __version__
+from .__about__ import __version__
 from .bcra_connector import BCRAApiError, BCRAConnector
 from .cheques import Cheque, ChequeDetalle, ChequeResponse, Entidad, EntidadResponse
 from .cheques import ErrorResponse as ChequesErrorResponse
