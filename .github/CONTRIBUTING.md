@@ -31,7 +31,7 @@ Before [creating an issue](https://help.github.com/en/github/managing-your-work-
 
 ### :shield: Security Issues
 
-Review our [Security Policy](.github/SECURITY.md). **Do not** file public issues for security vulnerabilities.
+Review our [Security Policy](SECURITY.md). **Do not** file public issues for security vulnerabilities.
 
 ### :bug: Bug Reports
 
