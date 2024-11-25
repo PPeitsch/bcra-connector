@@ -76,7 +76,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [test, code-quality]
+    needs: [ test, code-quality ]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
 
@@ -93,22 +93,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install hatch
 
-      - name: Configure PyPI credentials
-        run: |
-          mkdir -p ~/.config/hatch
-          echo "shell.color = true
-
-          [publish.index]
-          repo = 'main'
-
-          [publish.repo.main]
-          url = 'https://upload.pypi.org/legacy/'
-          user = '__token__'
-          auth = '${{ secrets.PYPI_API_TOKEN }}'
-          " > ~/.config/hatch/config.toml
-
       - name: Build package
         run: hatch build
 
       - name: Publish to PyPI
-        run: hatch publish --no-prompt
+        env:
+          HATCH_INDEX_REPO: main
+          HATCH_INDEX_USER: __token__
+          HATCH_INDEX_AUTH: ${{ secrets.PYPI_API_TOKEN }}
+        run: hatch publish
