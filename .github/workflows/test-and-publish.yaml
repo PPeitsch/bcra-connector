@@ -103,6 +103,7 @@ jobs:
 
           [publish.repo.main]
           url = 'https://upload.pypi.org/legacy/'
+          user = '__token__'
           auth = '${{ secrets.PYPI_API_TOKEN }}'
           " > ~/.config/hatch/config.toml
 
