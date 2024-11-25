@@ -1,4 +1,4 @@
-⚡ *Have you read the [Contributing Guidelines](./CONTRIBUTING.md)?*
+⚡ ⚡ *Have you read the [Contributing Guidelines](https://github.com/PPeitsch/bcra-connector/blob/main/.github/CONTRIBUTING.md)?*
 
 Fixes #
 
