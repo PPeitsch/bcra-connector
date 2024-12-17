@@ -1,9 +1,10 @@
 """Unit tests for currency exchange statistics models."""
 
 from datetime import date
-from typing import Dict, Any
+from typing import Any, Dict
 
 import pytest
+
 from bcra_connector.estadisticas_cambiarias import (
     CotizacionDetalle,
     CotizacionesResponse,
@@ -13,7 +14,7 @@ from bcra_connector.estadisticas_cambiarias import (
     DivisaResponse,
     ErrorResponse,
     Metadata,
-    Resultset
+    Resultset,
 )
 
 
@@ -23,10 +24,7 @@ class TestDivisa:
     @pytest.fixture
     def sample_divisa_data(self) -> Dict[str, Any]:
         """Fixture providing sample currency data."""
-        return {
-            "codigo": "USD",
-            "denominacion": "DOLAR ESTADOUNIDENSE"
-        }
+        return {"codigo": "USD", "denominacion": "DOLAR ESTADOUNIDENSE"}
 
     def test_divisa_from_dict(self, sample_divisa_data: Dict[str, Any]) -> None:
         """Test creation of Divisa from dictionary."""
@@ -37,9 +35,7 @@ class TestDivisa:
 
     def test_divisa_missing_fields(self) -> None:
         """Test handling of missing required fields."""
-        incomplete_data: Dict[str, Any] = {
-            "codigo": "USD"
-        }
+        incomplete_data: Dict[str, Any] = {"codigo": "USD"}
         with pytest.raises(KeyError):
             Divisa.from_dict(incomplete_data)
 
@@ -47,7 +43,7 @@ class TestDivisa:
         """Test validation of currency code."""
         invalid_data: Dict[str, Any] = {
             "codigo": "",  # Empty code
-            "denominacion": "TEST"
+            "denominacion": "TEST",
         }
         with pytest.raises(ValueError):
             Divisa.from_dict(invalid_data)
@@ -63,12 +59,11 @@ class TestCotizacionDetalle:
             "codigoMoneda": "USD",
             "descripcion": "DOLAR ESTADOUNIDENSE",
             "tipoPase": 1.0,
-            "tipoCotizacion": 43.6862
+            "tipoCotizacion": 43.6862,
         }
 
     def test_cotizacion_detalle_from_dict(
-        self,
-        sample_cotizacion_detalle_data: Dict[str, Any]
+        self, sample_cotizacion_detalle_data: Dict[str, Any]
     ) -> None:
         """Test creation of CotizacionDetalle from dictionary."""
         detalle: CotizacionDetalle = CotizacionDetalle.from_dict(
@@ -86,7 +81,7 @@ class TestCotizacionDetalle:
             "codigoMoneda": "USD",
             "descripcion": "TEST",
             "tipoPase": "not-a-number",
-            "tipoCotizacion": 43.6862
+            "tipoCotizacion": 43.6862,
         }
         with pytest.raises(ValueError):
             CotizacionDetalle.from_dict(invalid_data)
@@ -105,14 +100,13 @@ class TestCotizacionFecha:
                     "codigoMoneda": "USD",
                     "descripcion": "DOLAR ESTADOUNIDENSE",
                     "tipoPase": 1.0,
-                    "tipoCotizacion": 43.6862
+                    "tipoCotizacion": 43.6862,
                 }
-            ]
+            ],
         }
 
     def test_cotizacion_fecha_from_dict(
-        self,
-        sample_cotizacion_fecha_data: Dict[str, Any]
+        self, sample_cotizacion_fecha_data: Dict[str, Any]
     ) -> None:
         """Test creation of CotizacionFecha from dictionary."""
         cotizacion: CotizacionFecha = CotizacionFecha.from_dict(
@@ -126,10 +120,7 @@ class TestCotizacionFecha:
 
     def test_cotizacion_fecha_with_null_date(self) -> None:
         """Test handling of null date."""
-        data: Dict[str, Any] = {
-            "fecha": None,
-            "detalle": []
-        }
+        data: Dict[str, Any] = {"fecha": None, "detalle": []}
         cotizacion: CotizacionFecha = CotizacionFecha.from_dict(data)
 
         assert cotizacion.fecha is None
@@ -141,11 +132,7 @@ class TestResponseModels:
 
     def test_resultset(self) -> None:
         """Test Resultset model."""
-        data: Dict[str, Any] = {
-            "count": 1,
-            "offset": 0,
-            "limit": 1000
-        }
+        data: Dict[str, Any] = {"count": 1, "offset": 0, "limit": 1000}
         resultset: Resultset = Resultset.from_dict(data)
 
         assert resultset.count == 1
@@ -154,13 +141,7 @@ class TestResponseModels:
 
     def test_metadata(self) -> None:
         """Test Metadata model."""
-        data: Dict[str, Any] = {
-            "resultset": {
-                "count": 1,
-                "offset": 0,
-                "limit": 1000
-            }
-        }
+        data: Dict[str, Any] = {"resultset": {"count": 1, "offset": 0, "limit": 1000}}
         metadata: Metadata = Metadata.from_dict(data)
 
         assert metadata.resultset.count == 1
@@ -172,15 +153,9 @@ class TestResponseModels:
         data: Dict[str, Any] = {
             "status": 200,
             "results": [
-                {
-                    "codigo": "USD",
-                    "denominacion": "DOLAR ESTADOUNIDENSE"
-                },
-                {
-                    "codigo": "EUR",
-                    "denominacion": "EURO"
-                }
-            ]
+                {"codigo": "USD", "denominacion": "DOLAR ESTADOUNIDENSE"},
+                {"codigo": "EUR", "denominacion": "EURO"},
+            ],
         }
         response: DivisaResponse = DivisaResponse.from_dict(data)
 
@@ -191,14 +166,10 @@ class TestResponseModels:
         assert response.results[1].denominacion == "EURO"
 
     def test_cotizacion_response(
-        self,
-        sample_cotizacion_fecha_data: Dict[str, Any]
+        self, sample_cotizacion_fecha_data: Dict[str, Any]
     ) -> None:
         """Test CotizacionResponse model."""
-        data: Dict[str, Any] = {
-            "status": 200,
-            "results": sample_cotizacion_fecha_data
-        }
+        data: Dict[str, Any] = {"status": 200, "results": sample_cotizacion_fecha_data}
         response: CotizacionResponse = CotizacionResponse.from_dict(data)
 
         assert response.status == 200
@@ -206,20 +177,13 @@ class TestResponseModels:
         assert response.results.fecha == date(2024, 3, 5)
 
     def test_cotizaciones_response(
-        self,
-        sample_cotizacion_fecha_data: Dict[str, Any]
+        self, sample_cotizacion_fecha_data: Dict[str, Any]
     ) -> None:
         """Test CotizacionesResponse model."""
         data: Dict[str, Any] = {
             "status": 200,
-            "metadata": {
-                "resultset": {
-                    "count": 1,
-                    "offset": 0,
-                    "limit": 1000
-                }
-            },
-            "results": [sample_cotizacion_fecha_data]
+            "metadata": {"resultset": {"count": 1, "offset": 0, "limit": 1000}},
+            "results": [sample_cotizacion_fecha_data],
         }
         response: CotizacionesResponse = CotizacionesResponse.from_dict(data)
 
@@ -232,9 +196,7 @@ class TestResponseModels:
         """Test ErrorResponse model."""
         data: Dict[str, Any] = {
             "status": 400,
-            "errorMessages": [
-                "La fecha desde no puede ser mayor a la fecha hasta."
-            ]
+            "errorMessages": ["La fecha desde no puede ser mayor a la fecha hasta."],
         }
         response: ErrorResponse = ErrorResponse.from_dict(data)
 

@@ -47,7 +47,7 @@ class TestTimeoutConfig:
         total_timeout = 10.0
         config = TimeoutConfig.from_total(total_timeout)
         assert config.connect == 1.0  # 10% of total
-        assert config.read == 9.0    # 90% of total
+        assert config.read == 9.0  # 90% of total
         assert isinstance(config, TimeoutConfig)
 
     def test_invalid_total_timeout(self):

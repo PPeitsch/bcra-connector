@@ -52,7 +52,7 @@ class TestBCRAConnector:
             verify_ssl=False,
             debug=True,
             rate_limit=rate_limit,
-            timeout=timeout
+            timeout=timeout,
         )
         assert connector.verify_ssl is False
         assert connector.session.headers["Accept-Language"] == "en-US"
@@ -88,7 +88,9 @@ class TestBCRAConnector:
         assert result[0].valor == 100.0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_principales_variables_empty_response(self, mock_get, mock_api_response):
+    def test_get_principales_variables_empty_response(
+        self, mock_get, mock_api_response
+    ):
         """Test handling of empty response for principal variables."""
         mock_get.return_value = mock_api_response({"results": []})
 
@@ -102,13 +104,7 @@ class TestBCRAConnector:
     def test_get_datos_variable_success(self, mock_get, mock_api_response):
         """Test successful retrieval of variable data."""
         mock_data = {
-            "results": [
-                {
-                    "idVariable": 1,
-                    "fecha": "2024-03-05",
-                    "valor": 100.0
-                }
-            ]
+            "results": [{"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0}]
         }
         mock_get.return_value = mock_api_response(mock_data)
 
@@ -133,20 +129,14 @@ class TestBCRAConnector:
         """Test handling of invalid date ranges."""
         # Test end date before start date
         with pytest.raises(ValueError) as exc_info:
-            connector.get_datos_variable(
-                1,
-                datetime(2024, 3, 5),
-                datetime(2024, 3, 1)
-            )
-        assert "'desde' date must be earlier than or equal to 'hasta' date" in str(exc_info.value)
+            connector.get_datos_variable(1, datetime(2024, 3, 5), datetime(2024, 3, 1))
+        assert "'desde' date must be earlier than or equal to 'hasta' date" in str(
+            exc_info.value
+        )
 
         # Test date range exceeding one year
         with pytest.raises(ValueError) as exc_info:
-            connector.get_datos_variable(
-                1,
-                datetime(2024, 1, 1),
-                datetime(2025, 1, 2)
-            )
+            connector.get_datos_variable(1, datetime(2024, 1, 1), datetime(2025, 1, 2))
         assert "Date range must not exceed 1 year" in str(exc_info.value)
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
@@ -156,7 +146,7 @@ class TestBCRAConnector:
             "results": [
                 {"idVariable": 1, "fecha": "2024-03-03", "valor": 95.0},
                 {"idVariable": 1, "fecha": "2024-03-04", "valor": 97.5},
-                {"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0}
+                {"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0},
             ]
         }
         mock_get.return_value = mock_api_response(mock_data)
@@ -184,14 +174,11 @@ class TestBCRAConnector:
         """Test successful retrieval of financial entities."""
         mock_data = {
             "results": [
-                {
-                    "codigoEntidad": 11,
-                    "denominacion": "BANCO DE LA NACION ARGENTINA"
-                },
+                {"codigoEntidad": 11, "denominacion": "BANCO DE LA NACION ARGENTINA"},
                 {
                     "codigoEntidad": 14,
-                    "denominacion": "BANCO DE LA PROVINCIA DE BUENOS AIRES"
-                }
+                    "denominacion": "BANCO DE LA PROVINCIA DE BUENOS AIRES",
+                },
             ]
         }
         mock_get.return_value = mock_api_response(mock_data)
@@ -217,9 +204,9 @@ class TestBCRAConnector:
                     {
                         "sucursal": 524,
                         "numeroCuenta": 5240055962,
-                        "causal": "Denuncia por robo"
+                        "causal": "Denuncia por robo",
                     }
-                ]
+                ],
             }
         }
         mock_get.return_value = mock_api_response(mock_data)
@@ -259,10 +246,7 @@ class TestBCRAConnector:
     def test_rate_limiting(self, connector):
         """Test rate limiting functionality."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
-            mock_get.return_value = Mock(
-                json=lambda: {"results": []},
-                status_code=200
-            )
+            mock_get.return_value = Mock(json=lambda: {"results": []}, status_code=200)
 
             # Make multiple requests to test rate limiting
             start_time = datetime.now()
@@ -272,18 +256,23 @@ class TestBCRAConnector:
             duration = (datetime.now() - start_time).total_seconds()
             assert duration >= 1.0  # Should take at least 1 second due to rate limiting
 
-    @pytest.mark.parametrize("response_code,error_messages", [
-        (400, ["Bad Request"]),
-        (404, ["Not Found"]),
-        (500, ["Internal Server Error"]),
-        (429, ["Too Many Requests"])
-    ])
-    def test_error_responses(self, connector, response_code, error_messages, mock_api_response):
+    @pytest.mark.parametrize(
+        "response_code,error_messages",
+        [
+            (400, ["Bad Request"]),
+            (404, ["Not Found"]),
+            (500, ["Internal Server Error"]),
+            (429, ["Too Many Requests"]),
+        ],
+    )
+    def test_error_responses(
+        self, connector, response_code, error_messages, mock_api_response
+    ):
         """Test handling of various error responses."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             mock_response = mock_api_response(
                 {"status": response_code, "errorMessages": error_messages},
-                response_code
+                response_code,
             )
             mock_response.raise_for_status.side_effect = HTTPError(
                 f"{response_code} Error"
@@ -301,7 +290,7 @@ class TestBCRAConnector:
             mock_get.side_effect = [
                 ConnectionError("First attempt failed"),
                 ConnectionError("Second attempt failed"),
-                Mock(json=lambda: {"results": []}, status_code=200)
+                Mock(json=lambda: {"results": []}, status_code=200),
             ]
 
             result = connector.get_principales_variables()

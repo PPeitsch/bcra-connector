@@ -1,16 +1,17 @@
 """Unit tests for check-related models."""
 
 from datetime import date
-from typing import Dict, Any
+from typing import Any, Dict
 
 import pytest
+
 from bcra_connector.cheques import (
     Cheque,
     ChequeDetalle,
     ChequeResponse,
     Entidad,
     EntidadResponse,
-    ErrorResponse
+    ErrorResponse,
 )
 
 
@@ -21,7 +22,7 @@ class TestEntidad:
         """Test creation of Entidad instances."""
         data: Dict[str, Any] = {
             "codigoEntidad": 11,
-            "denominacion": "BANCO DE LA NACION ARGENTINA"
+            "denominacion": "BANCO DE LA NACION ARGENTINA",
         }
         entidad: Entidad = Entidad.from_dict(data)
 
@@ -31,8 +32,7 @@ class TestEntidad:
     def test_entidad_to_dict(self) -> None:
         """Test conversion of Entidad to dictionary."""
         entidad: Entidad = Entidad(
-            codigo_entidad=14,
-            denominacion="BANCO DE LA PROVINCIA DE BUENOS AIRES"
+            codigo_entidad=14, denominacion="BANCO DE LA PROVINCIA DE BUENOS AIRES"
         )
         data: Dict[str, Any] = entidad.to_dict()
 
@@ -58,7 +58,7 @@ class TestChequeDetalle:
         data: Dict[str, Any] = {
             "sucursal": 524,
             "numeroCuenta": 5240055962,
-            "causal": "Denuncia por robo"
+            "causal": "Denuncia por robo",
         }
         detalle: ChequeDetalle = ChequeDetalle.from_dict(data)
 
@@ -69,9 +69,7 @@ class TestChequeDetalle:
     def test_cheque_detalle_to_dict(self) -> None:
         """Test conversion of ChequeDetalle to dictionary."""
         detalle: ChequeDetalle = ChequeDetalle(
-            sucursal=524,
-            numero_cuenta=5240055962,
-            causal="Denuncia por robo"
+            sucursal=524, numero_cuenta=5240055962, causal="Denuncia por robo"
         )
         data: Dict[str, Any] = detalle.to_dict()
 
@@ -95,9 +93,9 @@ class TestCheque:
                 {
                     "sucursal": 524,
                     "numeroCuenta": 5240055962,
-                    "causal": "Denuncia por robo"
+                    "causal": "Denuncia por robo",
                 }
-            ]
+            ],
         }
 
     def test_cheque_creation(self, sample_cheque_data: Dict[str, Any]) -> None:
@@ -128,7 +126,7 @@ class TestCheque:
             "denunciado": False,
             "fechaProcesamiento": "2024-03-05",
             "denominacionEntidad": "BANCO TEST",
-            "detalles": []
+            "detalles": [],
         }
         cheque: Cheque = Cheque.from_dict(data)
 
@@ -143,11 +141,8 @@ class TestResponses:
         data: Dict[str, Any] = {
             "status": 200,
             "results": [
-                {
-                    "codigoEntidad": 11,
-                    "denominacion": "BANCO DE LA NACION ARGENTINA"
-                }
-            ]
+                {"codigoEntidad": 11, "denominacion": "BANCO DE LA NACION ARGENTINA"}
+            ],
         }
         response: EntidadResponse = EntidadResponse.from_dict(data)
 
@@ -157,10 +152,7 @@ class TestResponses:
 
     def test_cheque_response(self, sample_cheque_data: Dict[str, Any]) -> None:
         """Test ChequeResponse model."""
-        data: Dict[str, Any] = {
-            "status": 200,
-            "results": sample_cheque_data
-        }
+        data: Dict[str, Any] = {"status": 200, "results": sample_cheque_data}
         response: ChequeResponse = ChequeResponse.from_dict(data)
 
         assert response.status == 200
@@ -170,7 +162,7 @@ class TestResponses:
         """Test ErrorResponse model."""
         data: Dict[str, Any] = {
             "status": 400,
-            "errorMessages": ["Invalid check number"]
+            "errorMessages": ["Invalid check number"],
         }
         response: ErrorResponse = ErrorResponse.from_dict(data)
 
@@ -182,10 +174,7 @@ class TestResponses:
         """Test ErrorResponse with multiple error messages."""
         data: Dict[str, Any] = {
             "status": 400,
-            "errorMessages": [
-                "Invalid check number",
-                "Invalid entity code"
-            ]
+            "errorMessages": ["Invalid check number", "Invalid entity code"],
         }
         response: ErrorResponse = ErrorResponse.from_dict(data)
 
@@ -203,7 +192,7 @@ class TestValidation:
                 denunciado=True,
                 fecha_procesamiento="invalid-date",
                 denominacion_entidad="TEST",
-                detalles=[]
+                detalles=[],
             )
 
     def test_negative_check_number(self) -> None:
@@ -214,7 +203,7 @@ class TestValidation:
                 denunciado=True,
                 fecha_procesamiento=date.today(),
                 denominacion_entidad="TEST",
-                detalles=[]
+                detalles=[],
             )
 
     def test_empty_entity_name(self) -> None:

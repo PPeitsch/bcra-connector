@@ -1,8 +1,9 @@
 """Pytest configuration and shared fixtures."""
 
 from typing import Any, Callable, Dict
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from bcra_connector import BCRAConnector
 
@@ -36,7 +37,7 @@ def sample_variable_data() -> Dict[str, Any]:
         "cdSerie": 246,
         "descripcion": "Test Variable",
         "fecha": "2024-03-05",
-        "valor": 100.0
+        "valor": 100.0,
     }
 
 

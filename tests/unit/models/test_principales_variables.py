@@ -1,9 +1,10 @@
 """Unit tests for principal variables models."""
 
 from datetime import date
-from typing import Dict, Any
+from typing import Any, Dict
 
 import pytest
+
 from bcra_connector.principales_variables import DatosVariable, PrincipalesVariables
 
 
@@ -18,12 +19,11 @@ class TestPrincipalesVariables:
             "cdSerie": 246,
             "descripcion": "Test Variable",
             "fecha": "2024-03-05",
-            "valor": 100.0
+            "valor": 100.0,
         }
 
     def test_principales_variables_from_dict(
-        self,
-        sample_variable_data: Dict[str, Any]
+        self, sample_variable_data: Dict[str, Any]
     ) -> None:
         """Test creation of PrincipalesVariables from dictionary."""
         variable: PrincipalesVariables = PrincipalesVariables.from_dict(
@@ -43,7 +43,7 @@ class TestPrincipalesVariables:
             "cdSerie": 246,
             "descripcion": "Test Variable",
             "fecha": "invalid-date",
-            "valor": 100.0
+            "valor": 100.0,
         }
         with pytest.raises(ValueError):
             PrincipalesVariables.from_dict(invalid_data)
@@ -52,7 +52,7 @@ class TestPrincipalesVariables:
         """Test handling of missing required fields."""
         incomplete_data: Dict[str, Any] = {
             "idVariable": 1,
-            "descripcion": "Test Variable"
+            "descripcion": "Test Variable",
         }
         with pytest.raises(KeyError):
             PrincipalesVariables.from_dict(incomplete_data)
@@ -64,7 +64,7 @@ class TestPrincipalesVariables:
             "cdSerie": 246,
             "descripcion": "Test Variable",
             "fecha": "2024-03-05",
-            "valor": "not-a-number"
+            "valor": "not-a-number",
         }
         with pytest.raises(ValueError):
             PrincipalesVariables.from_dict(invalid_data)
@@ -76,16 +76,9 @@ class TestDatosVariable:
     @pytest.fixture
     def sample_datos_data(self) -> Dict[str, Any]:
         """Fixture providing sample data point."""
-        return {
-            "idVariable": 1,
-            "fecha": "2024-03-05",
-            "valor": 100.0
-        }
+        return {"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0}
 
-    def test_datos_variable_from_dict(
-        self,
-        sample_datos_data: Dict[str, Any]
-    ) -> None:
+    def test_datos_variable_from_dict(self, sample_datos_data: Dict[str, Any]) -> None:
         """Test creation of DatosVariable from dictionary."""
         dato: DatosVariable = DatosVariable.from_dict(sample_datos_data)
 
@@ -98,17 +91,14 @@ class TestDatosVariable:
         invalid_data: Dict[str, Any] = {
             "idVariable": 1,
             "fecha": "invalid-date",
-            "valor": 100.0
+            "valor": 100.0,
         }
         with pytest.raises(ValueError):
             DatosVariable.from_dict(invalid_data)
 
     def test_datos_variable_missing_fields(self) -> None:
         """Test handling of missing required fields."""
-        incomplete_data: Dict[str, Any] = {
-            "idVariable": 1,
-            "fecha": "2024-03-05"
-        }
+        incomplete_data: Dict[str, Any] = {"idVariable": 1, "fecha": "2024-03-05"}
         with pytest.raises(KeyError):
             DatosVariable.from_dict(incomplete_data)
 
@@ -117,7 +107,7 @@ class TestDatosVariable:
         invalid_data: Dict[str, Any] = {
             "idVariable": 1,
             "fecha": "2024-03-05",
-            "valor": "not-a-number"
+            "valor": "not-a-number",
         }
         with pytest.raises(ValueError):
             DatosVariable.from_dict(invalid_data)
@@ -127,7 +117,7 @@ class TestDatosVariable:
         invalid_data: Dict[str, Any] = {
             "idVariable": -1,
             "fecha": "2024-03-05",
-            "valor": 100.0
+            "valor": 100.0,
         }
         with pytest.raises(ValueError):
             DatosVariable.from_dict(invalid_data)
@@ -135,14 +125,10 @@ class TestDatosVariable:
     def test_datos_variable_comparison(self) -> None:
         """Test equality comparison between DatosVariable instances."""
         dato1: DatosVariable = DatosVariable(
-            idVariable=1,
-            fecha=date(2024, 3, 5),
-            valor=100.0
+            idVariable=1, fecha=date(2024, 3, 5), valor=100.0
         )
         dato2: DatosVariable = DatosVariable(
-            idVariable=1,
-            fecha=date(2024, 3, 6),
-            valor=101.0
+            idVariable=1, fecha=date(2024, 3, 6), valor=101.0
         )
 
         assert dato1 != dato2
@@ -152,14 +138,10 @@ class TestDatosVariable:
     def test_datos_variable_same_date_comparison(self) -> None:
         """Test comparison of DatosVariable with same date."""
         dato1: DatosVariable = DatosVariable(
-            idVariable=1,
-            fecha=date(2024, 3, 5),
-            valor=100.0
+            idVariable=1, fecha=date(2024, 3, 5), valor=100.0
         )
         dato2: DatosVariable = DatosVariable(
-            idVariable=1,
-            fecha=date(2024, 3, 5),
-            valor=101.0
+            idVariable=1, fecha=date(2024, 3, 5), valor=101.0
         )
 
         assert dato1 == dato2  # Same date should be considered equal

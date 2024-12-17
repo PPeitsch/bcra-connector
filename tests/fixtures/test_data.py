@@ -1,13 +1,11 @@
 """Utility functions for generating test data."""
 
 from datetime import date
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 
 def create_test_variable(
-    id_variable: int = 1,
-    valor: float = 100.0,
-    fecha: Optional[date] = None
+    id_variable: int = 1, valor: float = 100.0, fecha: Optional[date] = None
 ) -> Dict[str, Any]:
     """Creates test data for variables.
 
@@ -27,5 +25,5 @@ def create_test_variable(
         "cdSerie": 246,
         "descripcion": f"Test Variable {id_variable}",
         "fecha": fecha.isoformat(),
-        "valor": valor
+        "valor": valor,
     }

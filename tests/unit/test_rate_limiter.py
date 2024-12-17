@@ -1,11 +1,12 @@
 """Unit tests for the rate limiting functionality."""
 
+import queue
+import threading
 import time
 from typing import List, Optional
-import threading
-import queue
 
 import pytest
+
 from bcra_connector.rate_limiter import RateLimitConfig, RateLimiter
 
 
@@ -20,9 +21,7 @@ class TestRateLimitConfig:
         assert config.burst == 10  # Default burst equals calls
 
         config_with_burst: RateLimitConfig = RateLimitConfig(
-            calls=10,
-            period=1.0,
-            _burst=20
+            calls=10, period=1.0, _burst=20
         )
         assert config_with_burst.burst == 20
 
@@ -34,7 +33,9 @@ class TestRateLimitConfig:
         with pytest.raises(ValueError, match="period must be greater than 0"):
             RateLimitConfig(calls=1, period=0)
 
-        with pytest.raises(ValueError, match="burst must be greater than or equal to calls"):
+        with pytest.raises(
+            ValueError, match="burst must be greater than or equal to calls"
+        ):
             RateLimitConfig(calls=10, period=1.0, _burst=5)
 
 
@@ -136,7 +137,7 @@ class TestRateLimiter:
                 delayed_count += 1
 
         assert success_count == 20  # Burst limit
-        assert delayed_count == 5   # Remaining requests
+        assert delayed_count == 5  # Remaining requests
 
     def test_remaining_calls(self, limiter: RateLimiter) -> None:
         """Test remaining calls calculation."""
@@ -195,4 +196,4 @@ class TestRateLimiter:
 
         # Verify delays are properly spaced
         for i in range(1, len(delays)):
-            assert abs(delays[i] - delays[i-1] - 0.1) < 0.01  # ~0.1s between requests
+            assert abs(delays[i] - delays[i - 1] - 0.1) < 0.01  # ~0.1s between requests
