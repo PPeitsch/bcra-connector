@@ -1,12 +1,21 @@
+"""Pytest configuration and shared fixtures."""
+
+from typing import Any, Callable, Dict
 import pytest
 from unittest.mock import Mock
 
+from bcra_connector import BCRAConnector
+
 
 @pytest.fixture
-def mock_api_response():
-    """Fixture to simulate API responses."""
+def mock_api_response() -> Callable[[Dict[str, Any], int], Mock]:
+    """Fixture to simulate API responses.
 
-    def _mock_response(data, status_code=200):
+    Returns:
+        Function that creates mock responses with given data and status code
+    """
+
+    def _mock_response(data: Dict[str, Any], status_code: int = 200) -> Mock:
         response = Mock()
         response.json.return_value = data
         response.status_code = status_code
@@ -16,8 +25,12 @@ def mock_api_response():
 
 
 @pytest.fixture
-def sample_variable_data():
-    """Fixture with sample variable data."""
+def sample_variable_data() -> Dict[str, Any]:
+    """Fixture with sample variable data.
+
+    Returns:
+        Dictionary containing sample variable data
+    """
     return {
         "idVariable": 1,
         "cdSerie": 246,
@@ -28,7 +41,10 @@ def sample_variable_data():
 
 
 @pytest.fixture
-def bcra_connector():
-    """Fixture for BCRAConnector instance."""
-    from bcra_connector import BCRAConnector
+def bcra_connector() -> BCRAConnector:
+    """Fixture for BCRAConnector instance.
+
+    Returns:
+        Configured BCRAConnector instance for testing
+    """
     return BCRAConnector(verify_ssl=False)
