@@ -256,7 +256,7 @@ class BCRAConnector:
         self.logger.info("Fetching financial entities")
         try:
             data = self._make_request("cheques/v1.0/entidades")
-            entities = [Entidad(**e) for e in data["results"]]
+            entities = [Entidad.from_dict(e) for e in data["results"]]
             self.logger.info(f"Successfully fetched {len(entities)} entities")
             return entities
         except KeyError as e:
