@@ -3,7 +3,7 @@
 import queue
 import threading
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import pytest
 
@@ -52,15 +52,15 @@ class TestRateLimiter:
         """Test basic rate limiting functionality."""
         # First 20 calls should be immediate (burst capacity)
         for _ in range(20):
-            delay: float = limiter.acquire()
-            assert delay == 0
+            initial_delay: float = limiter.acquire()
+            assert initial_delay == 0
 
         # Next call should be delayed
         start_time: float = time.monotonic()
-        delay: float = limiter.acquire()
+        subsequent_delay: float = limiter.acquire()
         elapsed: float = time.monotonic() - start_time
 
-        assert delay > 0
+        assert subsequent_delay > 0
         assert elapsed >= 0.1  # At least some delay
 
     def test_sliding_window(self, limiter: RateLimiter) -> None:
@@ -73,15 +73,15 @@ class TestRateLimiter:
         time.sleep(0.5)
 
         # Should still be limited
-        delay: float = limiter.acquire()
-        assert delay > 0
+        first_delay: float = limiter.acquire()
+        assert first_delay > 0
 
         # Wait full period
         time.sleep(1.0)
 
         # Should be allowed again
-        delay = limiter.acquire()
-        assert delay == 0
+        second_delay: float = limiter.acquire()
+        assert second_delay == 0
 
     def test_reset(self, limiter: RateLimiter) -> None:
         """Test reset functionality."""
@@ -127,15 +127,15 @@ class TestRateLimiter:
         delayed_count: int = 0
 
         while not results_queue.empty():
-            status: str
-            delay: float
-            status, delay = results_queue.get()  # type: ignore
+            result: Tuple[str, float] = results_queue.get()
+            status, delay = result
             assert status == "success"  # No errors should occur
             if delay == 0:
                 success_count += 1
             else:
                 delayed_count += 1
 
+        # Break the unreachable code by moving the assertions outside the loop
         assert success_count == 20  # Burst limit
         assert delayed_count == 5  # Remaining requests
 
@@ -163,7 +163,7 @@ class TestRateLimiter:
         assert limiter.is_limited
 
         # Wait for reset
-        time.sleep(1.1)
+        time.sleep(1.1)  # type: ignore[unreachable]
         assert not limiter.is_limited
 
     @pytest.mark.timeout(5)
@@ -175,12 +175,12 @@ class TestRateLimiter:
 
         # Should allow burst capacity immediately
         for _ in range(10):
-            delay: float = limiter.acquire()
-            assert delay == 0
+            initial_delay: float = limiter.acquire()
+            assert initial_delay == 0
 
         # Next calls should be rate limited
-        delay = limiter.acquire()
-        assert delay > 0
+        subsequent_delay: float = limiter.acquire()
+        assert subsequent_delay > 0
 
     def test_rate_limit_precision(self, limiter: RateLimiter) -> None:
         """Test precision of rate limiting delays."""
