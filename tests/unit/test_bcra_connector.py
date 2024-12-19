@@ -77,7 +77,7 @@ class TestBCRAConnector:
                 }
             ]
         }
-        mock_get.return_value = mock_api_response(mock_data)
+        mock_get.return_value = mock_api_response(mock_data, 200)
 
         connector: BCRAConnector = BCRAConnector()
         result: List[PrincipalesVariables] = connector.get_principales_variables()
@@ -95,7 +95,7 @@ class TestBCRAConnector:
         self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
     ) -> None:
         """Test handling of empty response for principal variables."""
-        mock_get.return_value = mock_api_response({"results": []})
+        mock_get.return_value = mock_api_response({"results": []}, 200)
 
         connector: BCRAConnector = BCRAConnector()
         result: List[PrincipalesVariables] = connector.get_principales_variables()
@@ -111,7 +111,7 @@ class TestBCRAConnector:
         mock_data: Dict[str, Any] = {
             "results": [{"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0}]
         }
-        mock_get.return_value = mock_api_response(mock_data)
+        mock_get.return_value = mock_api_response(mock_data, 200)
 
         connector: BCRAConnector = BCRAConnector()
         start_date: datetime = datetime(2024, 3, 1)
@@ -160,7 +160,7 @@ class TestBCRAConnector:
                 {"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0},
             ]
         }
-        mock_get.return_value = mock_api_response(mock_data)
+        mock_get.return_value = mock_api_response(mock_data, 200)
 
         connector: BCRAConnector = BCRAConnector()
         result: DatosVariable = connector.get_latest_value(1)
@@ -175,7 +175,7 @@ class TestBCRAConnector:
         self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
     ) -> None:
         """Test handling of no data for latest value."""
-        mock_get.return_value = mock_api_response({"results": []})
+        mock_get.return_value = mock_api_response({"results": []}, 200)
 
         connector: BCRAConnector = BCRAConnector()
         with pytest.raises(BCRAApiError) as exc_info:
@@ -196,7 +196,7 @@ class TestBCRAConnector:
                 },
             ]
         }
-        mock_get.return_value = mock_api_response(mock_data)
+        mock_get.return_value = mock_api_response(mock_data, 200)
 
         connector: BCRAConnector = BCRAConnector()
         result: List[Entidad] = connector.get_entidades()
@@ -226,7 +226,7 @@ class TestBCRAConnector:
                 ],
             }
         }
-        mock_get.return_value = mock_api_response(mock_data)
+        mock_get.return_value = mock_api_response(mock_data, 200)
 
         connector: BCRAConnector = BCRAConnector()
         result: Cheque = connector.get_cheque_denunciado(11, 20377516)
