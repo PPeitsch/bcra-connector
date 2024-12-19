@@ -64,9 +64,9 @@ class TestTimeoutConfig:
         """Test that TimeoutConfig instances are effectively immutable."""
         config: TimeoutConfig = TimeoutConfig()
         with pytest.raises(AttributeError):
-            setattr(config, 'connect', 10.0)
+            setattr(config, "connect", 10.0)
         with pytest.raises(AttributeError):
-            setattr(config, 'read', 60.0)
+            setattr(config, "read", 60.0)
 
     def test_string_representation(self) -> None:
         """Test string representation of TimeoutConfig."""

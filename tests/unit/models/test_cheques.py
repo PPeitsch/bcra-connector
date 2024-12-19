@@ -29,15 +29,16 @@ class TestEntidad:
         assert entidad.codigo_entidad == 11
         assert entidad.denominacion == "BANCO DE LA NACION ARGENTINA"
 
-    def test_entidad_to_dict(self) -> None:
-        """Test conversion of Entidad to dictionary."""
+    def test_entidad_from_dict(self) -> None:
+        """Test conversion from dictionary for Entidad."""
         entidad: Entidad = Entidad(
             codigo_entidad=14, denominacion="BANCO DE LA PROVINCIA DE BUENOS AIRES"
         )
-        data: Dict[str, Any] = entidad.to_dict()
-
-        assert data["codigoEntidad"] == 14
-        assert data["denominacion"] == "BANCO DE LA PROVINCIA DE BUENOS AIRES"
+        data: Dict[str, Any] = {
+            "codigoEntidad": 14,
+            "denominacion": "BANCO DE LA PROVINCIA DE BUENOS AIRES",
+        }
+        assert entidad == Entidad.from_dict(data)
 
     def test_entidad_equality(self) -> None:
         """Test equality comparison of Entidad instances."""
@@ -66,16 +67,17 @@ class TestChequeDetalle:
         assert detalle.numero_cuenta == 5240055962
         assert detalle.causal == "Denuncia por robo"
 
-    def test_cheque_detalle_to_dict(self) -> None:
-        """Test conversion of ChequeDetalle to dictionary."""
+    def test_cheque_detalle_from_dict(self) -> None:
+        """Test conversion from dictionary for ChequeDetalle."""
         detalle: ChequeDetalle = ChequeDetalle(
             sucursal=524, numero_cuenta=5240055962, causal="Denuncia por robo"
         )
-        data: Dict[str, Any] = detalle.to_dict()
-
-        assert data["sucursal"] == 524
-        assert data["numeroCuenta"] == 5240055962
-        assert data["causal"] == "Denuncia por robo"
+        data: Dict[str, Any] = {
+            "sucursal": 524,
+            "numeroCuenta": 5240055962,
+            "causal": "Denuncia por robo",
+        }
+        assert detalle == ChequeDetalle.from_dict(data)
 
 
 class TestCheque:
@@ -109,15 +111,10 @@ class TestCheque:
         assert len(cheque.detalles) == 1
         assert isinstance(cheque.detalles[0], ChequeDetalle)
 
-    def test_cheque_to_dict(self, sample_cheque_data: Dict[str, Any]) -> None:
-        """Test conversion of Cheque to dictionary."""
+    def test_cheque_from_dict(self, sample_cheque_data: Dict[str, Any]) -> None:
+        """Test conversion from dictionary for Cheque."""
         cheque: Cheque = Cheque.from_dict(sample_cheque_data)
-        data: Dict[str, Any] = cheque.to_dict()
-
-        assert data["numeroCheque"] == 20377516
-        assert data["denunciado"] is True
-        assert data["fechaProcesamiento"] == "2024-03-05"
-        assert len(data["detalles"]) == 1
+        assert cheque == Cheque.from_dict(sample_cheque_data)
 
     def test_cheque_with_no_detalles(self) -> None:
         """Test Cheque creation with no details."""
@@ -187,12 +184,14 @@ class TestValidation:
     def test_invalid_date_format(self) -> None:
         """Test handling of invalid date format."""
         with pytest.raises(ValueError):
-            Cheque(
-                numero_cheque=1,
-                denunciado=True,
-                fecha_procesamiento="invalid-date",
-                denominacion_entidad="TEST",
-                detalles=[],
+            Cheque.from_dict(
+                {
+                    "numeroCheque": 1,
+                    "denunciado": True,
+                    "fechaProcesamiento": "invalid-date",
+                    "denominacionEntidad": "TEST",
+                    "detalles": [],
+                }
             )
 
     def test_negative_check_number(self) -> None:

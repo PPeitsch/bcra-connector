@@ -120,7 +120,11 @@ class TestErrorHandling:
 
         assert len(strict_result) == len(lenient_result)
 
-    def test_retry_mechanism(self, strict_rate_limit_connector: BCRAConnector, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_retry_mechanism(
+        self,
+        strict_rate_limit_connector: BCRAConnector,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Test retry mechanism for failed requests."""
         failure_count = 0
 
@@ -134,7 +138,7 @@ class TestErrorHandling:
             response._content = b'{"results": []}'
             return response
 
-        monkeypatch.setattr(strict_rate_limit_connector.session, 'get', mock_request)
+        monkeypatch.setattr(strict_rate_limit_connector.session, "get", mock_request)
         result = strict_rate_limit_connector.get_principales_variables()
         assert result is not None
         assert failure_count == 3  # Two failures + one success
