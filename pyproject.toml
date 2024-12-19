@@ -106,4 +106,4 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 addopts = "--cov-report=term --cov-report=xml"
 testpaths = ["tests"]
-python_files = "*_tests.py"
+python_files = ["*_tests.py", "test_*.py"]
