@@ -62,14 +62,20 @@ class DatosVariable:
     fecha: date
     valor: float
 
+    def __post_init__(self) -> None:
+        """Validate instance after initialization."""
+        if self.idVariable < 0:
+            raise ValueError("Variable ID must be non-negative")
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DatosVariable":
         """Create a DatosVariable instance from a dictionary."""
-        return cls(
+        instance = cls(
             idVariable=data["idVariable"],
             fecha=date.fromisoformat(data["fecha"]),
             valor=float(data["valor"]),
         )
+        return instance
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the DatosVariable instance to a dictionary."""
@@ -78,3 +84,9 @@ class DatosVariable:
             "fecha": self.fecha.isoformat(),
             "valor": self.valor,
         }
+
+    def __eq__(self, other: object) -> bool:
+        """Compare DatosVariable instances based only on idVariable and fecha."""
+        if not isinstance(other, DatosVariable):
+            return NotImplemented
+        return self.idVariable == other.idVariable and self.fecha == other.fecha
