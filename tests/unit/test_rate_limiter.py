@@ -3,7 +3,7 @@
 import queue
 import threading
 import time
-from typing import List, Optional, Tuple
+from typing import Tuple, Union
 
 import pytest
 
@@ -99,10 +99,14 @@ class TestRateLimiter:
         delay: float = limiter.acquire()
         assert delay == 0
 
+    import queue
+    import threading
+    from typing import Tuple, Union
+
     def test_concurrent_access(self, limiter: RateLimiter) -> None:
         """Test thread safety of rate limiter."""
         THREAD_COUNT = limiter.config.burst + 5
-        results = queue.Queue()
+        results: queue.Queue[Tuple[str, Union[bool, str]]] = queue.Queue()
 
         def worker() -> None:
             try:
