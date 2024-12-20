@@ -2,6 +2,7 @@
 Test suite for BCRAConnector class covering all methods and functionality.
 """
 
+import time
 from datetime import date, datetime
 from typing import Any, Callable, Dict, List
 from unittest.mock import Mock, patch
@@ -235,9 +236,12 @@ class TestBCRAConnector:
         assert result.numero_cheque == 20377516
         assert result.denunciado is True
         assert result.fecha_procesamiento == date(2024, 3, 5)
+        assert result.denominacion_entidad == "BANCO DE LA NACION ARGENTINA"
         assert len(result.detalles) == 1
         assert isinstance(result.detalles[0], ChequeDetalle)
         assert result.detalles[0].sucursal == 524
+        assert result.detalles[0].numero_cuenta == 5240055962
+        assert result.detalles[0].causal == "Denuncia por robo"
 
     def test_error_handling(self, connector: BCRAConnector) -> None:
         """Test various error handling scenarios."""
@@ -265,13 +269,31 @@ class TestBCRAConnector:
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             mock_get.return_value = Mock(json=lambda: {"results": []}, status_code=200)
 
-            # Make multiple requests to test rate limiting
-            start_time: datetime = datetime.now()
-            for _ in range(12):  # Default is 10 calls per second
-                connector.get_principales_variables()
+            # First, reset the rate limiter to ensure a clean state
+            connector.rate_limiter.reset()
 
-            duration: float = (datetime.now() - start_time).total_seconds()
-            assert duration >= 1.0  # Should take at least 1 second due to rate limiting
+            # Make requests up to the burst limit
+            for _ in range(connector.rate_limiter.config.burst):
+                delay = connector.rate_limiter.acquire()
+                assert delay == 0, "No delay expected within burst limit"
+
+            # Make additional request that should be rate limited
+            start_time = time.monotonic()
+            delay = connector.rate_limiter.acquire()
+            end_time = time.monotonic()
+
+            assert delay > 0, "Expected delay when exceeding burst limit"
+            assert connector.rate_limiter.is_limited, "Rate limiter should be limited"
+            assert (
+                end_time - start_time >= delay
+            ), "Should have waited at least the delay time"
+
+            # Verify rate limiter state
+            assert (
+                connector.rate_limiter.current_usage
+                > connector.rate_limiter.config.calls
+            )
+            assert connector.rate_limiter.remaining_calls() == 0
 
     @pytest.mark.parametrize(
         "response_code,error_messages",

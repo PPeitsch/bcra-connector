@@ -278,13 +278,7 @@ class BCRAConnector:
             data = self._make_request(
                 f"cheques/v1.0/denunciados/{codigo_entidad}/{numero_cheque}"
             )
-            result = data["results"]
-            detalles = [ChequeDetalle(**d) for d in result.get("detalles", [])]
-            cheque = Cheque(**result, detalles=detalles)
-            self.logger.info(
-                f"Successfully fetched information for check {numero_cheque}"
-            )
-            return cheque
+            return Cheque.from_dict(data["results"])
         except KeyError as e:
             raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
 
