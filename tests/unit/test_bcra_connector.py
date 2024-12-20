@@ -275,27 +275,25 @@ class TestBCRAConnector:
             # Make requests up to the burst limit
             for _ in range(connector.rate_limiter.config.burst):
                 delay = connector.rate_limiter.acquire()
-                assert delay == 0, "No delay expected within burst limit"
+                assert delay == 0, f"Unexpected delay within burst limit, got {delay}s"
 
             # Make an additional request that should be rate limited
             start_time = time.monotonic()
             delay = connector.rate_limiter.acquire()
             end_time = time.monotonic()
 
-            # Allow small tolerances in timing due to system variability
+            # Verify that delay is enforced after exceeding burst limit
             assert delay > 0, "Expected delay when exceeding burst limit"
             assert (
                 end_time - start_time >= delay
-            ), f"Expected delay of at least {delay}s"
-            assert (
-                connector.rate_limiter.is_limited or delay > 0
-            ), "Rate limiter should be limited or delay should be enforced"
+            ), f"Expected delay of at least {delay}s, got {end_time - start_time}s"
+            assert connector.rate_limiter.is_limited, "Rate limiter should be limited"
 
             # Verify rate limiter state
             assert (
                 connector.rate_limiter.current_usage
-                > connector.rate_limiter.config.calls
-            ), "Current usage should exceed configured call limit"
+                == connector.rate_limiter.config.burst + 1
+            ), "Current usage should reflect calls made, including the limited one"
             assert (
                 connector.rate_limiter.remaining_calls() == 0
             ), "Remaining calls should be zero after exceeding limit"

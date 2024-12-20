@@ -121,7 +121,7 @@ class RateLimiter:
         """Check if rate limit is currently being enforced."""
         with self._lock:
             self._clean_old_timestamps()
-            return len(self._window) >= self.config.burst
+            return len(self._window) >= self.config.calls
 
     def remaining_calls(self) -> int:
         """Get the number of remaining calls allowed in the current window.
