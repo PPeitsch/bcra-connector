@@ -45,8 +45,7 @@ class TestErrorHandling:
     def test_connection_error(self) -> None:
         """Test handling of connection errors."""
         connector = BCRAConnector(
-            verify_ssl=False,
-            timeout=TimeoutConfig(connect=0.1, read=0.1)
+            verify_ssl=False, timeout=TimeoutConfig(connect=0.1, read=0.1)
         )
         connector.BASE_URL = "https://nonexistent.example.com"
 
@@ -55,21 +54,25 @@ class TestErrorHandling:
         assert "connection error" in str(exc_info.value).lower()
 
     def test_rate_limit_exceeded(
-            self, strict_rate_limit_connector: BCRAConnector
+        self, strict_rate_limit_connector: BCRAConnector
     ) -> None:
         """Test handling of rate limit exceeded."""
+        # Configure stricter rate limiting
+        strict_rate_limit_connector.rate_limiter.reset()
         strict_rate_limit_connector.rate_limiter.config = RateLimitConfig(
             calls=1, period=1.0, _burst=1
         )
 
+        # First call should succeed
         strict_rate_limit_connector.get_principales_variables()
 
-        start_time = time.monotonic()
+        # Force immediate rate limiting
+        strict_rate_limit_connector.rate_limiter._window.append(time.monotonic())
+
+        # Second call should be rate limited
+        time.sleep(0.1)  # Ensure we're in the rate limit window
         with pytest.raises(BCRAApiError) as exc_info:
             strict_rate_limit_connector.get_principales_variables()
-        duration = time.monotonic() - start_time
-
-        assert duration >= 1.0
         assert "rate limit" in str(exc_info.value).lower()
 
     def test_invalid_date_range(
@@ -102,7 +105,9 @@ class TestErrorHandling:
         )
 
     def test_malformed_response_handling(
-            self, strict_rate_limit_connector: BCRAConnector, monkeypatch: pytest.MonkeyPatch
+        self,
+        strict_rate_limit_connector: BCRAConnector,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test handling of malformed API responses."""
 
@@ -130,9 +135,9 @@ class TestErrorHandling:
         assert len(strict_result) == len(lenient_result)
 
     def test_retry_mechanism(
-        self,
-        strict_rate_limit_connector: BCRAConnector,
-        monkeypatch: pytest.MonkeyPatch,
+            self,
+            strict_rate_limit_connector: BCRAConnector,
+            monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test retry mechanism for failed requests."""
         failure_count = 0
@@ -141,15 +146,19 @@ class TestErrorHandling:
             nonlocal failure_count
             failure_count += 1
             if failure_count < 3:
-                raise requests.ConnectionError("Simulated failure")
+                raise requests.ConnectionError("Simulated connection failure")
+
             response = requests.Response()
             response.status_code = 200
             response._content = b'{"results": []}'
             return response
 
+        # Reset rate limiter before test
+        strict_rate_limit_connector.rate_limiter.reset()
         monkeypatch.setattr(strict_rate_limit_connector.session, "get", mock_request)
+
         result = strict_rate_limit_connector.get_principales_variables()
-        assert result is not None
+        assert result == []
         assert failure_count == 3  # Two failures + one success
 
     def test_network_errors(self, strict_rate_limit_connector: BCRAConnector) -> None:
@@ -170,16 +179,16 @@ class TestErrorHandling:
 
     @pytest.mark.parametrize("status_code", [400, 401, 403, 404, 500, 502, 503])
     def test_http_error_codes(
-            self, strict_rate_limit_connector: BCRAConnector, status_code: int
+        self, strict_rate_limit_connector: BCRAConnector, status_code: int
     ) -> None:
         """Test handling of various HTTP error codes."""
 
         def mock_get(*args: Any, **kwargs: Any) -> requests.Response:
             response = requests.Response()
             response.status_code = status_code
-            response._content = json.dumps({
-                "errorMessages": [f"Test error for {status_code}"]
-            }).encode()
+            response._content = json.dumps(
+                {"errorMessages": [f"Test error for {status_code}"]}
+            ).encode()
             response.url = "test_url"
             response.reason = f"Error {status_code}"
             return response

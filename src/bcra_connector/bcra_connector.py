@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import requests
 import urllib3
+import ssl
+from urllib3.exceptions import SSLError as URLLibSSLError
 from scipy.stats import pearsonr
 
 from .cheques import Cheque, Entidad
@@ -117,27 +119,34 @@ class BCRAConnector:
 
                 try:
                     response.raise_for_status()
-                except requests.HTTPError:
-                    error_msg = f"HTTP {response.status_code}"
-                    if response.status_code == 404:
-                        error_msg = "Not found"
+                except requests.HTTPError as e:
+                    status_code = response.status_code
+                    if status_code == 404:
+                        raise BCRAApiError("Resource not found") from e
+                    if status_code == 429:
+                        raise BCRAApiError("Rate limit exceeded") from e
+
+                    error_msg = f"HTTP {status_code}"
                     try:
                         error_data = response.json()
                         if "errorMessages" in error_data:
                             error_msg = f"{error_msg}: {', '.join(error_data['errorMessages'])}"
                     except (ValueError, KeyError):
-                        pass
-                    raise BCRAApiError(error_msg)
+                        error_msg = f"{error_msg}: {response.reason}"
+                    raise BCRAApiError(error_msg) from e
 
                 try:
                     return dict(response.json())
                 except ValueError as e:
                     raise BCRAApiError(f"Invalid JSON response: {str(e)}")
 
-            except requests.Timeout:
+            except (ssl.SSLError, URLLibSSLError) as e:
+                raise BCRAApiError("SSL verification failed") from e
+
+            except requests.Timeout as e:
                 self.logger.error(f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError("Request timed out")
+                    raise BCRAApiError("Request timed out") from e
                 time.sleep(self.RETRY_DELAY * (2 ** attempt))
 
             except requests.ConnectionError as e:
@@ -145,11 +154,11 @@ class BCRAConnector:
                     raise BCRAApiError("SSL verification failed")
                 self.logger.warning(f"Connection error (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError("Connection error")
+                    raise BCRAApiError("API request failed: Connection error") from e
                 time.sleep(self.RETRY_DELAY * (2 ** attempt))
 
             except requests.RequestException as e:
-                raise BCRAApiError(str(e))
+                raise BCRAApiError(f"API request failed: {str(e)}") from e
 
         raise BCRAApiError("Maximum retry attempts reached")
 
