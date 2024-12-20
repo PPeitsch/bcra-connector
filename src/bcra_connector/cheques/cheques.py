@@ -20,12 +20,23 @@ class Entidad:
     codigo_entidad: int
     denominacion: str
 
+    def __post_init__(self) -> None:
+        """Validate instance after initialization."""
+        if self.codigo_entidad < 0:
+            raise ValueError("Entity code must be non-negative")
+        if not self.denominacion.strip():
+            raise ValueError("Entity name cannot be empty")
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Entidad":
         """Create an Entidad instance from a dictionary."""
         return cls(
             codigo_entidad=data["codigoEntidad"], denominacion=data["denominacion"]
         )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the instance to a dictionary."""
+        return {"codigoEntidad": self.codigo_entidad, "denominacion": self.denominacion}
 
 
 @dataclass
@@ -51,6 +62,14 @@ class ChequeDetalle:
             causal=data["causal"],
         )
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the instance to a dictionary."""
+        return {
+            "sucursal": self.sucursal,
+            "numeroCuenta": self.numero_cuenta,
+            "causal": self.causal,
+        }
+
 
 @dataclass
 class Cheque:
@@ -70,6 +89,13 @@ class Cheque:
     denominacion_entidad: str
     detalles: List[ChequeDetalle]
 
+    def __post_init__(self) -> None:
+        """Validate instance after initialization."""
+        if self.numero_cheque < 0:
+            raise ValueError("Check number must be non-negative")
+        if not self.denominacion_entidad.strip():
+            raise ValueError("Entity name cannot be empty")
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Cheque":
         """Create a Cheque instance from a dictionary."""
@@ -82,20 +108,13 @@ class Cheque:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert the Cheque instance to a dictionary."""
+        """Convert the instance to a dictionary."""
         return {
             "numeroCheque": self.numero_cheque,
             "denunciado": self.denunciado,
             "fechaProcesamiento": self.fecha_procesamiento.isoformat(),
             "denominacionEntidad": self.denominacion_entidad,
-            "detalles": [
-                {
-                    "sucursal": d.sucursal,
-                    "numeroCuenta": d.numero_cuenta,
-                    "causal": d.causal,
-                }
-                for d in self.detalles
-            ],
+            "detalles": [d.to_dict() for d in self.detalles],
         }
 
 

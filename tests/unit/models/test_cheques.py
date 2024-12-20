@@ -147,6 +147,23 @@ class TestResponses:
         assert len(response.results) == 1
         assert isinstance(response.results[0], Entidad)
 
+    @pytest.fixture
+    def sample_cheque_data(self) -> Dict[str, Any]:
+        """Fixture providing sample check data."""
+        return {
+            "numeroCheque": 20377516,
+            "denunciado": True,
+            "fechaProcesamiento": "2024-03-05",
+            "denominacionEntidad": "BANCO DE LA NACION ARGENTINA",
+            "detalles": [
+                {
+                    "sucursal": 524,
+                    "numeroCuenta": 5240055962,
+                    "causal": "Denunciado por tercero",
+                }
+            ],
+        }
+
     def test_cheque_response(self, sample_cheque_data: Dict[str, Any]) -> None:
         """Test ChequeResponse model."""
         data: Dict[str, Any] = {"status": 200, "results": sample_cheque_data}
