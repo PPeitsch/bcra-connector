@@ -14,7 +14,7 @@ import requests
 import urllib3
 from scipy.stats import pearsonr
 
-from .cheques import Cheque, ChequeDetalle, Entidad
+from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .principales_variables import DatosVariable, PrincipalesVariables
 from .rate_limiter import RateLimitConfig, RateLimiter
@@ -94,7 +94,7 @@ class BCRAConnector:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def _make_request(
-        self, endpoint: str, params: Optional[Dict[str, Any]] = None
+            self, endpoint: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Make a request to the BCRA API with retry logic and rate limiting.
 
@@ -119,28 +119,45 @@ class BCRAConnector:
                     verify=self.verify_ssl,
                     timeout=self.timeout.as_tuple,
                 )
-                response.raise_for_status()
-                self.logger.debug("Request successful")
-                return dict(response.json())
+
+                # Handle HTTP errors
+                if response.status_code >= 400:
+                    error_msg = f"HTTP {response.status_code}"
+                    try:
+                        error_data = response.json()
+                        if "errorMessages" in error_data:
+                            error_msg = f"{error_msg}: {', '.join(error_data['errorMessages'])}"
+                    except (ValueError, KeyError):
+                        error_msg = f"{error_msg}: {response.reason}"
+                    raise BCRAApiError(error_msg)
+
+                # Handle malformed JSON
+                try:
+                    return dict(response.json())
+                except ValueError as e:
+                    raise BCRAApiError(f"Invalid JSON response: {str(e)}")
+
             except requests.Timeout as e:
                 self.logger.error(
-                    f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
+                    f"Request timeout (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
                 )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(
-                        f"Request timed out after {self.MAX_RETRIES} attempts"
-                    ) from e
-                time.sleep(self.RETRY_DELAY * (2**attempt))
-            except requests.RequestException as e:
+                    raise BCRAApiError("Request timeout error") from e
+                time.sleep(self.RETRY_DELAY * (2 ** attempt))
+
+            except requests.ConnectionError as e:
                 self.logger.warning(
-                    f"Request failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
+                    f"Connection error (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
                 )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(
-                        f"API request failed after {self.MAX_RETRIES} attempts: {str(e)}"
-                    ) from e
-                time.sleep(self.RETRY_DELAY * (2**attempt))  # Exponential backoff
-        raise BCRAApiError("The request could not be completed")
+                    raise BCRAApiError("Connection error") from e
+                time.sleep(self.RETRY_DELAY * (2 ** attempt))
+
+            except requests.RequestException as e:
+                self.logger.error(f"Request error: {str(e)}")
+                raise BCRAApiError(str(e)) from e
+
+        raise BCRAApiError("Maximum retry attempts reached")
 
     # Principales Variables methods
     def get_principales_variables(self) -> List[PrincipalesVariables]:

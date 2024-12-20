@@ -2,6 +2,7 @@
 
 import json
 import socket
+import time
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -38,36 +39,37 @@ class TestErrorHandling:
         """Test handling of request timeouts."""
         with pytest.raises(BCRAApiError) as exc_info:
             short_timeout_connector.get_principales_variables()
-
         assert "timeout" in str(exc_info.value).lower()
 
     def test_connection_error(self) -> None:
         """Test handling of connection errors."""
-        # Usando requests.Session para simular el error de conexión
-        with pytest.raises(BCRAApiError) as exc_info:
-            session = requests.Session()
-            session.mount("https://", requests.adapters.HTTPAdapter(max_retries=0))
-            connector = BCRAConnector(verify_ssl=False)
-            connector.session = session
-            connector.get_principales_variables()
-
-        error_msg = str(exc_info.value).lower()
-        assert any(
-            term in error_msg for term in ["connection", "dns", "timeout", "refused"]
+        connector = BCRAConnector(
+            verify_ssl=False,
+            timeout=TimeoutConfig(connect=0.1, read=0.1)
         )
+        connector.BASE_URL = "https://nonexistent.example.com"
+
+        with pytest.raises(BCRAApiError) as exc_info:
+            connector.get_principales_variables()
+        assert "connection error" in str(exc_info.value).lower()
 
     def test_rate_limit_exceeded(
-        self, strict_rate_limit_connector: BCRAConnector
+            self, strict_rate_limit_connector: BCRAConnector
     ) -> None:
         """Test handling of rate limit exceeded."""
-        # Make rapid successive requests
+        strict_rate_limit_connector.rate_limiter.config = RateLimitConfig(
+            calls=1, period=1.0, _burst=1
+        )
+
         strict_rate_limit_connector.get_principales_variables()
 
+        start_time = time.monotonic()
         with pytest.raises(BCRAApiError) as exc_info:
             strict_rate_limit_connector.get_principales_variables()
+        duration = time.monotonic() - start_time
 
-        error = str(exc_info.value).lower()
-        assert any(term in error for term in ["rate limit", "too many requests", "429"])
+        assert duration >= 1.0
+        assert "rate limit" in str(exc_info.value).lower()
 
     def test_invalid_date_range(
         self, strict_rate_limit_connector: BCRAConnector
@@ -99,15 +101,21 @@ class TestErrorHandling:
         )
 
     def test_malformed_response_handling(
-        self, strict_rate_limit_connector: BCRAConnector
+            self, strict_rate_limit_connector: BCRAConnector, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test handling of malformed API responses."""
-        with pytest.raises(BCRAApiError):
+
+        def mock_get(*args: Any, **kwargs: Any) -> requests.Response:
             response = requests.Response()
             response.status_code = 200
-            response._content = b"invalid json"
-            with pytest.raises(json.JSONDecodeError):
-                response.json()
+            response._content = b"invalid json{{"
+            return response
+
+        monkeypatch.setattr(strict_rate_limit_connector.session, "get", mock_get)
+
+        with pytest.raises(BCRAApiError) as exc_info:
+            strict_rate_limit_connector.get_principales_variables()
+        assert "invalid json" in str(exc_info.value).lower()
 
     def test_ssl_verification(self) -> None:
         """Test SSL verification behavior."""
@@ -161,10 +169,15 @@ class TestErrorHandling:
 
     @pytest.mark.parametrize("status_code", [400, 401, 403, 404, 500, 502, 503])
     def test_http_error_codes(
-        self, strict_rate_limit_connector: BCRAConnector, status_code: int
+            self, strict_rate_limit_connector: BCRAConnector, status_code: int
     ) -> None:
         """Test handling of various HTTP error codes."""
-        with pytest.raises(BCRAApiError):
+        with pytest.raises(BCRAApiError) as exc_info:
             response = requests.Response()
             response.status_code = status_code
+            response._content = json.dumps({
+                "errorMessages": [f"Test error for {status_code}"]
+            }).encode()
+            response.url = "test_url"
             response.raise_for_status()
+        assert str(status_code) in str(exc_info.value)
