@@ -106,8 +106,8 @@ class BCRAConnector:
                 # Apply rate limiting
                 delay = self.rate_limiter.acquire()
                 if delay > 0:
-                    self.logger.debug(f"Rate limit applied. Waited {delay:.2f} seconds")
-                    raise BCRAApiError("HTTP 429: Rate limit exceeded")
+                    self.logger.debug(f"Rate limit applied. Delay: {delay:.2f} seconds")
+                    raise BCRAApiError("Rate limit exceeded")
 
                 self.logger.debug(f"Making request to {url}")
                 response = self.session.get(
@@ -140,25 +140,28 @@ class BCRAConnector:
                 except ValueError as e:
                     raise BCRAApiError("Invalid JSON response") from e
 
-            except (ssl.SSLError, URLLibSSLError) as e:
-                raise BCRAApiError("SSL verification failed") from e
-
             except requests.Timeout as e:
                 self.logger.error(
-                    f"Request timeout (attempt {attempt + 1}/{self.MAX_RETRIES})"
+                    f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES})"
                 )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError("Request timeout") from e
+                    raise BCRAApiError("Request timed out") from e
                 time.sleep(self.RETRY_DELAY * (2**attempt))
 
             except requests.ConnectionError as e:
+
                 if "SSL" in str(e):
                     raise BCRAApiError("SSL verification failed") from e
+
                 self.logger.warning(
                     f"Connection error (attempt {attempt + 1}/{self.MAX_RETRIES})"
                 )
+
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError("Connection error") from e
+                    raise BCRAApiError(
+                        "API request failed: Connection error"
+                    ) from e  # Modificado aquí
+
                 time.sleep(self.RETRY_DELAY * (2**attempt))
 
             except requests.RequestException as e:

@@ -62,21 +62,15 @@ class RateLimiter:
             self._window.popleft()
 
     def _get_delay(self) -> float:
-        """Calculate the required delay before the next request.
-
-        :return: Required delay in seconds
-        """
+        """Calculate the required delay before the next request."""
         now = time.monotonic()
         self._clean_old_timestamps()
 
         if len(self._window) < self.config.burst:
             return 0.0
 
-        if len(self._window) >= self.config.calls:
-            next_available = self._window[-self.config.calls] + self.config.period
-            return max(0.0, next_available - now)
-
-        return 0.0
+        next_available = self._window[0] + self.config.period
+        return max(0.0, next_available - now)
 
     def acquire(self) -> float:
         """Acquire permission to make a request.
@@ -109,10 +103,13 @@ class RateLimiter:
         """Check if rate limit is currently being enforced."""
         with self._lock:
             self._clean_old_timestamps()
-            return len(self._window) >= self.config.calls
+            return len(self._window) >= self.config.burst
 
     def remaining_calls(self) -> int:
-        """Get the number of remaining calls allowed in the current window."""
+        """Get the number of remaining calls allowed in the current window.
+
+        Based on the base rate limit (calls), not the burst limit.
+        """
         with self._lock:
             self._clean_old_timestamps()
             return max(0, self.config.calls - len(self._window))

@@ -39,7 +39,7 @@ class TestErrorHandling:
         """Test handling of request timeouts."""
         with pytest.raises(BCRAApiError) as exc_info:
             short_timeout_connector.get_principales_variables()
-        assert "timeout" in str(exc_info.value).lower()
+        assert "request timed out" in str(exc_info.value).lower()
 
     def test_connection_error(self) -> None:
         """Test handling of connection errors."""
