@@ -107,3 +107,6 @@ ignore_missing_imports = true
 addopts = "--cov-report=term --cov-report=xml"
 testpaths = ["tests"]
 python_files = ["*_tests.py", "test_*.py"]
+markers = [
+    "integration: mark a test as an integration test",
+]
