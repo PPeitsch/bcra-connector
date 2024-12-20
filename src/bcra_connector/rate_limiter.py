@@ -79,11 +79,17 @@ class RateLimiter:
         """
         with self._lock:
             delay = self._get_delay()
-            if delay > 0:
-                time.sleep(delay)
+            if delay == 0:
+                self._window.append(time.monotonic())
+                return 0.0
 
-            self._window.append(time.monotonic())
-            return delay
+        if delay > 0:
+            time.sleep(delay)  # Apply delay outside the lock
+            with self._lock:  # Re-acquire lock to add timestamp
+                self._clean_old_timestamps()
+                self._window.append(time.monotonic())
+
+        return delay
 
     def reset(self) -> None:
         """Reset the rate limiter state."""
