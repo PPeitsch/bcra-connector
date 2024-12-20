@@ -62,15 +62,25 @@ class RateLimiter:
             self._window.popleft()
 
     def _get_delay(self) -> float:
-        """Calculate the required delay before the next request."""
+        """Calculate the required delay before the next request.
+
+        :return: Required delay in seconds
+        """
         now = time.monotonic()
         self._clean_old_timestamps()
 
         if len(self._window) < self.config.burst:
             return 0.0
 
-        next_available = self._window[0] + self.config.period
-        return max(0.0, next_available - now)
+        # Calculate delay based on the period and number of requests beyond burst
+        requests_over_burst = max(0, len(self._window) - self.config.calls)
+        if requests_over_burst > 0:
+            # Calculate delay that distributes requests evenly over the period
+            next_available = self._window[0] + (self.config.period * requests_over_burst / self.config.calls)
+            return max(0.0, next_available - now)
+
+        # Default delay when at burst limit
+        return max(0.0, self._window[0] + self.config.period - now)
 
     def acquire(self) -> float:
         """Acquire permission to make a request.
