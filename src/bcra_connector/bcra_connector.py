@@ -165,7 +165,7 @@ class BCRAConnector:
                 time.sleep(self.RETRY_DELAY * (2**attempt))
 
             except requests.RequestException as e:
-                raise BCRAApiError(f"Request error: {str(e)}") from e
+                raise BCRAApiError(f"API request failed: {str(e)}") from e
 
         raise BCRAApiError("Maximum retry attempts reached")
 

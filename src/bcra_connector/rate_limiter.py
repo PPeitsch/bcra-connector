@@ -76,7 +76,9 @@ class RateLimiter:
         requests_over_burst = max(0, len(self._window) - self.config.calls)
         if requests_over_burst > 0:
             # Calculate delay that distributes requests evenly over the period
-            next_available = self._window[0] + (self.config.period * requests_over_burst / self.config.calls)
+            next_available = self._window[0] + (
+                self.config.period * requests_over_burst / self.config.calls
+            )
             return max(0.0, next_available - now)
 
         # Default delay when at burst limit
