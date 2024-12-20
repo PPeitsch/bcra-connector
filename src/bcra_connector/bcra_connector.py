@@ -96,13 +96,7 @@ class BCRAConnector:
     def _make_request(
             self, endpoint: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Make a request to the BCRA API with retry logic and rate limiting.
-
-        :param endpoint: The API endpoint to request
-        :param params: Query parameters for the request, defaults to None
-        :return: The JSON response from the API
-        :raises BCRAApiError: If the API request fails after retries
-        """
+        """Make a request to the BCRA API with retry logic and rate limiting."""
         url = f"{self.BASE_URL}/{endpoint}"
 
         for attempt in range(self.MAX_RETRIES):
@@ -111,6 +105,7 @@ class BCRAConnector:
                 delay = self.rate_limiter.acquire()
                 if delay > 0:
                     self.logger.debug(f"Rate limit applied. Waited {delay:.2f} seconds")
+                    raise BCRAApiError("Rate limit exceeded")
 
                 self.logger.debug(f"Making request to {url}")
                 response = self.session.get(
@@ -120,42 +115,41 @@ class BCRAConnector:
                     timeout=self.timeout.as_tuple,
                 )
 
-                # Handle HTTP errors
-                if response.status_code >= 400:
+                try:
+                    response.raise_for_status()
+                except requests.HTTPError:
                     error_msg = f"HTTP {response.status_code}"
+                    if response.status_code == 404:
+                        error_msg = "Not found"
                     try:
                         error_data = response.json()
                         if "errorMessages" in error_data:
                             error_msg = f"{error_msg}: {', '.join(error_data['errorMessages'])}"
                     except (ValueError, KeyError):
-                        error_msg = f"{error_msg}: {response.reason}"
+                        pass
                     raise BCRAApiError(error_msg)
 
-                # Handle malformed JSON
                 try:
                     return dict(response.json())
                 except ValueError as e:
                     raise BCRAApiError(f"Invalid JSON response: {str(e)}")
 
-            except requests.Timeout as e:
-                self.logger.error(
-                    f"Request timeout (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
-                )
+            except requests.Timeout:
+                self.logger.error(f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError("Request timeout error") from e
+                    raise BCRAApiError("Request timed out")
                 time.sleep(self.RETRY_DELAY * (2 ** attempt))
 
             except requests.ConnectionError as e:
-                self.logger.warning(
-                    f"Connection error (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
-                )
+                if "SSL" in str(e):
+                    raise BCRAApiError("SSL verification failed")
+                self.logger.warning(f"Connection error (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError("Connection error") from e
+                    raise BCRAApiError("Connection error")
                 time.sleep(self.RETRY_DELAY * (2 ** attempt))
 
             except requests.RequestException as e:
-                self.logger.error(f"Request error: {str(e)}")
-                raise BCRAApiError(str(e)) from e
+                raise BCRAApiError(str(e))
 
         raise BCRAApiError("Maximum retry attempts reached")
 

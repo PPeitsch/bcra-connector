@@ -5,6 +5,7 @@ import socket
 import time
 from datetime import datetime, timedelta
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 import requests
@@ -172,12 +173,23 @@ class TestErrorHandling:
             self, strict_rate_limit_connector: BCRAConnector, status_code: int
     ) -> None:
         """Test handling of various HTTP error codes."""
-        with pytest.raises(BCRAApiError) as exc_info:
+
+        def mock_get(*args: Any, **kwargs: Any) -> requests.Response:
             response = requests.Response()
             response.status_code = status_code
             response._content = json.dumps({
                 "errorMessages": [f"Test error for {status_code}"]
             }).encode()
             response.url = "test_url"
-            response.raise_for_status()
-        assert str(status_code) in str(exc_info.value)
+            response.reason = f"Error {status_code}"
+            return response
+
+        with patch.object(strict_rate_limit_connector.session, "get", mock_get):
+            with pytest.raises(BCRAApiError) as exc_info:
+                strict_rate_limit_connector.get_principales_variables()
+
+            error_msg = str(exc_info.value).lower()
+            if status_code == 404:
+                assert "not found" in error_msg
+            else:
+                assert str(status_code) in error_msg
