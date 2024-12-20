@@ -130,6 +130,21 @@ class TestCotizacionFecha:
 class TestResponseModels:
     """Test suite for response models."""
 
+    @pytest.fixture
+    def sample_cotizacion_fecha_data(self) -> Dict[str, Any]:
+        """Fixture providing sample dated quotation data."""
+        return {
+            "fecha": "2024-03-05",
+            "detalle": [
+                {
+                    "codigoMoneda": "USD",
+                    "descripcion": "DOLAR ESTADOUNIDENSE",
+                    "tipoPase": 1.0,
+                    "tipoCotizacion": 43.6862,
+                }
+            ],
+        }
+
     def test_resultset(self) -> None:
         """Test Resultset model."""
         data: Dict[str, Any] = {"count": 1, "offset": 0, "limit": 1000}
