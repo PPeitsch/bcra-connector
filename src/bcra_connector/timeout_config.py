@@ -1,12 +1,8 @@
-"""
-Timeout configuration for API requests.
-"""
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Tuple
 
 
-@dataclass
+@dataclass(frozen=True)  # frozen=True hace la clase inmutable
 class TimeoutConfig:
     """Configuration for request timeouts.
 
@@ -14,8 +10,8 @@ class TimeoutConfig:
     :param read: How long to wait for the server to send data (seconds)
     """
 
-    connect: float = 3.05  # Default connect timeout
-    read: float = 27.0  # Default read timeout
+    connect: float = field(default=3.05)
+    read: float = field(default=27.0)
 
     def __post_init__(self) -> None:
         """Validate timeout values."""
