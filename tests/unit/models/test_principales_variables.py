@@ -69,6 +69,17 @@ class TestPrincipalesVariables:
         with pytest.raises(ValueError):
             PrincipalesVariables.from_dict(invalid_data)
 
+    def test_principales_variables_to_dict(self, sample_variable_data: Dict[str, Any]) -> None:
+        """Test conversion of PrincipalesVariables to dictionary."""
+        variable = PrincipalesVariables.from_dict(sample_variable_data)
+        result = variable.to_dict()
+
+        assert result["idVariable"] == 1
+        assert result["cdSerie"] == 246
+        assert result["descripcion"] == "Test Variable"
+        assert result["fecha"] == "2024-03-05"
+        assert result["valor"] == 100.0
+
 
 class TestDatosVariable:
     """Test suite for DatosVariable model."""
@@ -145,3 +156,12 @@ class TestDatosVariable:
         )
 
         assert dato1 == dato2  # Same date should be considered equal
+
+    def test_datos_variable_to_dict(self, sample_datos_data: Dict[str, Any]) -> None:
+        """Test conversion of DatosVariable to dictionary."""
+        dato = DatosVariable.from_dict(sample_datos_data)
+        result = dato.to_dict()
+
+        assert result["idVariable"] == 1
+        assert result["fecha"] == "2024-03-05"
+        assert result["valor"] == 100.0
