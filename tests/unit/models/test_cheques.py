@@ -79,6 +79,15 @@ class TestChequeDetalle:
         }
         assert detalle == ChequeDetalle.from_dict(data)
 
+    def test_cheque_detalle_to_dict(self) -> None:
+        """Test conversion of ChequeDetalle to dictionary."""
+        detalle = ChequeDetalle(sucursal=524, numero_cuenta=5240055962, causal="Test")
+        result = detalle.to_dict()
+
+        assert result["sucursal"] == 524
+        assert result["numeroCuenta"] == 5240055962
+        assert result["causal"] == "Test"
+
 
 class TestCheque:
     """Test suite for Cheque model."""
@@ -128,6 +137,19 @@ class TestCheque:
         cheque: Cheque = Cheque.from_dict(data)
 
         assert len(cheque.detalles) == 0
+
+    def test_cheque_to_dict(self, sample_cheque_data: Dict[str, Any]) -> None:
+        """Test conversion of Cheque to dictionary."""
+        cheque = Cheque.from_dict(sample_cheque_data)
+        result = cheque.to_dict()
+
+        assert result["numeroCheque"] == 20377516
+        assert result["denunciado"] is True
+        assert result["fechaProcesamiento"] == "2024-03-05"
+        assert result["denominacionEntidad"] == "BANCO DE LA NACION ARGENTINA"
+        assert isinstance(result["detalles"], list)
+        assert len(result["detalles"]) == 1
+        assert result["detalles"][0]["sucursal"] == 524
 
 
 class TestResponses:
