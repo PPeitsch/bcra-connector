@@ -48,6 +48,22 @@ class TestDivisa:
         with pytest.raises(ValueError):
             Divisa.from_dict(invalid_data)
 
+    def test_divisa_validation(self):
+        """Test Divisa validation with invalid data."""
+        # Test empty code
+        with pytest.raises(ValueError, match="Currency code cannot be empty"):
+            Divisa(codigo="   ", denominacion="US Dollar")
+
+        # Test empty denomination
+        with pytest.raises(ValueError, match="Currency name cannot be empty"):
+            Divisa(codigo="USD", denominacion="  ")
+
+    def test_divisa_empty_denomination(self) -> None:
+        """Test validation of empty denomination."""
+        # Test empty denomination
+        with pytest.raises(ValueError, match="Currency name cannot be empty"):
+            Divisa(codigo="USD", denominacion="   ")
+
 
 class TestCotizacionDetalle:
     """Test suite for CotizacionDetalle model."""
@@ -125,6 +141,31 @@ class TestCotizacionFecha:
 
         assert cotizacion.fecha is None
         assert len(cotizacion.detalle) == 0
+
+    def test_cotizacion_fecha_to_dict_with_null_date(self) -> None:
+        """Test to_dict() method with null date."""
+        data = {"fecha": None, "detalle": []}
+        cotizacion = CotizacionFecha.from_dict(data)
+        result = cotizacion.to_dict()
+
+        assert result["fecha"] is None
+        assert isinstance(result["detalle"], list)
+        assert len(result["detalle"]) == 0
+
+    def test_none_fecha_handling(self):
+        """Test handling of None fecha in CotizacionFecha."""
+        data = {
+            "fecha": None,
+            "detalle": []
+        }
+        cotizacion = CotizacionFecha.from_dict(data)
+        assert cotizacion.fecha is None
+        assert len(cotizacion.detalle) == 0
+
+        # Test to_dict with None fecha
+        result = cotizacion.to_dict()
+        assert result["fecha"] is None
+        assert result["detalle"] == []
 
 
 class TestResponseModels:
