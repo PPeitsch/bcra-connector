@@ -106,8 +106,10 @@ class BCRAConnector:
                 # Apply rate limiting
                 delay = self.rate_limiter.acquire()
                 if delay > 0:
-                    self.logger.debug(f"Rate limit applied. Delay: {delay:.2f} seconds")
-                    raise BCRAApiError("Rate limit exceeded")
+                    self.logger.debug(
+                        f"Rate limit applied. Waiting {delay:.2f} seconds"
+                    )
+                    time.sleep(delay)  # Actually wait instead of raising an error
 
                 self.logger.debug(f"Making request to {url}")
                 response = self.session.get(
@@ -149,19 +151,14 @@ class BCRAConnector:
                 time.sleep(self.RETRY_DELAY * (2**attempt))
 
             except requests.ConnectionError as e:
-
                 if "SSL" in str(e):
                     raise BCRAApiError("SSL verification failed") from e
 
                 self.logger.warning(
                     f"Connection error (attempt {attempt + 1}/{self.MAX_RETRIES})"
                 )
-
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(
-                        "API request failed: Connection error"
-                    ) from e  # Modificado aquí
-
+                    raise BCRAApiError("API request failed: Connection error") from e
                 time.sleep(self.RETRY_DELAY * (2**attempt))
 
             except requests.RequestException as e:
