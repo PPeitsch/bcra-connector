@@ -90,18 +90,14 @@ class RateLimiter:
         :return: Time spent waiting (in seconds)
         """
         with self._lock:
+            # Check if we need to delay
             delay = self._get_delay()
-            if delay == 0:
-                self._window.append(time.monotonic())
-                return 0.0
 
-        if delay > 0:
-            time.sleep(delay)  # Apply delay outside the lock
-            with self._lock:  # Re-acquire lock to add timestamp
-                self._clean_old_timestamps()
-                self._window.append(time.monotonic())
+            # Add the new timestamp BEFORE waiting
+            now = time.monotonic()
+            self._window.append(now)
 
-        return delay
+            return delay
 
     def reset(self) -> None:
         """Reset the rate limiter state."""
@@ -121,7 +117,15 @@ class RateLimiter:
         """Check if rate limit is currently being enforced."""
         with self._lock:
             self._clean_old_timestamps()
-            return len(self._window) >= self.config.calls
+            current_size = len(self._window)
+            # We are limited if either:
+            # 1. We've exceeded the burst limit
+            # 2. We've exceeded the base rate limit and have requests in the current period
+            return current_size >= self.config.burst or (
+                    current_size >= self.config.calls and
+                    self._window and
+                    (time.monotonic() - self._window[0]) <= self.config.period
+            )
 
     def remaining_calls(self) -> int:
         """Get the number of remaining calls allowed in the current window.
