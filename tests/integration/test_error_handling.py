@@ -61,6 +61,9 @@ class TestErrorHandling:
             calls=1, period=1.0, _burst=1
         )
 
+        # Make first request to use up the burst
+        strict_rate_limit_connector.get_principales_variables()
+
         # Force rate limited state
         now = time.monotonic()
         strict_rate_limit_connector.rate_limiter._window.clear()
