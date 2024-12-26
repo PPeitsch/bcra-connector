@@ -56,19 +56,26 @@ class TestErrorHandling:
         self, strict_rate_limit_connector: BCRAConnector
     ) -> None:
         """Test handling of rate limit exceeded."""
+        # Configure a very strict rate limit
         strict_rate_limit_connector.rate_limiter.reset()
         strict_rate_limit_connector.rate_limiter.config = RateLimitConfig(
             calls=1, period=1.0, _burst=1
         )
 
-        # Make first request to use up the burst
-        strict_rate_limit_connector.get_principales_variables()
-
-        # Force rate limited state
+        # Force the rate limiter into a limited state by filling the window
+        # We add multiple timestamps to ensure the rate limit is exceeded
         now = time.monotonic()
-        strict_rate_limit_connector.rate_limiter._window.clear()
-        strict_rate_limit_connector.rate_limiter._window.append(now)
+        for _ in range(3):  # Add more timestamps than both burst and calls limit
+            strict_rate_limit_connector.rate_limiter._window.append(now)
 
+        # Verify we're actually in a rate-limited state before making the request
+        assert (
+            strict_rate_limit_connector.rate_limiter.current_usage
+            > strict_rate_limit_connector.rate_limiter.config.calls
+        )
+        assert strict_rate_limit_connector.rate_limiter.remaining_calls() == 0
+
+        # Now attempt the request, which should raise the rate limit error
         with pytest.raises(BCRAApiError) as exc_info:
             strict_rate_limit_connector.get_principales_variables()
 
