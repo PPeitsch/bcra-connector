@@ -53,25 +53,25 @@ class TestErrorHandling:
         assert "connection error" in str(exc_info.value).lower()
 
     def test_rate_limit_exceeded(
-        self, strict_rate_limit_connector: BCRAConnector
+            self, strict_rate_limit_connector: BCRAConnector
     ) -> None:
         """Test handling of rate limit exceeded."""
-        # Configure stricter rate limiting
         strict_rate_limit_connector.rate_limiter.reset()
         strict_rate_limit_connector.rate_limiter.config = RateLimitConfig(
             calls=1, period=1.0, _burst=1
         )
 
-        # First call should succeed
+        # First call
         strict_rate_limit_connector.get_principales_variables()
 
-        # Force immediate rate limiting
-        strict_rate_limit_connector.rate_limiter._window.append(time.monotonic())
+        # Force rate limiting by setting window time explicitly
+        now = time.monotonic()
+        strict_rate_limit_connector.rate_limiter._window.clear()
+        strict_rate_limit_connector.rate_limiter._window.append(now)
 
-        # Second call should be rate limited
-        time.sleep(0.1)  # Ensure we're in the rate limit window
         with pytest.raises(BCRAApiError) as exc_info:
             strict_rate_limit_connector.get_principales_variables()
+
         assert "rate limit" in str(exc_info.value).lower()
 
     def test_invalid_date_range(
