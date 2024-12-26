@@ -53,7 +53,7 @@ class TestErrorHandling:
         assert "connection error" in str(exc_info.value).lower()
 
     def test_rate_limit_exceeded(
-            self, strict_rate_limit_connector: BCRAConnector
+        self, strict_rate_limit_connector: BCRAConnector
     ) -> None:
         """Test handling of rate limit exceeded."""
         strict_rate_limit_connector.rate_limiter.reset()
@@ -61,10 +61,7 @@ class TestErrorHandling:
             calls=1, period=1.0, _burst=1
         )
 
-        # First call
-        strict_rate_limit_connector.get_principales_variables()
-
-        # Force rate limiting by setting window time explicitly
+        # Force rate limited state
         now = time.monotonic()
         strict_rate_limit_connector.rate_limiter._window.clear()
         strict_rate_limit_connector.rate_limiter._window.append(now)

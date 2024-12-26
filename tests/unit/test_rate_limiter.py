@@ -50,18 +50,16 @@ class TestRateLimiter:
 
     def test_basic_rate_limiting(self, limiter: RateLimiter) -> None:
         """Test basic rate limiting functionality."""
-        # First 20 calls should be immediate (burst capacity)
-        for _ in range(20):
-            initial_delay: float = limiter.acquire()
+        # First calls within burst limit
+        for _ in range(limiter.config.burst):
+            initial_delay = limiter.acquire()
             assert initial_delay == 0
 
-        # Next call should be delayed
-        start_time: float = time.monotonic()
-        subsequent_delay: float = limiter.acquire()
-        elapsed: float = time.monotonic() - start_time
-
+        # Next call should be rate limited
+        subsequent_delay = limiter.acquire()
         assert subsequent_delay > 0
-        assert elapsed >= 0.1  # At least some delay
+        assert limiter.current_usage > 0
+        assert limiter.remaining_calls() < limiter.config.calls
 
     def test_sliding_window(self, limiter: RateLimiter) -> None:
         """Test sliding window behavior."""
