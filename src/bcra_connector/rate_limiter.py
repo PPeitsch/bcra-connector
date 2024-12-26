@@ -118,13 +118,13 @@ class RateLimiter:
         with self._lock:
             self._clean_old_timestamps()
             current_size = len(self._window)
-            # We are limited if either:
-            # 1. We've exceeded the burst limit
-            # 2. We've exceeded the base rate limit and have requests in the current period
-            return current_size >= self.config.burst or (
-                    current_size >= self.config.calls and
-                    self._window and
-                    (time.monotonic() - self._window[0]) <= self.config.period
+            return bool(
+                current_size >= self.config.burst
+                or (
+                    current_size >= self.config.calls
+                    and self._window
+                    and (time.monotonic() - self._window[0]) <= self.config.period
+                )
             )
 
     def remaining_calls(self) -> int:

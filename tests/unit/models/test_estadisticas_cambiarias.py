@@ -48,7 +48,7 @@ class TestDivisa:
         with pytest.raises(ValueError):
             Divisa.from_dict(invalid_data)
 
-    def test_divisa_validation(self):
+    def test_divisa_validation(self) -> None:
         """Test Divisa validation with invalid data."""
         # Test empty code
         with pytest.raises(ValueError, match="Currency code cannot be empty"):
@@ -144,7 +144,7 @@ class TestCotizacionFecha:
 
     def test_cotizacion_fecha_to_dict_with_null_date(self) -> None:
         """Test to_dict() method with null date."""
-        data = {"fecha": None, "detalle": []}
+        data: Dict[str, Any] = {"fecha": None, "detalle": []}
         cotizacion = CotizacionFecha.from_dict(data)
         result = cotizacion.to_dict()
 
@@ -152,12 +152,9 @@ class TestCotizacionFecha:
         assert isinstance(result["detalle"], list)
         assert len(result["detalle"]) == 0
 
-    def test_none_fecha_handling(self):
+    def test_none_fecha_handling(self) -> None:
         """Test handling of None fecha in CotizacionFecha."""
-        data = {
-            "fecha": None,
-            "detalle": []
-        }
+        data: Dict[str, Any] = {"fecha": None, "detalle": []}
         cotizacion = CotizacionFecha.from_dict(data)
         assert cotizacion.fecha is None
         assert len(cotizacion.detalle) == 0

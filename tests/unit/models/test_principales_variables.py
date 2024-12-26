@@ -69,7 +69,9 @@ class TestPrincipalesVariables:
         with pytest.raises(ValueError):
             PrincipalesVariables.from_dict(invalid_data)
 
-    def test_principales_variables_to_dict(self, sample_variable_data: Dict[str, Any]) -> None:
+    def test_principales_variables_to_dict(
+        self, sample_variable_data: Dict[str, Any]
+    ) -> None:
         """Test conversion of PrincipalesVariables to dictionary."""
         variable = PrincipalesVariables.from_dict(sample_variable_data)
         result = variable.to_dict()
