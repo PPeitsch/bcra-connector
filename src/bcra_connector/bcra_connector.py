@@ -98,18 +98,22 @@ class BCRAConnector:
     def _make_request(
         self, endpoint: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Make a request to the BCRA API with retry logic and rate limiting."""
+        """Make a request to the BCRA API with retry logic and rate limiting.
+
+        :param endpoint: The API endpoint to request
+        :param params: Query parameters for the request
+        :return: The JSON response from the API
+        :raises BCRAApiError: If the API request fails after retries or rate limit is exceeded
+        """
         url = f"{self.BASE_URL}/{endpoint}"
 
         for attempt in range(self.MAX_RETRIES):
             try:
-                # Apply rate limiting
+                # Apply rate limiting - will raise BCRAApiError if limit exceeded
                 delay = self.rate_limiter.acquire()
                 if delay > 0:
-                    self.logger.debug(
-                        f"Rate limit applied. Waiting {delay:.2f} seconds"
-                    )
-                    time.sleep(delay)  # Actually wait instead of raising an error
+                    self.logger.debug(f"Rate limit applied. Waited {delay:.2f} seconds")
+                    time.sleep(delay)
 
                 self.logger.debug(f"Making request to {url}")
                 response = self.session.get(
@@ -160,6 +164,10 @@ class BCRAConnector:
                 if attempt == self.MAX_RETRIES - 1:
                     raise BCRAApiError("API request failed: Connection error") from e
                 time.sleep(self.RETRY_DELAY * (2**attempt))
+
+            except BCRAApiError:
+                # Re-raise BCRAApiError immediately without retrying
+                raise
 
             except requests.RequestException as e:
                 raise BCRAApiError(f"API request failed: {str(e)}") from e

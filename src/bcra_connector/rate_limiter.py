@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import Deque, Optional
 
+from bcra_connector import BCRAApiError
+
 
 @dataclass
 class RateLimitConfig:
@@ -87,17 +89,35 @@ class RateLimiter:
     def acquire(self) -> float:
         """Acquire permission to make a request.
 
+        Enforces rate limiting using a sliding window approach. If the rate limit is exceeded,
+        it will either delay the request or raise an exception depending on the severity.
+
         :return: Time spent waiting (in seconds)
+        :raises BCRAApiError: If rate limit is exceeded beyond burst capacity
         """
         with self._lock:
-            # Check if we need to delay
-            delay = self._get_delay()
-
-            # Add the new timestamp BEFORE waiting
             now = time.monotonic()
-            self._window.append(now)
 
-            return delay
+            # Clean old timestamps first
+            self._clean_old_timestamps()
+
+            # Check burst limit
+            if len(self._window) >= self.config.burst:
+                raise BCRAApiError(
+                    f"Rate limit exceeded: Maximum burst capacity of {self.config.burst} requests reached"
+                )
+
+            # Calculate required delay based on standard rate limit
+            if len(self._window) >= self.config.calls:
+                # Calculate when the oldest request in the rate limit window will expire
+                # Add a small buffer (0.01s) to ensure we're safely under the limit
+                delay = (self._window[0] + self.config.period + 0.01) - now
+                if delay > 0:
+                    return delay
+
+            # Add current request timestamp and return 0 delay
+            self._window.append(now)
+            return 0.0
 
     def reset(self) -> None:
         """Reset the rate limiter state."""
