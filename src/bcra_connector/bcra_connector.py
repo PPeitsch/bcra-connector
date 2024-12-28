@@ -5,7 +5,6 @@ Handles rate limiting, retries, and error cases.
 """
 
 import logging
-import ssl
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
@@ -19,7 +18,7 @@ from urllib3.exceptions import SSLError as URLLibSSLError
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .principales_variables import DatosVariable, PrincipalesVariables
-from .rate_limiter import RateLimitConfig, RateLimiter
+from .rate_limiter import RateLimitConfig, RateLimiter, RateLimitExceededError
 from .timeout_config import TimeoutConfig
 
 
@@ -163,6 +162,9 @@ class BCRAConnector:
 
             except requests.RequestException as e:
                 raise BCRAApiError(f"API request failed: {str(e)}") from e
+
+            except RateLimitExceededError as e:
+                raise BCRAApiError("Rate limit exceeded") from e
 
         raise BCRAApiError("Maximum retry attempts reached")
 

@@ -9,6 +9,12 @@ from threading import Lock
 from typing import Deque, Optional
 
 
+class RateLimitExceededError(Exception):
+    """Raised when rate limit is exceeded."""
+
+    pass
+
+
 @dataclass
 class RateLimitConfig:
     """Configuration for rate limiting.
@@ -88,16 +94,18 @@ class RateLimiter:
         """Acquire permission to make a request.
 
         :return: Time spent waiting (in seconds)
+        :raises RateLimitExceededError: If rate limit is exceeded
         """
         with self._lock:
-            # Check if we need to delay
             delay = self._get_delay()
 
-            # Add the new timestamp BEFORE waiting
+            if delay > 0:
+                raise RateLimitExceededError("Rate limit exceeded")
+
             now = time.monotonic()
             self._window.append(now)
 
-            return delay
+            return 0.0
 
     def reset(self) -> None:
         """Reset the rate limiter state."""
