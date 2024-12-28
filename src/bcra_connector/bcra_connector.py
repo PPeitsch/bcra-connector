@@ -5,7 +5,6 @@ Handles rate limiting, retries, and error cases.
 """
 
 import logging
-import ssl
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union

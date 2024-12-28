@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import Deque, Optional
 
-from bcra_connector import BCRAApiError
+from .bcra_connector import BCRAApiError
 
 
 @dataclass
