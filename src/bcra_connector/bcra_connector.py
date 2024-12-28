@@ -5,6 +5,7 @@ Handles rate limiting, retries, and error cases.
 """
 
 import logging
+import ssl
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
@@ -13,8 +14,9 @@ import numpy as np
 import requests
 import urllib3
 from scipy.stats import pearsonr
+from urllib3.exceptions import SSLError as URLLibSSLError
 
-from .cheques import Cheque, ChequeDetalle, Entidad
+from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .principales_variables import DatosVariable, PrincipalesVariables
 from .rate_limiter import RateLimitConfig, RateLimiter
@@ -96,13 +98,7 @@ class BCRAConnector:
     def _make_request(
         self, endpoint: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Make a request to the BCRA API with retry logic and rate limiting.
-
-        :param endpoint: The API endpoint to request
-        :param params: Query parameters for the request, defaults to None
-        :return: The JSON response from the API
-        :raises BCRAApiError: If the API request fails after retries
-        """
+        """Make a request to the BCRA API with retry logic and rate limiting."""
         url = f"{self.BASE_URL}/{endpoint}"
 
         for attempt in range(self.MAX_RETRIES):
@@ -110,7 +106,10 @@ class BCRAConnector:
                 # Apply rate limiting
                 delay = self.rate_limiter.acquire()
                 if delay > 0:
-                    self.logger.debug(f"Rate limit applied. Waited {delay:.2f} seconds")
+                    self.logger.debug(
+                        f"Rate limit applied. Waiting {delay:.2f} seconds"
+                    )
+                    time.sleep(delay)  # Actually wait instead of raising an error
 
                 self.logger.debug(f"Making request to {url}")
                 response = self.session.get(
@@ -119,28 +118,53 @@ class BCRAConnector:
                     verify=self.verify_ssl,
                     timeout=self.timeout.as_tuple,
                 )
-                response.raise_for_status()
-                self.logger.debug("Request successful")
-                return dict(response.json())
+
+                try:
+                    response.raise_for_status()
+                except requests.HTTPError as e:
+                    status_code = response.status_code
+                    if status_code == 404:
+                        raise BCRAApiError("HTTP 404: Resource not found") from e
+
+                    error_msg = f"HTTP {status_code}"
+                    try:
+                        error_data = response.json()
+                        if "errorMessages" in error_data:
+                            error_msg = (
+                                f"{error_msg}: {', '.join(error_data['errorMessages'])}"
+                            )
+                    except (ValueError, KeyError):
+                        error_msg = f"{error_msg}: {response.reason}"
+                    raise BCRAApiError(error_msg) from e
+
+                try:
+                    return dict(response.json())
+                except ValueError as e:
+                    raise BCRAApiError("Invalid JSON response") from e
+
             except requests.Timeout as e:
                 self.logger.error(
-                    f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
+                    f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES})"
                 )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(
-                        f"Request timed out after {self.MAX_RETRIES} attempts"
-                    ) from e
+                    raise BCRAApiError("Request timed out") from e
                 time.sleep(self.RETRY_DELAY * (2**attempt))
-            except requests.RequestException as e:
+
+            except requests.ConnectionError as e:
+                if "SSL" in str(e):
+                    raise BCRAApiError("SSL verification failed") from e
+
                 self.logger.warning(
-                    f"Request failed (attempt {attempt + 1}/{self.MAX_RETRIES}): {str(e)}"
+                    f"Connection error (attempt {attempt + 1}/{self.MAX_RETRIES})"
                 )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(
-                        f"API request failed after {self.MAX_RETRIES} attempts: {str(e)}"
-                    ) from e
-                time.sleep(self.RETRY_DELAY * (2**attempt))  # Exponential backoff
-        raise BCRAApiError("The request could not be completed")
+                    raise BCRAApiError("API request failed: Connection error") from e
+                time.sleep(self.RETRY_DELAY * (2**attempt))
+
+            except requests.RequestException as e:
+                raise BCRAApiError(f"API request failed: {str(e)}") from e
+
+        raise BCRAApiError("Maximum retry attempts reached")
 
     # Principales Variables methods
     def get_principales_variables(self) -> List[PrincipalesVariables]:
@@ -256,7 +280,7 @@ class BCRAConnector:
         self.logger.info("Fetching financial entities")
         try:
             data = self._make_request("cheques/v1.0/entidades")
-            entities = [Entidad(**e) for e in data["results"]]
+            entities = [Entidad.from_dict(e) for e in data["results"]]
             self.logger.info(f"Successfully fetched {len(entities)} entities")
             return entities
         except KeyError as e:
@@ -278,13 +302,7 @@ class BCRAConnector:
             data = self._make_request(
                 f"cheques/v1.0/denunciados/{codigo_entidad}/{numero_cheque}"
             )
-            result = data["results"]
-            detalles = [ChequeDetalle(**d) for d in result.get("detalles", [])]
-            cheque = Cheque(**result, detalles=detalles)
-            self.logger.info(
-                f"Successfully fetched information for check {numero_cheque}"
-            )
-            return cheque
+            return Cheque.from_dict(data["results"])
         except KeyError as e:
             raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
 

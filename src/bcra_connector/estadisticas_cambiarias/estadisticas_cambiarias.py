@@ -20,6 +20,13 @@ class Divisa:
     codigo: str
     denominacion: str
 
+    def __post_init__(self) -> None:
+        """Validate instance after initialization."""
+        if not self.codigo.strip():
+            raise ValueError("Currency code cannot be empty")
+        if not self.denominacion.strip():
+            raise ValueError("Currency name cannot be empty")
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Divisa":
         """Create a Divisa instance from a dictionary."""

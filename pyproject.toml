@@ -58,6 +58,7 @@ dev = [
     "types-urllib3>=1.26.0",
     "numpy>=1.26.4",
     "scipy>=1.13.1",
+    "pytest-timeout>=2.1.0",
 ]
 
 [project.urls]
@@ -106,4 +107,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 addopts = "--cov-report=term --cov-report=xml"
 testpaths = ["tests"]
-python_files = "*_tests.py"
+python_files = ["*_tests.py", "test_*.py"]
+markers = [
+    "integration: mark a test as an integration test",
+]

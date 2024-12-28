@@ -72,11 +72,17 @@ class RateLimiter:
         if len(self._window) < self.config.burst:
             return 0.0
 
-        if len(self._window) >= self.config.calls:
-            next_available = self._window[-self.config.calls] + self.config.period
+        # Calculate delay based on the period and number of requests beyond burst
+        requests_over_burst = max(0, len(self._window) - self.config.calls)
+        if requests_over_burst > 0:
+            # Calculate delay that distributes requests evenly over the period
+            next_available = self._window[0] + (
+                self.config.period * requests_over_burst / self.config.calls
+            )
             return max(0.0, next_available - now)
 
-        return 0.0
+        # Default delay when at burst limit
+        return max(0.0, self._window[0] + self.config.period - now)
 
     def acquire(self) -> float:
         """Acquire permission to make a request.
@@ -84,11 +90,13 @@ class RateLimiter:
         :return: Time spent waiting (in seconds)
         """
         with self._lock:
+            # Check if we need to delay
             delay = self._get_delay()
-            if delay > 0:
-                time.sleep(delay)
 
-            self._window.append(time.monotonic())
+            # Add the new timestamp BEFORE waiting
+            now = time.monotonic()
+            self._window.append(now)
+
             return delay
 
     def reset(self) -> None:
@@ -109,10 +117,21 @@ class RateLimiter:
         """Check if rate limit is currently being enforced."""
         with self._lock:
             self._clean_old_timestamps()
-            return len(self._window) >= self.config.calls
+            current_size = len(self._window)
+            return bool(
+                current_size >= self.config.burst
+                or (
+                    current_size >= self.config.calls
+                    and self._window
+                    and (time.monotonic() - self._window[0]) <= self.config.period
+                )
+            )
 
     def remaining_calls(self) -> int:
-        """Get the number of remaining calls allowed in the current window."""
+        """Get the number of remaining calls allowed in the current window.
+
+        Based on the base rate limit (calls), not the burst limit.
+        """
         with self._lock:
             self._clean_old_timestamps()
             return max(0, self.config.calls - len(self._window))
