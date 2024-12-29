@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2024-12-28
+
+### Added
+- Comprehensive unit test coverage for all major components
+- Extensive integration tests for BCRA API endpoints
+- Complete test suite for rate limiter and error handling
+- Improved type annotations across test infrastructure
+- Detailed test cases for data models and edge cases
+
+### Enhanced
+- Test coverage for principales_variables, cheques, and estadisticas_cambiarias modules
+- Error handling and rate limiting test scenarios
+- Reliability of rate limiter implementation
+- Consistency in test suite structure and methodology
+
+### Fixed
+- Intermittent test failures in rate limiting tests
+- SSL and timeout error handling test coverage
+- Type annotation issues in test files
+- Flaky test behaviors in CI environment
+
+### Changed
+- Improved test suite organization
+- Enhanced error message validation
+- Refined rate limiter state tracking logic
+
 ## [0.4.0] - 2024-11-23
 
 ### Added
@@ -144,7 +170,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usage examples for all main features
 - Installation guide
 
-
+[0.4.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.3.1...v0.3.2
