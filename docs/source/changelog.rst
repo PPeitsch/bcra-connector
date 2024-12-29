@@ -6,6 +6,37 @@ All notable changes to the BCRA API Connector will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+0.4.1 - 2024-12-28
+------------------
+
+Added
+^^^^^
+* Comprehensive unit test coverage for all major components
+* Extensive integration tests for BCRA API endpoints
+* Complete test suite for rate limiter and error handling
+* Improved type annotations across test infrastructure
+* Detailed test cases for data models and edge cases
+
+Enhanced
+^^^^^^^^
+* Test coverage for principales_variables, cheques, and estadisticas_cambiarias modules
+* Error handling and rate limiting test scenarios
+* Reliability of rate limiter implementation
+* Consistency in test suite structure and methodology
+
+Fixed
+^^^^^
+* Intermittent test failures in rate limiting tests
+* SSL and timeout error handling test coverage
+* Type annotation issues in test files
+* Flaky test behaviors in CI environment
+
+Changed
+^^^^^^^
+* Improved test suite organization
+* Enhanced error message validation
+* Refined rate limiter state tracking logic
+
 0.4.0 - 2024-11-23
 ------------------
 
