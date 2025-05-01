@@ -29,7 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Eliminated unnecessary type ignore comments
 - MyPy configuration for proper handling of src package structure
 - Module-specific overrides for external dependencies
-- Adapted Principales Variables methods for Monetarias v3.0 API
 
 ### Changed
 - Removed auto-generated `_version.py` from version control
