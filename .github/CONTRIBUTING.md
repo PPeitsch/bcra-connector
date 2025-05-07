@@ -83,10 +83,10 @@ Follow these [commit message guidelines](https://chris.beams.io/posts/git-commit
 ```
 [TAG] Concise change description in 50 chars or less
 
-More detailed explanation if needed. Wrap at 72 characters. Focus 
+More detailed explanation if needed. Wrap at 72 characters. Focus
 on WHY this change is being made rather than WHAT was changed.
 
-The code itself shows what changed; use this space to explain 
+The code itself shows what changed; use this space to explain
 motivation and context.
 
  - Bullet points welcome

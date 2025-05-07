@@ -3,22 +3,27 @@ Example of fetching and comparing latest values for multiple BCRA variables.
 Demonstrates multi-variable analysis and visualization.
 """
 
+import logging
 import os
 import sys
-import logging
+
 import matplotlib.pyplot as plt
 
 # Add the parent directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.bcra_connector import BCRAConnector, BCRAApiError
+from src.bcra_connector import BCRAApiError, BCRAConnector
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
 def save_plot(fig, filename):
-    static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs/build/_static/images'))
+    static_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "docs/build/_static/images")
+    )
     os.makedirs(static_dir, exist_ok=True)
     filepath = os.path.join(static_dir, filename)
     fig.savefig(filepath)
@@ -29,7 +34,11 @@ def main():
     connector = BCRAConnector(verify_ssl=False)  # Set to False only if necessary
 
     # Let's get the latest value for a few different variables
-    variable_names = ["Reservas Internacionales del BCRA", "Tipo de Cambio Minorista", "Tasa de Política Monetaria"]
+    variable_names = [
+        "Reservas Internacionales del BCRA",
+        "Tipo de Cambio Minorista",
+        "Tasa de Política Monetaria",
+    ]
 
     latest_values = []
     for variable_name in variable_names:
@@ -51,11 +60,13 @@ def main():
     # Plot the latest values
     if latest_values:
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.bar([name for name, _ in latest_values], [value for _, value in latest_values])
+        ax.bar(
+            [name for name, _ in latest_values], [value for _, value in latest_values]
+        )
         ax.set_title("Latest Values for Different Variables")
         ax.set_xlabel("Variable")
         ax.set_ylabel("Value")
-        plt.xticks(rotation=45, ha='right')
+        plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
         save_plot(fig, "latest_values.png")
     else:

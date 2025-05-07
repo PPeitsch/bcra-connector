@@ -183,7 +183,7 @@ class TestRateLimiter:
 
         # Test 3 subsequent requests
         for _ in range(3):
-            delay = limiter.acquire()
+            _ = limiter.acquire()
             elapsed = time.monotonic() - start_time
             delays.append(elapsed)
             start_time = time.monotonic()

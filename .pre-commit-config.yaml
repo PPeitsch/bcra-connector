@@ -43,6 +43,7 @@ repos:
             # W503: Line break before binary operator (Black prefers after)
             # Add any project-specific ignores here if needed later, e.g.:
             # "--per-file-ignores=path/to/file.py:F401,path/to/other:E722"
+            "--per-file-ignores=examples/*:E402" # Ignore E402 for all files in examples/
           ]
         # Optional: Exclude specific directories if needed, e.g.,
         # exclude: ^(docs/|examples/|...)

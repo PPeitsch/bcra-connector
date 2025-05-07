@@ -1,6 +1,6 @@
 """Integration tests for BCRA API endpoints."""
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 import pytest
