@@ -54,6 +54,7 @@ repos:
     hooks:
       - id: mypy
         # MyPy reads its configuration from pyproject.toml ([tool.mypy])
+        args: ["--explicit-package-bases"]  # Solución para el problema de módulos duplicados
         # Specify dependencies needed for type checking external libraries:
         additional_dependencies: [
             # Add types-* packages for libraries used
