@@ -102,8 +102,24 @@ warn_unreachable = true
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]
-module = ["scipy.*"]
+module = [
+    "scipy.*",
+    "matplotlib.*",
+    "matplotlib.pyplot",
+    "bcra_connector",
+    "bcra_connector.*"
+]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "examples.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
 addopts = "--cov-report=term --cov-report=xml"

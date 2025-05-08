@@ -3,7 +3,7 @@
 repos:
   # Standard hooks - Generally useful checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0 # Use a recent version
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace    # Removes trailing whitespace
       - id: end-of-file-fixer      # Ensures files end with one newline
@@ -19,7 +19,8 @@ repos:
     hooks:
       - id: black
         # Black reads configuration from pyproject.toml automatically
-        # language_version: python3.9 # Optional: Specify if needed, but usually defaults ok
+        # Optional: Specify if needed, but usually defaults ok
+        # language_version: python3.9
 
   # isort - Sorts Python imports automatically
   - repo: https://github.com/pycqa/isort
@@ -31,7 +32,7 @@ repos:
 
   # Flake8 - Linter for style and logic errors
   - repo: https://github.com/pycqa/flake8
-    rev: 7.1.0 # Use a recent stable version
+    rev: 7.1.0
     hooks:
       - id: flake8
         # Flake8 doesn't read pyproject.toml by default. Pass config via args:
@@ -50,20 +51,17 @@ repos:
 
   # MyPy - Static type checker
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.0 # Use a recent stable version
+    rev: v1.11.0
     hooks:
       - id: mypy
-        # MyPy reads its configuration from pyproject.toml ([tool.mypy])
-        args: ["--explicit-package-bases"]  # Solución para el problema de módulos duplicados
-        # Specify dependencies needed for type checking external libraries:
+        args: ["--explicit-package-bases"]
         additional_dependencies: [
-            # Add types-* packages for libraries used
             "types-requests>=2.31.0",
             "types-urllib3>=1.26.0",
-            # Add libraries that provide their own types or need stubs
             "numpy~=1.26.4",
-            "scipy~=1.13.1", # Match project deps
-            "pytest>=6.0.0", # If you type-check tests
+            "scipy~=1.13.1",
+            "pytest>=6.0.0",
+            "matplotlib>=3.7.3",  # Añadir matplotlib para los ejemplos
           ]
         # You might need to exclude specific files/modules if they cause issues
         # exclude: ^(tests/fixtures/problematic_file.py|...)
