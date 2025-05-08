@@ -9,6 +9,7 @@ import sys
 from datetime import datetime, timedelta
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -58,10 +59,16 @@ def main():
 
         # Plot the data
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(
-            [datetime.strptime(d.fecha, "%Y-%m-%d") for d in datos],
-            [d.valor for d in datos],
-        )
+
+        # Convert dates and prepare data arrays for matplotlib
+        dates = [datetime.combine(dato.fecha, datetime.min.time()) for dato in datos]
+        values = [dato.valor for dato in datos]
+
+        # Convert to numpy arrays for matplotlib compatibility
+        dates_array = np.array(dates)
+        values_array = np.array(values)
+
+        ax.plot_date(dates_array, values_array, "-")
         ax.set_title(f"{variable_name} - Last 30 Days")
         ax.set_xlabel("Date")
         ax.set_ylabel("Value")

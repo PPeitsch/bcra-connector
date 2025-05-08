@@ -152,7 +152,7 @@ class TestRateLimiter:
         assert limiter.is_limited
 
         # Wait for reset
-        time.sleep(1.1)  # type: ignore[unreachable]
+        time.sleep(1.1)
         assert not limiter.is_limited
 
     @pytest.mark.timeout(5)
