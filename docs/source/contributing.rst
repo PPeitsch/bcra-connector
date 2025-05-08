@@ -40,4 +40,3 @@ Pull Requests
 - Keep PRs focused on a single change rather than multiple unrelated changes.
 
 Thank you for contributing to BCRA API Connector!
-

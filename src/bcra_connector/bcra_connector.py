@@ -5,7 +5,6 @@ Handles rate limiting, retries, and error cases.
 """
 
 import logging
-import ssl
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
@@ -14,7 +13,6 @@ import numpy as np
 import requests
 import urllib3
 from scipy.stats import pearsonr
-from urllib3.exceptions import SSLError as URLLibSSLError
 
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa

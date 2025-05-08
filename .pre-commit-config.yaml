@@ -1,0 +1,67 @@
+# Configuration for pre-commit hooks
+
+repos:
+  # Standard hooks - Generally useful checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace    # Removes trailing whitespace
+      - id: end-of-file-fixer      # Ensures files end with one newline
+      - id: check-yaml             # Checks yaml files for parseable syntax
+      - id: check-added-large-files # Prevents adding large files
+      - id: check-toml             # Checks toml files for parseable syntax
+      - id: check-merge-conflict   # Checks for merge conflict markers
+      - id: debug-statements       # Checks for leftover pdb/breakpoint calls
+
+  # Black - The uncompromising Python code formatter
+  - repo: https://github.com/psf/black
+    rev: 24.4.2 # Keep consistent with common versions
+    hooks:
+      - id: black
+        # Black reads configuration from pyproject.toml automatically
+        # Optional: Specify if needed, but usually defaults ok
+        # language_version: python3.9
+
+  # isort - Sorts Python imports automatically
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+        # isort reads configuration from pyproject.toml automatically
+
+  # Flake8 - Linter for style and logic errors
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.0
+    hooks:
+      - id: flake8
+        # Flake8 doesn't read pyproject.toml by default. Pass config via args:
+        args: [
+            "--max-line-length=88",       # Match Black's default
+            "--extend-ignore=E203,E501,W503", # Rules ignored for Black compatibility
+            # E203: Whitespace before ':' (handled by Black)
+            # E501: Line too long (handled by Black)
+            # W503: Line break before binary operator (Black prefers after)
+            # Add any project-specific ignores here if needed later, e.g.:
+            # "--per-file-ignores=path/to/file.py:F401,path/to/other:E722"
+            "--per-file-ignores=examples/*:E402" # Ignore E402 for all files in examples/
+          ]
+        # Optional: Exclude specific directories if needed, e.g.,
+        # exclude: ^(docs/|examples/|...)
+
+  # MyPy - Static type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.0
+    hooks:
+      - id: mypy
+        args: ["--explicit-package-bases"]
+        additional_dependencies: [
+            "types-requests>=2.31.0",
+            "types-urllib3>=1.26.0",
+            "numpy~=1.26.4",
+            "scipy~=1.13.1",
+            "pytest>=6.0.0",
+            "matplotlib>=3.7.3",  # Añadir matplotlib para los ejemplos
+          ]
+        # You might need to exclude specific files/modules if they cause issues
+        # exclude: ^(tests/fixtures/problematic_file.py|...)

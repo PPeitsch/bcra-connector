@@ -152,7 +152,7 @@ class TestRateLimiter:
         assert limiter.is_limited
 
         # Wait for reset
-        time.sleep(1.1)  # type: ignore[unreachable]
+        time.sleep(1.1)
         assert not limiter.is_limited
 
     @pytest.mark.timeout(5)
@@ -183,7 +183,7 @@ class TestRateLimiter:
 
         # Test 3 subsequent requests
         for _ in range(3):
-            delay = limiter.acquire()
+            _ = limiter.acquire()
             elapsed = time.monotonic() - start_time
             delays.append(elapsed)
             start_time = time.monotonic()

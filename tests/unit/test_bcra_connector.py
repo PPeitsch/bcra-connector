@@ -2,7 +2,6 @@
 Test suite for BCRAConnector class covering all methods and functionality.
 """
 
-import time
 from datetime import date, datetime
 from typing import Any, Callable, Dict, List
 from unittest.mock import Mock, patch

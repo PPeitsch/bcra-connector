@@ -6,6 +6,42 @@ All notable changes to the BCRA API Connector will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+0.4.2 - 2025-05-08
+------------------
+
+Added
+^^^^^
+* Pre-commit configuration with ``.pre-commit-config.yaml``
+* Code quality hooks for automated checks:
+   - Standard checks (whitespace, EOF, syntax validation)
+   - Python code formatting with ``black``
+   - Import sorting with ``isort``
+   - Linting with ``flake8``
+   - Static type checking with ``mypy``
+* Root conftest.py to resolve module import issues for tests
+
+Enhanced
+^^^^^^^^
+* Code formatting and style consistency across the codebase
+* Type annotations and static type checking configuration
+* Build system with improved version management
+* CI/CD integration with local development workflow
+
+Fixed
+^^^^^
+* Matplotlib plot type errors with simplified date conversion
+* Removed unreachable code in example files
+* Eliminated unnecessary type ignore comments
+* MyPy configuration for proper handling of src package structure
+* Module-specific overrides for external dependencies
+* Adapted Principales Variables methods for Monetarias v3.0 API
+
+Changed
+^^^^^^^
+* Removed auto-generated ``_version.py`` from version control
+* Established ``__about__.py`` as the single source of truth for versioning
+* Updated Sphinx version to resolve dependency conflicts with sphinx-rtd-theme
+
 0.4.1 - 2024-12-28
 ------------------
 
