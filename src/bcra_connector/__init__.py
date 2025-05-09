@@ -39,6 +39,7 @@ __all__ = [
     "ChequeDetalle",
     "Cheque",
     "EntidadResponse",
+    "ChequeResponse",
     "ChequesErrorResponse",
     # Estadísticas Cambiarias
     "Divisa",

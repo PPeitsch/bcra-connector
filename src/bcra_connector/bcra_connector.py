@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import requests
 import urllib3  # For urllib3.disable_warnings
+from scipy.stats import pearsonr
 
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
