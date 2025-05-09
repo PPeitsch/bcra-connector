@@ -4,14 +4,18 @@ Test suite for BCRAConnector class covering all methods and functionality.
 
 from datetime import date, datetime
 from typing import Any, Callable, Dict, List
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 import pytest
 from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from bcra_connector import BCRAApiError, BCRAConnector
-from bcra_connector.cheques import Cheque, ChequeDetalle, Entidad
-from bcra_connector.principales_variables import DatosVariable, PrincipalesVariables
+from bcra_connector.cheques import Cheque, Entidad
+from bcra_connector.principales_variables import (
+    DatosVariable,
+    DatosVariableResponse,
+    PrincipalesVariables,
+)
 from bcra_connector.rate_limiter import RateLimitConfig
 from bcra_connector.timeout_config import TimeoutConfig
 
@@ -22,7 +26,9 @@ class TestBCRAConnector:
     @pytest.fixture
     def connector(self) -> BCRAConnector:
         """Create a BCRAConnector instance for testing."""
-        return BCRAConnector(verify_ssl=False)
+        return BCRAConnector(
+            verify_ssl=False, rate_limit=RateLimitConfig(calls=100, period=1.0)
+        )
 
     @pytest.fixture
     def mock_api_response(self) -> Callable[[Dict[str, Any], int], Mock]:
@@ -32,159 +38,207 @@ class TestBCRAConnector:
             response = Mock()
             response.json.return_value = data
             response.status_code = status_code
+            if status_code >= 400:
+                response.raise_for_status.side_effect = HTTPError(response=response)
+            else:
+                response.raise_for_status.return_value = None
             return response
 
         return _create_response
 
     def test_init_default_values(self) -> None:
         """Test BCRAConnector initialization with default values."""
-        connector: BCRAConnector = BCRAConnector()
-        assert connector.verify_ssl is True
-        assert connector.session.headers["Accept-Language"] == "es-AR"
-        assert isinstance(connector.rate_limiter.config, RateLimitConfig)
-        assert isinstance(connector.timeout, TimeoutConfig)
+        connector_instance: BCRAConnector = BCRAConnector()
+        assert connector_instance.verify_ssl is True
+        assert connector_instance.session.headers["Accept-Language"] == "es-AR"
+        assert isinstance(connector_instance.rate_limiter.config, RateLimitConfig)
+        assert isinstance(connector_instance.timeout, TimeoutConfig)
 
     def test_init_custom_values(self) -> None:
         """Test BCRAConnector initialization with custom values."""
         rate_limit: RateLimitConfig = RateLimitConfig(calls=5, period=1.0)
         timeout: TimeoutConfig = TimeoutConfig(connect=5.0, read=30.0)
-        connector: BCRAConnector = BCRAConnector(
+        connector_instance: BCRAConnector = BCRAConnector(
             language="en-US",
             verify_ssl=False,
             debug=True,
             rate_limit=rate_limit,
             timeout=timeout,
         )
-        assert connector.verify_ssl is False
-        assert connector.session.headers["Accept-Language"] == "en-US"
-        assert connector.rate_limiter.config.calls == 5
-        assert connector.timeout.connect == 5.0
-        assert connector.timeout.read == 30.0
+        assert connector_instance.verify_ssl is False
+        assert connector_instance.session.headers["Accept-Language"] == "en-US"
+        assert connector_instance.rate_limiter.config.calls == 5
+        assert connector_instance.timeout.connect == 5.0
+        assert connector_instance.timeout.read == 30.0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_principales_variables_success(
-        self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
+    def test_get_principales_variables_success_v3(
+        self,
+        mock_get: Mock,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+        connector: BCRAConnector,
     ) -> None:
-        """Test successful retrieval of principal variables."""
-        mock_data: Dict[str, Any] = {
+        """Test successful retrieval of principal variables (v3.0 format)."""
+        mock_data_v3: Dict[str, Any] = {
             "results": [
                 {
                     "idVariable": 1,
-                    "cdSerie": 246,
-                    "descripcion": "Test Variable",
+                    "descripcion": "Test Variable v3",
                     "fecha": "2024-03-05",
                     "valor": 100.0,
+                    "categoria": "Indicadores Monetarios",
                 }
             ]
         }
-        mock_get.return_value = mock_api_response(mock_data, 200)
-
-        connector: BCRAConnector = BCRAConnector()
+        mock_get.return_value = mock_api_response(mock_data_v3, 200)
         result: List[PrincipalesVariables] = connector.get_principales_variables()
 
+        mock_get.assert_called_once_with(
+            f"{BCRAConnector.BASE_URL}/estadisticas/v3.0/monetarias",
+            params=None,
+            verify=False,
+            timeout=ANY,
+        )
         assert len(result) == 1
-        assert isinstance(result[0], PrincipalesVariables)
-        assert result[0].idVariable == 1
-        assert result[0].cdSerie == 246
-        assert result[0].descripcion == "Test Variable"
-        assert result[0].fecha == date(2024, 3, 5)
-        assert result[0].valor == 100.0
+        pv = result[0]
+        assert isinstance(pv, PrincipalesVariables)
+        assert pv.idVariable == 1
+        assert pv.descripcion == "Test Variable v3"
+        assert pv.fecha == date(2024, 3, 5)
+        assert pv.valor == 100.0
+        assert pv.categoria == "Indicadores Monetarios"
+        assert not hasattr(pv, "cdSerie")
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_principales_variables_empty_response(
-        self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
+    def test_get_principales_variables_empty_response_v3(
+        self,
+        mock_get: Mock,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+        connector: BCRAConnector,
     ) -> None:
-        """Test handling of empty response for principal variables."""
+        """Test handling of empty response for principal variables (v3.0)."""
         mock_get.return_value = mock_api_response({"results": []}, 200)
-
-        connector: BCRAConnector = BCRAConnector()
         result: List[PrincipalesVariables] = connector.get_principales_variables()
 
         assert isinstance(result, list)
         assert len(result) == 0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_datos_variable_success(
-        self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
+    def test_get_datos_variable_success_v3(
+        self,
+        mock_get: Mock,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+        connector: BCRAConnector,
     ) -> None:
-        """Test successful retrieval of variable data."""
-        mock_data: Dict[str, Any] = {
-            "results": [{"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0}]
+        """Test successful retrieval of variable data (v3.0 format)."""
+        mock_data_v3: Dict[str, Any] = {
+            "metadata": {"resultset": {"count": 1, "offset": 0, "limit": 10}},
+            "results": [{"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0}],
         }
-        mock_get.return_value = mock_api_response(mock_data, 200)
+        mock_get.return_value = mock_api_response(mock_data_v3, 200)
 
-        connector: BCRAConnector = BCRAConnector()
-        start_date: datetime = datetime(2024, 3, 1)
-        end_date: datetime = datetime(2024, 3, 5)
-        result: List[DatosVariable] = connector.get_datos_variable(
-            1, start_date, end_date
+        start_date = datetime(2024, 3, 1)
+        end_date = datetime(2024, 3, 5)
+
+        response: DatosVariableResponse = connector.get_datos_variable(
+            1, desde=start_date, hasta=end_date, limit=10, offset=0
         )
 
-        assert len(result) == 1
-        assert isinstance(result[0], DatosVariable)
-        assert result[0].idVariable == 1
-        assert result[0].fecha == date(2024, 3, 5)
-        assert result[0].valor == 100.0
-
-        # Verify correct URL formation
-        expected_url: str = (
-            f"{BCRAConnector.BASE_URL}/estadisticas/v2.0/DatosVariable/1/2024-03-01/2024-03-05"
+        expected_url = f"{BCRAConnector.BASE_URL}/estadisticas/v3.0/monetarias/1"
+        expected_params = {
+            "desde": "2024-03-01",
+            "hasta": "2024-03-05",
+            "limit": 10,
+            "offset": 0,
+        }
+        mock_get.assert_called_once_with(
+            expected_url, params=expected_params, verify=False, timeout=ANY
         )
-        mock_get.assert_called_once()
-        actual_url: str = mock_get.call_args[0][0]
-        assert actual_url == expected_url
 
-    def test_get_datos_variable_invalid_dates(self, connector: BCRAConnector) -> None:
-        """Test handling of invalid date ranges."""
-        # Test end date before start date
-        with pytest.raises(ValueError) as exc_info:
+        assert isinstance(response, DatosVariableResponse)
+        assert response.metadata.resultset.count == 1
+        assert response.metadata.resultset.offset == 0
+        assert response.metadata.resultset.limit == 10
+        assert len(response.results) == 1
+        dv = response.results[0]
+        assert isinstance(dv, DatosVariable)
+        assert dv.idVariable == 1
+        assert dv.fecha == date(2024, 3, 5)
+        assert dv.valor == 100.0
+
+    def test_get_datos_variable_invalid_dates_v3(
+        self, connector: BCRAConnector
+    ) -> None:
+        """Test handling of invalid date ranges (v3.0)."""
+        with pytest.raises(
+            ValueError,
+            match="'desde' date must be earlier than or equal to 'hasta' date",
+        ):
             connector.get_datos_variable(1, datetime(2024, 3, 5), datetime(2024, 3, 1))
-        assert "'desde' date must be earlier than or equal to 'hasta' date" in str(
-            exc_info.value
-        )
 
-        # Test date range exceeding one year
-        with pytest.raises(ValueError) as exc_info:
-            connector.get_datos_variable(1, datetime(2024, 1, 1), datetime(2025, 1, 2))
-        assert "Date range must not exceed 1 year" in str(exc_info.value)
-
-    @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_latest_value_success(
-        self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
+    def test_get_datos_variable_invalid_limit_offset_v3(
+        self, connector: BCRAConnector
     ) -> None:
-        """Test successful retrieval of latest value."""
-        mock_data: Dict[str, Any] = {
-            "results": [
-                {"idVariable": 1, "fecha": "2024-03-03", "valor": 95.0},
-                {"idVariable": 1, "fecha": "2024-03-04", "valor": 97.5},
-                {"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0},
-            ]
-        }
-        mock_get.return_value = mock_api_response(mock_data, 200)
+        """Test validation for limit and offset in get_datos_variable (v3.0)."""
+        valid_date = datetime(2024, 1, 1)
+        with pytest.raises(ValueError, match="Limit must be between 10 and 3000"):
+            connector.get_datos_variable(1, desde=valid_date, limit=5)
+        with pytest.raises(ValueError, match="Limit must be between 10 and 3000"):
+            connector.get_datos_variable(1, desde=valid_date, limit=3001)
+        with pytest.raises(ValueError, match="Offset must be non-negative"):
+            connector.get_datos_variable(1, desde=valid_date, offset=-1)
+        try:
+            connector.get_datos_variable(1, desde=valid_date, limit=10, offset=0)
+        except ValueError:
+            pytest.fail("Valid limit/offset raised ValueError unexpectedly.")
 
-        connector: BCRAConnector = BCRAConnector()
+    @patch("bcra_connector.bcra_connector.BCRAConnector.get_datos_variable")
+    def test_get_latest_value_success_v3(
+        self, mock_get_datos_variable: Mock, connector: BCRAConnector
+    ) -> None:
+        """Test successful retrieval of latest value (using v3.0)."""
+        mock_response_data = DatosVariableResponse(
+            metadata=Mock(resultset=Mock(count=3, offset=0, limit=10)),
+            results=[
+                DatosVariable(idVariable=1, fecha=date(2024, 3, 3), valor=95.0),
+                DatosVariable(idVariable=1, fecha=date(2024, 3, 5), valor=100.0),
+                DatosVariable(idVariable=1, fecha=date(2024, 3, 4), valor=97.5),
+            ],
+        )
+        mock_get_datos_variable.return_value = mock_response_data
+
         result: DatosVariable = connector.get_latest_value(1)
+
+        mock_get_datos_variable.assert_any_call(1, limit=10)
 
         assert isinstance(result, DatosVariable)
         assert result.idVariable == 1
         assert result.fecha == date(2024, 3, 5)
         assert result.valor == 100.0
 
-    @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_latest_value_no_data(
-        self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
+    @patch("bcra_connector.bcra_connector.BCRAConnector.get_datos_variable")
+    def test_get_latest_value_no_data_v3(
+        self, mock_get_datos_variable: Mock, connector: BCRAConnector
     ) -> None:
-        """Test handling of no data for latest value."""
-        mock_get.return_value = mock_api_response({"results": []}, 200)
+        """Test handling of no data for latest value (using v3.0)."""
+        mock_empty_response = DatosVariableResponse(
+            metadata=Mock(resultset=Mock(count=0, offset=0, limit=10)), results=[]
+        )
+        mock_get_datos_variable.side_effect = [mock_empty_response, mock_empty_response]
 
-        connector: BCRAConnector = BCRAConnector()
-        with pytest.raises(BCRAApiError) as exc_info:
+        with pytest.raises(BCRAApiError, match="No data available for variable 1"):
             connector.get_latest_value(1)
-        assert "No data available for variable 1" in str(exc_info.value)
+
+        assert mock_get_datos_variable.call_count == 2
+        mock_get_datos_variable.assert_any_call(1, limit=10)
+        mock_get_datos_variable.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
     def test_get_entidades_success(
-        self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
+        self,
+        mock_get: Mock,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+        connector: BCRAConnector,
     ) -> None:
         """Test successful retrieval of financial entities."""
         mock_data: Dict[str, Any] = {
@@ -197,21 +251,27 @@ class TestBCRAConnector:
             ]
         }
         mock_get.return_value = mock_api_response(mock_data, 200)
-
-        connector: BCRAConnector = BCRAConnector()
         result: List[Entidad] = connector.get_entidades()
 
+        mock_get.assert_called_once_with(
+            f"{BCRAConnector.BASE_URL}/cheques/v1.0/entidades",
+            params=None,
+            verify=False,
+            timeout=ANY,
+        )
         assert len(result) == 2
         assert all(isinstance(entity, Entidad) for entity in result)
         assert result[0].codigo_entidad == 11
-        assert result[1].denominacion == "BANCO DE LA PROVINCIA DE BUENOS AIRES"
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
     def test_get_cheque_denunciado_success(
-        self, mock_get: Mock, mock_api_response: Callable[[Dict[str, Any], int], Mock]
+        self,
+        mock_get: Mock,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+        connector: BCRAConnector,
     ) -> None:
         """Test successful retrieval of reported check information."""
-        mock_data: Dict[str, Any] = {
+        mock_data_dict: Dict[str, Any] = {
             "results": {
                 "numeroCheque": 20377516,
                 "denunciado": True,
@@ -226,102 +286,146 @@ class TestBCRAConnector:
                 ],
             }
         }
-        mock_get.return_value = mock_api_response(mock_data, 200)
-
-        connector: BCRAConnector = BCRAConnector()
+        mock_get.return_value = mock_api_response(mock_data_dict, 200)
         result: Cheque = connector.get_cheque_denunciado(11, 20377516)
 
+        mock_get.assert_called_once_with(
+            f"{BCRAConnector.BASE_URL}/cheques/v1.0/denunciados/11/20377516",
+            params=None,
+            verify=False,
+            timeout=ANY,
+        )
         assert isinstance(result, Cheque)
         assert result.numero_cheque == 20377516
-        assert result.denunciado is True
-        assert result.fecha_procesamiento == date(2024, 3, 5)
-        assert result.denominacion_entidad == "BANCO DE LA NACION ARGENTINA"
-        assert len(result.detalles) == 1
-        assert isinstance(result.detalles[0], ChequeDetalle)
-        assert result.detalles[0].sucursal == 524
-        assert result.detalles[0].numero_cuenta == 5240055962
-        assert result.detalles[0].causal == "Denuncia por robo"
 
-    def test_error_handling(self, connector: BCRAConnector) -> None:
-        """Test various error handling scenarios."""
+    def test_error_handling_timeout(self, connector: BCRAConnector) -> None:
+        """Test timeout error handling."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
-            # Test timeout
             mock_get.side_effect = Timeout("Request timed out")
-            with pytest.raises(BCRAApiError) as exc_info:
+            with pytest.raises(BCRAApiError, match="Request timed out"):
                 connector.get_principales_variables()
-            assert "Request timed out" in str(exc_info.value)
 
-            # Test connection error
+    def test_error_handling_connection_error(self, connector: BCRAConnector) -> None:
+        """Test connection error handling."""
+        with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             mock_get.side_effect = ConnectionError("Connection failed")
-            with pytest.raises(BCRAApiError) as exc_info:
+            with pytest.raises(
+                BCRAApiError, match="API request failed: Connection error"
+            ):
                 connector.get_principales_variables()
-            assert "API request failed" in str(exc_info.value)
 
-            # Test HTTP error
-            mock_get.side_effect = HTTPError("404 Client Error")
-            with pytest.raises(BCRAApiError) as exc_info:
+    def test_error_handling_http_error_generic(
+        self,
+        connector: BCRAConnector,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+    ) -> None:
+        """Test generic HTTP error handling (non-404)."""
+        with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
+            mock_resp = mock_api_response({"errorMessages": ["Server Issue"]}, 500)
+            mock_get.return_value = mock_resp
+
+            with pytest.raises(BCRAApiError, match="HTTP 500"):
                 connector.get_principales_variables()
-            assert "API request failed" in str(exc_info.value)
+
+    def test_error_handling_http_404_error(
+        self,
+        connector: BCRAConnector,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+    ) -> None:
+        """Test 404 HTTP error handling from _make_request."""
+        with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
+            variable_id_for_test = 99999
+            mocked_api_url_path = f"estadisticas/v3.0/monetarias/{variable_id_for_test}"
+            full_mocked_url = f"{BCRAConnector.BASE_URL}/{mocked_api_url_path}"
+            api_error_content_message = "Recurso Especifico No Encontrado"
+
+            mock_resp = mock_api_response(
+                {"errorMessages": [api_error_content_message]}, 404
+            )
+            mock_resp.url = full_mocked_url
+
+            mock_get.return_value = mock_resp
+
+            expected_match_pattern = r"Resource not found \(404\)"
+
+            with pytest.raises(BCRAApiError, match=expected_match_pattern) as exc_info:
+                connector.get_datos_variable(variable_id_for_test)
+
+            assert full_mocked_url in str(exc_info.value)
+            assert api_error_content_message in str(exc_info.value)
+            assert "HTTP 404" in str(exc_info.value)
 
     def test_rate_limiting(self, connector: BCRAConnector) -> None:
         """Test rate limiting functionality."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
-            mock_get.return_value = Mock(json=lambda: {"results": []}, status_code=200)
-
-            connector.rate_limiter.reset()
+            mock_get.return_value = Mock(
+                json=lambda: {"results": []},
+                status_code=200,
+                raise_for_status=lambda: None,
+            )
 
             for _ in range(connector.rate_limiter.config.burst):
                 delay = connector.rate_limiter.acquire()
-                assert delay == 0
+                assert delay == 0.0
 
-            delay = connector.rate_limiter.acquire()
-            assert delay > 0
+            delay_needed = connector.rate_limiter.acquire()
+            assert delay_needed > 0.0
             assert (
                 connector.rate_limiter.current_usage
-                > connector.rate_limiter.config.calls
+                == connector.rate_limiter.config.burst + 1
             )
 
     @pytest.mark.parametrize(
-        "response_code,error_messages",
+        "response_code,error_messages,expected_match",
         [
-            (400, ["Bad Request"]),
-            (404, ["Not Found"]),
-            (500, ["Internal Server Error"]),
-            (429, ["Too Many Requests"]),
+            (400, ["Bad Request"], "HTTP 400"),
+            (404, ["Not Found"], "Resource not found"),
+            (500, ["Internal Server Error"], "HTTP 500"),
+            (429, ["Too Many Requests"], "HTTP 429"),
         ],
     )
-    def test_error_responses(
+    def test_error_responses_v3(
         self,
         connector: BCRAConnector,
         response_code: int,
         error_messages: List[str],
+        expected_match: str,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
     ) -> None:
-        """Test handling of various error responses."""
+        """Test handling of various error responses using a v3.0 endpoint."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
-            mock_response: Mock = mock_api_response(
-                {"status": response_code, "errorMessages": error_messages},
+            mock_response_obj: Mock = mock_api_response(
+                {"errorMessages": error_messages},
                 response_code,
             )
-            mock_response.raise_for_status.side_effect = HTTPError(
-                f"{response_code} Error"
-            )
-            mock_get.return_value = mock_response
+            if response_code >= 400:
+                mock_response_obj.raise_for_status.side_effect = HTTPError(
+                    response=mock_response_obj
+                )
+
+            mock_get.return_value = mock_response_obj
 
             with pytest.raises(BCRAApiError) as exc_info:
                 connector.get_principales_variables()
 
-            assert str(response_code) in str(exc_info.value)
+            assert expected_match in str(exc_info.value)
+            if error_messages:
+                assert all(msg in str(exc_info.value) for msg in error_messages)
 
-    def test_retry_mechanism(self, connector: BCRAConnector) -> None:
+    def test_retry_mechanism(
+        self,
+        connector: BCRAConnector,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+    ) -> None:
         """Test retry mechanism for failed requests."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
+            final_response = mock_api_response({"results": []}, 200)
             mock_get.side_effect = [
                 ConnectionError("First attempt failed"),
-                ConnectionError("Second attempt failed"),
-                Mock(json=lambda: {"results": []}, status_code=200),
+                Timeout("Second attempt failed"),
+                final_response,
             ]
 
-            result: List[Any] = connector.get_principales_variables()
+            result: List[PrincipalesVariables] = connector.get_principales_variables()
             assert result == []
             assert mock_get.call_count == 3

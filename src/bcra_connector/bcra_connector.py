@@ -4,19 +4,24 @@ Provides interfaces for variables, checks, and currency exchange rate data endpo
 Handles rate limiting, retries, and error cases.
 """
 
+import json
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import requests
-import urllib3
+import urllib3  # For urllib3.disable_warnings
 from scipy.stats import pearsonr
 
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
-from .principales_variables import DatosVariable, PrincipalesVariables
+from .principales_variables import (
+    DatosVariable,
+    DatosVariableResponse,
+    PrincipalesVariables,
+)
 from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
 
@@ -32,17 +37,13 @@ class BCRAConnector:
     A connector for the BCRA (Banco Central de la República Argentina) APIs.
 
     This class provides methods to interact with various BCRA APIs, including
-    Principales Variables, Cheques, and Estadísticas Cambiarias.
+    Principales Variables (Monetarias v3.0), Cheques, and Estadísticas Cambiarias.
     """
 
     BASE_URL = "https://api.bcra.gob.ar"
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # seconds
-    DEFAULT_RATE_LIMIT = RateLimitConfig(
-        calls=10,  # 10 calls
-        period=1.0,  # per second
-        _burst=20,  # allowing up to 20 calls
-    )
+    DEFAULT_RATE_LIMIT = RateLimitConfig(calls=10, period=1.0, _burst=20)
     DEFAULT_TIMEOUT = TimeoutConfig.default()
 
     def __init__(
@@ -68,7 +69,6 @@ class BCRAConnector:
         )
         self.verify_ssl = verify_ssl
 
-        # Configure timeouts
         if isinstance(timeout, (int, float)):
             self.timeout = TimeoutConfig.from_total(float(timeout))
         elif isinstance(timeout, TimeoutConfig):
@@ -76,16 +76,19 @@ class BCRAConnector:
         else:
             self.timeout = self.DEFAULT_TIMEOUT
 
-        # Initialize rate limiter
         self.rate_limiter = RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT)
 
-        # Configure logging
         log_level = logging.DEBUG if debug else logging.INFO
-        logging.basicConfig(
-            level=log_level,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
+        # Configure logger for this instance; avoid reconfiguring root logger if already set up
         self.logger = logging.getLogger(__name__)
+        if not self.logger.hasHandlers():  # Configure only if no handlers are attached
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+        self.logger.setLevel(log_level)
 
         if not self.verify_ssl:
             self.logger.warning(
@@ -101,169 +104,242 @@ class BCRAConnector:
 
         for attempt in range(self.MAX_RETRIES):
             try:
-                # Apply rate limiting
                 delay = self.rate_limiter.acquire()
                 if delay > 0:
                     self.logger.debug(
                         f"Rate limit applied. Waiting {delay:.2f} seconds"
                     )
-                    time.sleep(delay)  # Actually wait instead of raising an error
+                    time.sleep(delay)
 
-                self.logger.debug(f"Making request to {url}")
+                self.logger.debug(f"Making request to {url} with params {params}")
                 response = self.session.get(
                     url,
                     params=params,
                     verify=self.verify_ssl,
                     timeout=self.timeout.as_tuple,
                 )
+                response.raise_for_status()
+                return dict(response.json())
 
+            except requests.HTTPError as e:
+                status_code = e.response.status_code
+                error_msg = f"HTTP {status_code} for {e.response.url}"
                 try:
-                    response.raise_for_status()
-                except requests.HTTPError as e:
-                    status_code = response.status_code
-                    if status_code == 404:
-                        raise BCRAApiError("HTTP 404: Resource not found") from e
+                    error_data = e.response.json()
+                    if "errorMessages" in error_data:
+                        error_msg += f": {', '.join(error_data['errorMessages'])}"
+                    elif isinstance(error_data, dict):
+                        error_msg += f": {str(error_data)}"
+                except (ValueError, json.JSONDecodeError):
+                    error_msg += f": {e.response.reason}"
 
-                    error_msg = f"HTTP {status_code}"
-                    try:
-                        error_data = response.json()
-                        if "errorMessages" in error_data:
-                            error_msg = (
-                                f"{error_msg}: {', '.join(error_data['errorMessages'])}"
-                            )
-                    except (ValueError, KeyError):
-                        error_msg = f"{error_msg}: {response.reason}"
-                    raise BCRAApiError(error_msg) from e
-
-                try:
-                    return dict(response.json())
-                except ValueError as e:
-                    raise BCRAApiError("Invalid JSON response") from e
+                if status_code == 404:
+                    raise BCRAApiError(f"Resource not found (404): {error_msg}") from e
+                raise BCRAApiError(error_msg) from e
 
             except requests.Timeout as e:
                 self.logger.error(
-                    f"Request timed out (attempt {attempt + 1}/{self.MAX_RETRIES})"
+                    f"Request timed out to {url} (attempt {attempt + 1}/{self.MAX_RETRIES})"
                 )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError("Request timed out") from e
+                    raise BCRAApiError(
+                        f"Request timed out after {self.MAX_RETRIES} attempts to {url}"
+                    ) from e
                 time.sleep(self.RETRY_DELAY * (2**attempt))
 
             except requests.ConnectionError as e:
-                if "SSL" in str(e):
-                    raise BCRAApiError("SSL verification failed") from e
-
+                if "SSL" in str(e).upper():
+                    raise BCRAApiError(f"SSL issue for {url}: {e}") from e
                 self.logger.warning(
-                    f"Connection error (attempt {attempt + 1}/{self.MAX_RETRIES})"
+                    f"Connection error to {url} (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}"
                 )
                 if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError("API request failed: Connection error") from e
+                    raise BCRAApiError(
+                        f"API request failed: Connection error to {url} after {self.MAX_RETRIES} attempts"
+                    ) from e
                 time.sleep(self.RETRY_DELAY * (2**attempt))
 
             except requests.RequestException as e:
-                raise BCRAApiError(f"API request failed: {str(e)}") from e
+                self.logger.error(
+                    f"API request exception for {url}: {e} (attempt {attempt+1}/{self.MAX_RETRIES})"
+                )
+                if attempt == self.MAX_RETRIES - 1:
+                    raise BCRAApiError(
+                        f"API request failed after {self.MAX_RETRIES} attempts: {e}"
+                    ) from e
+                time.sleep(self.RETRY_DELAY * (2**attempt))
 
-        raise BCRAApiError("Maximum retry attempts reached")
+            except (ValueError, json.JSONDecodeError) as e:
+                raise BCRAApiError(f"Invalid JSON response from {url}") from e
 
-    # Principales Variables methods
+        raise BCRAApiError(
+            f"Maximum retry attempts ({self.MAX_RETRIES}) reached for {url}"
+        )
+
+    # Principales Variables / Monetarias methods (v3.0)
     def get_principales_variables(self) -> List[PrincipalesVariables]:
         """
-        Fetch the list of all principal variables published by BCRA.
+        Fetch the list of all monetary series and principal variables published by BCRA (API v3.0).
 
-        :return: A list of PrincipalesVariables objects
+        :return: A list of PrincipalesVariables objects (Note: structure changed in v3.0, 'categoria' added, 'cdSerie' removed)
         :raises BCRAApiError: If the API request fails or returns unexpected data
         """
-        self.logger.info("Fetching principal variables")
+        self.logger.info("Fetching monetary series and principal variables (v3.0)")
         try:
-            data = self._make_request("estadisticas/v2.0/PrincipalesVariables")
-
-            if not isinstance(data, dict) or "results" not in data:
+            data = self._make_request("estadisticas/v3.0/monetarias")
+            if not isinstance(data.get("results"), list):
                 raise BCRAApiError(
-                    "Unexpected response format: 'results' key not found"
-                )
-
-            if not isinstance(data["results"], list):
-                raise BCRAApiError(
-                    "Unexpected response format: 'results' is not a list"
+                    "Unexpected response format: 'results' is not a list or missing"
                 )
 
             variables = []
             for item in data["results"]:
                 try:
                     variables.append(PrincipalesVariables.from_dict(item))
-                except (KeyError, ValueError) as e:
-                    self.logger.warning(f"Skipping invalid variable data: {str(e)}")
+                except (ValueError, KeyError) as e:
+                    self.logger.warning(
+                        f"Skipping invalid variable data: {e} - Data: {item}"
+                    )
 
-            if not variables:
+            if not variables and data.get(
+                "results"
+            ):  # Check if results existed but parsing failed
+                self.logger.error(
+                    "Failed to parse any variable data despite receiving results."
+                )
+            elif not variables:
                 self.logger.warning("No valid variables found in the response")
             else:
                 self.logger.info(
-                    f"Successfully fetched {len(variables)} principal variables"
+                    f"Successfully fetched and parsed {len(variables)} variables (v3.0)"
                 )
-
             return variables
         except BCRAApiError:
             raise
         except Exception as e:
-            error_msg = f"Error fetching principal variables: {str(e)}"
-            self.logger.error(error_msg)
+            error_msg = f"Error fetching principal variables (v3.0): {str(e)}"
+            self.logger.exception(error_msg)
             raise BCRAApiError(error_msg) from e
 
     def get_datos_variable(
-        self, id_variable: int, desde: datetime, hasta: datetime
-    ) -> List[DatosVariable]:
+        self,
+        id_variable: int,
+        desde: Optional[datetime] = None,
+        hasta: Optional[datetime] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> DatosVariableResponse:
         """
-        Fetch the list of values for a variable within a specified date range.
+        Fetch the list of values for a variable/series (API v3.0).
 
-        :param id_variable: The ID of the desired variable
-        :param desde: The start date of the range to query
-        :param hasta: The end date of the range to query
-        :return: A list of DatosVariable objects
-        :raises ValueError: If the date range is invalid
-        :raises BCRAApiError: If the API request fails
+        Uses pagination via limit and offset. If desde/hasta are omitted, API defaults apply.
+
+        :param id_variable: The ID of the desired variable. Case-sensitive `{IdVariable}` in URL path.
+        :param desde: The start date of the range to query (inclusive). Optional. YYYY-MM-DD format.
+        :param hasta: The end date of the range to query (inclusive). Optional. YYYY-MM-DD format.
+        :param limit: Maximum number of results (10-3000). Optional, API defaults to 1000.
+        :param offset: Number of results to skip for pagination. Optional, defaults to 0.
+        :return: A DatosVariableResponse object containing metadata and results.
+        :raises ValueError: If date range is invalid or limit/offset are out of bounds.
+        :raises BCRAApiError: If the API request fails.
         """
-        self.logger.info(
-            f"Fetching data for variable {id_variable} from {desde.date()} to {hasta.date()}"
-        )
+        log_msg_parts = [f"Fetching data for variable {id_variable}"]
+        if desde:
+            log_msg_parts.append(f"from {desde.date()}")
+        if hasta:
+            log_msg_parts.append(f"to {hasta.date()}")
+        if limit is not None:
+            log_msg_parts.append(f"limit {limit}")
+        if offset is not None:
+            log_msg_parts.append(f"offset {offset}")
+        self.logger.info(" ".join(log_msg_parts) + " (v3.0)")
 
-        if desde > hasta:
+        if desde and hasta and desde > hasta:
             raise ValueError(
                 "'desde' date must be earlier than or equal to 'hasta' date"
             )
+        if limit is not None and not (10 <= limit <= 3000):
+            raise ValueError("Limit must be between 10 and 3000")
+        if offset is not None and offset < 0:
+            raise ValueError("Offset must be non-negative")
 
-        if hasta - desde > timedelta(days=365):
-            raise ValueError("Date range must not exceed 1 year")
+        params: Dict[str, Any] = {}
+        if desde:
+            params["desde"] = desde.strftime("%Y-%m-%d")
+        if hasta:
+            params["hasta"] = hasta.strftime("%Y-%m-%d")
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+
+        endpoint = f"estadisticas/v3.0/monetarias/{id_variable}"
 
         try:
-            data = self._make_request(
-                f"estadisticas/v2.0/DatosVariable/{id_variable}/{desde.date()}/{hasta.date()}"
+            raw_api_data = self._make_request(
+                endpoint, params=params if params else None
             )
-            datos = [DatosVariable.from_dict(item) for item in data["results"]]
-            self.logger.info(f"Successfully fetched {len(datos)} data points")
-            return datos
-        except KeyError as e:
-            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+            response_obj = DatosVariableResponse.from_dict(raw_api_data)
+            self.logger.info(
+                f"Successfully fetched and parsed {len(response_obj.results)} data points "
+                f"(total available: {response_obj.metadata.resultset.count}) for variable {id_variable} (v3.0)"
+            )
+            return response_obj
+        except (ValueError, KeyError) as e:
+            error_msg = f"Error parsing response for variable {id_variable} (v3.0): {e}"
+            self.logger.exception(error_msg)
+            raise BCRAApiError(error_msg) from e
+        except BCRAApiError:
+            self.logger.error(
+                f"API Error fetching data for variable {id_variable} (v3.0)"
+            )
+            raise
+        except Exception as e:
+            error_msg = (
+                f"Unexpected error fetching data for variable {id_variable} (v3.0): {e}"
+            )
+            self.logger.exception(error_msg)
+            raise BCRAApiError(error_msg) from e
 
     def get_latest_value(self, id_variable: int) -> DatosVariable:
         """
-        Fetch the latest value for a specific variable.
+        Fetch the latest value for a specific variable using API v3.0.
 
-        :param id_variable: The ID of the desired variable
-        :return: The latest data point for the specified variable
-        :raises BCRAApiError: If the API request fails or if no data is available
+        :param id_variable: The ID of the desired variable.
+        :return: The latest data point (DatosVariable object) for the specified variable.
+        :raises BCRAApiError: If the API request fails or if no data is available.
         """
-        self.logger.info(f"Fetching latest value for variable {id_variable}")
-        end_date = datetime.now()
-        start_date = end_date - timedelta(
-            days=30
-        )  # Look back 30 days to ensure we get data
-
-        data = self.get_datos_variable(id_variable, start_date, end_date)
-        if not data:
-            raise BCRAApiError(f"No data available for variable {id_variable}")
-
-        latest = max(data, key=lambda x: x.fecha)
         self.logger.info(
-            f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha})"
+            f"Fetching latest value for variable {id_variable} (using v3.0 logic)"
+        )
+        response_data = self.get_datos_variable(
+            id_variable, limit=10
+        )  # Small limit for efficiency
+
+        if not response_data.results:
+            # Fallback: If no data with small limit, query last 30 days.
+            # This could happen if the "latest" is older than the few records fetched by limit=10
+            # Or if the API default sort isn't strictly by date descending without a 'desde'
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=30)
+            self.logger.info(
+                f"No recent data found for {id_variable} with limit=10, checking last 30 days."
+            )
+            # Use a limit that covers roughly a month of daily data if the API allows
+            effective_limit = (
+                response_data.metadata.resultset.limit if response_data.metadata else 30
+            )
+            response_data = self.get_datos_variable(
+                id_variable, desde=start_date, hasta=end_date, limit=effective_limit
+            )
+            if not response_data.results:
+                raise BCRAApiError(
+                    f"No data available for variable {id_variable} in the last 30 days."
+                )
+
+        latest = max(response_data.results, key=lambda x: x.fecha)
+        self.logger.info(
+            f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha.isoformat()})"
         )
         return latest
 
@@ -278,11 +354,22 @@ class BCRAConnector:
         self.logger.info("Fetching financial entities")
         try:
             data = self._make_request("cheques/v1.0/entidades")
+            if "results" not in data or not isinstance(data["results"], list):
+                raise BCRAApiError(
+                    "Invalid response format for entities endpoint: 'results' key missing or not a list."
+                )
             entities = [Entidad.from_dict(e) for e in data["results"]]
             self.logger.info(f"Successfully fetched {len(entities)} entities")
             return entities
-        except KeyError as e:
-            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+        except (KeyError, ValueError) as e:
+            raise BCRAApiError(
+                f"Unexpected response format or data for entities: {str(e)}"
+            ) from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            self.logger.exception(f"Unexpected error fetching financial entities: {e}")
+            raise BCRAApiError(f"Error fetching financial entities: {str(e)}") from e
 
     def get_cheque_denunciado(self, codigo_entidad: int, numero_cheque: int) -> Cheque:
         """
@@ -300,9 +387,24 @@ class BCRAConnector:
             data = self._make_request(
                 f"cheques/v1.0/denunciados/{codigo_entidad}/{numero_cheque}"
             )
+            if "results" not in data or not isinstance(data["results"], dict):
+                raise BCRAApiError(
+                    "Invalid response format for reported check: 'results' key missing or not a dict."
+                )
             return Cheque.from_dict(data["results"])
-        except KeyError as e:
-            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+        except (KeyError, ValueError) as e:
+            raise BCRAApiError(
+                f"Unexpected response format or data for check {numero_cheque}: {str(e)}"
+            ) from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            self.logger.exception(
+                f"Unexpected error fetching check {numero_cheque}: {e}"
+            )
+            raise BCRAApiError(
+                f"Error fetching reported check {numero_cheque}: {str(e)}"
+            ) from e
 
     # Estadísticas Cambiarias methods
     def get_divisas(self) -> List[Divisa]:
@@ -315,11 +417,22 @@ class BCRAConnector:
         self.logger.info("Fetching currencies")
         try:
             data = self._make_request("estadisticascambiarias/v1.0/Maestros/Divisas")
-            divisas = [Divisa(**d) for d in data["results"]]
+            if "results" not in data or not isinstance(data["results"], list):
+                raise BCRAApiError(
+                    "Invalid response format for currencies: 'results' key missing or not a list."
+                )
+            divisas = [Divisa.from_dict(d) for d in data["results"]]
             self.logger.info(f"Successfully fetched {len(divisas)} currencies")
             return divisas
-        except KeyError as e:
-            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+        except (KeyError, ValueError) as e:
+            raise BCRAApiError(
+                f"Unexpected response format or data for divisas: {str(e)}"
+            ) from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            self.logger.exception(f"Unexpected error fetching currencies: {e}")
+            raise BCRAApiError(f"Error fetching currencies: {str(e)}") from e
 
     def get_cotizaciones(self, fecha: Optional[str] = None) -> CotizacionFecha:
         """
@@ -337,11 +450,29 @@ class BCRAConnector:
             data = self._make_request(
                 "estadisticascambiarias/v1.0/Cotizaciones", params
             )
+            if "results" not in data or not isinstance(data["results"], dict):
+                raise BCRAApiError(
+                    "Invalid response format for quotations: 'results' key missing or not a dict."
+                )
             cotizacion = CotizacionFecha.from_dict(data["results"])
-            self.logger.info(f"Successfully fetched quotations for {cotizacion.fecha}")
+            fecha_log = (
+                cotizacion.fecha.isoformat() if cotizacion.fecha else "latest available"
+            )
+            self.logger.info(f"Successfully fetched quotations for {fecha_log}")
             return cotizacion
-        except KeyError as e:
-            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+        except (KeyError, ValueError) as e:
+            raise BCRAApiError(
+                f"Unexpected response format or data for cotizaciones: {str(e)}"
+            ) from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            self.logger.exception(
+                f"Unexpected error fetching cotizaciones for {fecha}: {e}"
+            )
+            raise BCRAApiError(
+                f"Error fetching quotations for date {fecha}: {str(e)}"
+            ) from e
 
     def get_evolucion_moneda(
         self,
@@ -354,255 +485,472 @@ class BCRAConnector:
         """
         Fetch the evolution of a specific currency's quotation.
 
-        :param moneda: The currency code
-        :param fecha_desde: Start date (format: YYYY-MM-DD), defaults to None
-        :param fecha_hasta: End date (format: YYYY-MM-DD), defaults to None
-        :param limit: Maximum number of results to return (10-1000), defaults to 1000
-        :param offset: Number of results to skip, defaults to 0
-        :return: A list of CotizacionFecha objects with the currency's evolution data
-        :raises BCRAApiError: If the API request fails or returns unexpected data
-        :raises ValueError: If the limit is out of range
+        :param moneda: The currency code (case-sensitive in URL path).
+        :param fecha_desde: Start date (format: YYYY-MM-DD), defaults to None.
+        :param fecha_hasta: End date (format: YYYY-MM-DD), defaults to None.
+        :param limit: Maximum number of results to return (10-1000), defaults to 1000.
+        :param offset: Number of results to skip, defaults to 0.
+        :return: A list of CotizacionFecha objects with the currency's evolution data.
+        :raises BCRAApiError: If the API request fails or returns unexpected data.
+        :raises ValueError: If the limit is out of range or offset is negative.
         """
         self.logger.info(f"Fetching evolution for currency: {moneda}")
-        if limit < 10 or limit > 1000:
-            raise ValueError("Limit must be between 10 and 1000")
+        if not (10 <= limit <= 1000):
+            raise ValueError("Limit must be between 10 and 1000 for 'evolucion_moneda'")
+        if offset < 0:
+            raise ValueError("Offset must be non-negative for 'evolucion_moneda'")
 
-        try:
-            params = {
+        params = {
+            k: v
+            for k, v in {
                 "fechaDesde": fecha_desde,
                 "fechaHasta": fecha_hasta,
                 "limit": limit,
                 "offset": offset,
-            }
-            params = {k: v for k, v in params.items() if v is not None}
-            data = self._make_request(
-                f"estadisticascambiarias/v1.0/Cotizaciones/{moneda}", params
-            )
+            }.items()
+            if v is not None
+        }
+
+        endpoint = f"estadisticascambiarias/v1.0/Cotizaciones/{moneda}"
+        try:
+            data = self._make_request(endpoint, params=params if params else None)
+            if "results" not in data or not isinstance(data["results"], list):
+                raise BCRAApiError(
+                    f"Invalid response format for currency evolution ({moneda}): 'results' key missing/invalid."
+                )
             evolucion = [CotizacionFecha.from_dict(cf) for cf in data["results"]]
             self.logger.info(
                 f"Successfully fetched {len(evolucion)} data points for {moneda}"
             )
             return evolucion
-        except KeyError as e:
-            raise BCRAApiError(f"Unexpected response format: {str(e)}") from e
+        except (KeyError, ValueError) as e:
+            raise BCRAApiError(
+                f"Unexpected response format or data for {moneda} evolution: {str(e)}"
+            ) from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            self.logger.exception(
+                f"Unexpected error fetching evolution for {moneda}: {e}"
+            )
+            raise BCRAApiError(
+                f"Error fetching evolution for {moneda}: {str(e)}"
+            ) from e
 
+    # --- Helper Methods ---
     def get_variable_by_name(
         self, variable_name: str
     ) -> Optional[PrincipalesVariables]:
         """
-        Find a principal variable by its name.
+        Find a principal variable or monetary series by its name (Uses Monetarias v3.0 API).
 
-        :param variable_name: The name of the variable to find
-        :return: A PrincipalesVariables object if found, None otherwise
+        :param variable_name: The name of the variable/series to find (case-insensitive search).
+        :return: A PrincipalesVariables object if found, None otherwise.
         """
-        variables = self.get_principales_variables()
+        try:
+            variables = self.get_principales_variables()
+        except BCRAApiError as e:
+            self.logger.error(
+                f"Failed to get variables to search by name ('{variable_name}'): {e}"
+            )
+            return None
         normalized_name = variable_name.lower().strip()
         for variable in variables:
-            if normalized_name in variable.descripcion.lower():
+            if variable.descripcion and normalized_name in variable.descripcion.lower():
                 return variable
+        self.logger.info(
+            f"Variable/series with name containing '{variable_name}' not found."
+        )
         return None
 
     def get_variable_history(
-        self, variable_name: str, days: int = 30
+        self,
+        variable_name: str,
+        days: int = 30,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> List[DatosVariable]:
         """
-        Get the historical data for a variable by its name for the last n days.
+        Get the historical data for a variable/series by name for the last n days (Uses Monetarias v3.0 API).
 
-        :param variable_name: The name of the variable
-        :param days: The number of days to look back, defaults to 30
-        :return: A list of DatosVariable objects
-        :raises ValueError: If the variable is not found
+        This method returns just the list of data points for convenience.
+
+        :param variable_name: The name of the variable/series.
+        :param days: The number of days to look back, defaults to 30. Must be positive.
+        :param limit: Maximum number of results (10-3000). Optional.
+        :param offset: Number of results to skip for pagination. Optional.
+        :return: A list of DatosVariable objects.
+        :raises ValueError: If the variable is not found or days/limit/offset are invalid.
+        :raises BCRAApiError: If the API request fails.
         """
         variable = self.get_variable_by_name(variable_name)
         if not variable:
             raise ValueError(f"Variable '{variable_name}' not found")
+        if days <= 0:
+            raise ValueError("Number of days must be positive.")
 
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        return self.get_datos_variable(variable.idVariable, start_date, end_date)
+
+        response_obj = self.get_datos_variable(
+            variable.idVariable,
+            desde=start_date,
+            hasta=end_date,
+            limit=limit,
+            offset=offset,
+        )
+        return response_obj.results
 
     def get_currency_evolution(
-        self, currency_code: str, days: int = 30
+        self, currency_code: str, days: int = 30, limit: int = 1000, offset: int = 0
     ) -> List[CotizacionFecha]:
         """
         Get the evolution of a currency's quotation for the last n days.
 
-        :param currency_code: The currency code (e.g., 'USD', 'EUR')
-        :param days: The number of days to look back, defaults to 30
-        :return: A list of CotizacionFecha objects
+        :param currency_code: The currency code (e.g., 'USD', 'EUR'). Case-sensitive for URL.
+        :param days: The number of days to look back, defaults to 30. Must be positive.
+        :param limit: Maximum number of results (10-1000), defaults to 1000 for this specific API.
+        :param offset: Number of results to skip, defaults to 0.
+        :return: A list of CotizacionFecha objects.
+        :raises ValueError: If days/limit/offset are invalid.
+        :raises BCRAApiError: If the API request fails.
         """
+        if days <= 0:
+            raise ValueError("Number of days must be positive.")
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
         return self.get_evolucion_moneda(
             currency_code,
             fecha_desde=start_date.strftime("%Y-%m-%d"),
             fecha_hasta=end_date.strftime("%Y-%m-%d"),
+            limit=limit,
+            offset=offset,
         )
 
     def check_denunciado(self, entity_name: str, check_number: int) -> bool:
         """
         Check if a check is reported as stolen or lost.
 
-        :param entity_name: The name of the financial entity
-        :param check_number: The check number
-        :return: True if the check is reported, False otherwise
-        :raises ValueError: If the entity is not found
+        :param entity_name: The name of the financial entity (case-insensitive search).
+        :param check_number: The check number. Must be positive.
+        :return: True if the check is reported, False otherwise.
+        :raises ValueError: If the entity is not found or check_number is invalid.
+        :raises BCRAApiError: If the API request fails (other than a 404 for the check itself).
         """
-        entities = self.get_entidades()
+        if check_number <= 0:
+            raise ValueError("Check number must be positive.")
+        try:
+            entities = self.get_entidades()
+        except BCRAApiError as e:
+            self.logger.error(
+                f"Could not get entities to check denounced status for '{entity_name}': {e}"
+            )
+            raise
+        normalized_entity_name = entity_name.lower().strip()
         entity = next(
-            (e for e in entities if e.denominacion.lower() == entity_name.lower()), None
+            (
+                e
+                for e in entities
+                if e.denominacion and e.denominacion.lower() == normalized_entity_name
+            ),
+            None,
         )
         if not entity:
             raise ValueError(f"Entity '{entity_name}' not found")
-
-        cheque = self.get_cheque_denunciado(entity.codigo_entidad, check_number)
-        return cheque.denunciado
+        try:
+            cheque = self.get_cheque_denunciado(entity.codigo_entidad, check_number)
+            return cheque.denunciado
+        except BCRAApiError as e:
+            if "404" in str(e) or "not found" in str(e).lower():
+                self.logger.info(
+                    f"Check {check_number} for entity {entity.codigo_entidad} ({entity_name}) not found, assuming not denounced."
+                )
+                return False
+            self.logger.error(
+                f"API error checking denounced status for check {check_number} of entity '{entity_name}': {e}"
+            )
+            raise
+        except Exception as e:
+            self.logger.exception(
+                f"Unexpected error checking denounced status for check {check_number} of entity '{entity_name}': {e}"
+            )
+            raise BCRAApiError(
+                f"Unexpected error during check verification for '{entity_name}', check {check_number}: {e}"
+            ) from e
 
     def get_latest_quotations(self) -> Dict[str, float]:
         """
-        Get the latest quotations for all currencies.
+        Get the latest quotations (tipo_cotizacion) for all currencies.
 
-        :return: A dictionary with currency codes as keys and their latest quotations as values
+        :return: A dictionary with currency codes as keys and their latest quotations as values.
+        :raises BCRAApiError: If fetching quotations fails.
         """
-        cotizaciones = self.get_cotizaciones()
+        try:
+            cotizaciones = self.get_cotizaciones()
+        except BCRAApiError as e:
+            self.logger.error(f"Failed to get latest quotations: {e}")
+            raise
+        if not cotizaciones or not cotizaciones.detalle:
+            self.logger.warning(
+                "No quotation details found in the latest API response for quotations."
+            )
+            return {}
         return {
             detail.codigo_moneda: detail.tipo_cotizacion
             for detail in cotizaciones.detalle
+            if detail.codigo_moneda
         }
 
     def get_currency_pair_evolution(
         self, base_currency: str, quote_currency: str, days: int = 30
     ) -> List[Dict[str, Any]]:
         """
-        Get the evolution of a currency pair for the last n days.
+        Get the evolution of a currency pair exchange rate for the last n days.
 
-        :param base_currency: The base currency code (e.g., 'USD')
-        :param quote_currency: The quote currency code (e.g., 'EUR')
-        :param days: The number of days to look back, defaults to 30
-        :return: A list of dictionaries containing the date and the exchange rate
+        Calculates rate as (quote_currency_value / base_currency_value) using ARS as intermediary.
+        Assumes both currencies are quoted against ARS by the API.
+
+        :param base_currency: The base currency code (e.g., 'USD'). Case-sensitive for URL.
+        :param quote_currency: The quote currency code (e.g., 'EUR'). Case-sensitive for URL.
+        :param days: The number of days to look back, defaults to 30. Must be positive.
+        :return: List of dictionaries with 'fecha' (ISO format) and 'tasa' (exchange rate).
+        :raises ValueError: If days is invalid.
+        :raises BCRAApiError: If underlying API calls fail.
         """
-        base_evolution = self.get_currency_evolution(base_currency, days)
-        quote_evolution = self.get_currency_evolution(quote_currency, days)
+        if days <= 0:
+            raise ValueError("Number of days must be positive.")
+        try:
+            limit = (
+                days + 15
+            )  # Fetch a bit more data to ensure good overlap for daily data
+            base_evolution = self.get_currency_evolution(
+                base_currency, days, limit=limit
+            )
+            quote_evolution = self.get_currency_evolution(
+                quote_currency, days, limit=limit
+            )
+        except BCRAApiError as e:
+            self.logger.error(
+                f"Failed to get evolution for currency pair {base_currency}/{quote_currency} due to API error: {e}"
+            )
+            raise
 
-        base_dict = {
-            cf.fecha: self._get_cotizacion_detalle(cf, base_currency).tipo_cotizacion
-            for cf in base_evolution
-        }
-        quote_dict = {
-            cf.fecha: self._get_cotizacion_detalle(cf, quote_currency).tipo_cotizacion
-            for cf in quote_evolution
-        }
+        base_dict: Dict[date, float] = {}
+        for cf in base_evolution:
+            if cf.fecha:
+                try:
+                    base_dict[cf.fecha] = self._get_cotizacion_detalle(
+                        cf, base_currency
+                    ).tipo_cotizacion
+                except ValueError:
+                    self.logger.debug(
+                        f"Base currency {base_currency} not in cotizacion for {cf.fecha.isoformat()}"
+                    )
+        quote_dict: Dict[date, float] = {}
+        for cf in quote_evolution:
+            if cf.fecha:
+                try:
+                    quote_dict[cf.fecha] = self._get_cotizacion_detalle(
+                        cf, quote_currency
+                    ).tipo_cotizacion
+                except ValueError:
+                    self.logger.debug(
+                        f"Quote currency {quote_currency} not in cotizacion for {cf.fecha.isoformat()}"
+                    )
 
         pair_evolution = []
-        for date in set(base_dict.keys()) & set(quote_dict.keys()):
-            if base_dict[date] != 0 and date is not None:
-                rate = quote_dict[date] / base_dict[date]
-                pair_evolution.append({"fecha": date.isoformat(), "tasa": rate})
-
-        return sorted(pair_evolution, key=lambda x: x["fecha"])
+        common_dates = sorted(list(set(base_dict.keys()) & set(quote_dict.keys())))
+        for d_obj in common_dates:
+            base_val = base_dict[d_obj]
+            quote_val = quote_dict[d_obj]
+            if base_val != 0:  # Avoid division by zero
+                rate = quote_val / base_val
+                pair_evolution.append({"fecha": d_obj.isoformat(), "tasa": rate})
+            else:
+                self.logger.warning(
+                    f"Base currency {base_currency} had zero value on {d_obj.isoformat()}, cannot calculate pair rate."
+                )
+        self.logger.info(
+            f"Calculated {len(pair_evolution)} data points for {base_currency}/{quote_currency} pair evolution."
+        )
+        return pair_evolution
 
     @staticmethod
     def _get_cotizacion_detalle(
         cotizacion_fecha: CotizacionFecha, currency_code: str
     ) -> CotizacionDetalle:
-        """
-        Helper method to get CotizacionDetalle for a specific currency from CotizacionFecha.
-
-        :param cotizacion_fecha: CotizacionFecha object
-        :param currency_code: The currency code to look for
-        :return: CotizacionDetalle for the specified currency
-        :raises ValueError: If the currency is not found in the CotizacionFecha
-        """
+        """Helper method to get CotizacionDetalle for a specific currency from CotizacionFecha."""
+        if not cotizacion_fecha or not cotizacion_fecha.detalle:
+            raise ValueError(
+                f"Invalid or empty CotizacionFecha object provided for currency {currency_code}."
+            )
         for detail in cotizacion_fecha.detalle:
             if detail.codigo_moneda == currency_code:
                 return detail
         raise ValueError(
-            f"Currency {currency_code} not found in cotizacion for date {cotizacion_fecha.fecha}"
+            f"Currency {currency_code} not found in cotizacion for date {cotizacion_fecha.fecha.isoformat() if cotizacion_fecha.fecha else 'N/A'}"
         )
 
     def get_variable_correlation(
         self, variable_name1: str, variable_name2: str, days: int = 30
     ) -> float:
         """
-        Calculate the correlation between two variables over the last n days.
+        Calculate Pearson correlation between two variables/series over last n days (Monetarias v3.0).
 
-        :param variable_name1: The name of the first variable
-        :param variable_name2: The name of the second variable
-        :param days: The number of days to look back, defaults to 30
-        :return: The correlation coefficient between -1 and 1
-        :raises ValueError: If either variable is not found or if there's insufficient data
+        Handles missing data by linear interpolation.
+
+        :param variable_name1: Name of the first variable/series.
+        :param variable_name2: Name of the second variable/series.
+        :param days: Number of days to look back (must be > 1).
+        :return: Correlation coefficient (-1 to 1), or NaN if not calculable.
+        :raises ValueError: If variables not found or days invalid.
+        :raises BCRAApiError: If underlying API calls fail.
         """
-
-        data1 = self.get_variable_history(variable_name1, days)
-        data2 = self.get_variable_history(variable_name2, days)
+        if days <= 1:
+            raise ValueError("Number of days must be greater than 1 for correlation.")
+        try:
+            data1 = self.get_variable_history(variable_name1, days)
+            data2 = self.get_variable_history(variable_name2, days)
+        except BCRAApiError as e:
+            self.logger.error(
+                f"Failed to get history for correlation between '{variable_name1}' and '{variable_name2}': {e}"
+            )
+            raise
 
         if not data1 or not data2:
-            raise ValueError("Insufficient data for correlation calculation")
+            self.logger.warning(
+                f"Insufficient data for correlation: '{variable_name1}' ({len(data1)} pts), '{variable_name2}' ({len(data2)} pts)"
+            )
+            return np.nan
 
         dates1 = [d.fecha for d in data1]
         dates2 = [d.fecha for d in data2]
-        values1 = [d.valor for d in data1]
-        values2 = [d.valor for d in data2]
+        values1 = np.array([d.valor for d in data1], dtype=float)
+        values2 = np.array([d.valor for d in data2], dtype=float)
 
-        # Create a date range covering both datasets
-        all_dates = sorted(set(dates1 + dates2))
+        if (
+            len(set(dates1)) < 2 or len(set(dates2)) < 2
+        ):  # Need at least two distinct time points
+            self.logger.warning(
+                f"Insufficient unique dates for meaningful correlation between '{variable_name1}' and '{variable_name2}'"
+            )
+            return np.nan
 
-        # Interpolate missing values
+        all_dates_ord = np.array(
+            sorted(list(set(d.toordinal() for d in dates1 + dates2))), dtype=float
+        )
+        dates1_ord = np.array([d.toordinal() for d in dates1], dtype=float)
+        dates2_ord = np.array([d.toordinal() for d in dates2], dtype=float)
+
+        # Sort data before interpolation as np.interp requires x-coordinates to be increasing
+        sort_idx1 = np.argsort(dates1_ord)
+        sort_idx2 = np.argsort(dates2_ord)
         interp_values1 = np.interp(
-            [d.toordinal() for d in all_dates], [d.toordinal() for d in dates1], values1
+            all_dates_ord, dates1_ord[sort_idx1], values1[sort_idx1]
         )
         interp_values2 = np.interp(
-            [d.toordinal() for d in all_dates], [d.toordinal() for d in dates2], values2
+            all_dates_ord, dates2_ord[sort_idx2], values2[sort_idx2]
         )
 
-        # Calculate correlation
-        correlation, _ = pearsonr(interp_values1, interp_values2)
+        # Check for constant series after interpolation, which makes correlation undefined or NaN
+        if np.allclose(interp_values1, interp_values1[0]) or np.allclose(
+            interp_values2, interp_values2[0]
+        ):
+            self.logger.warning(
+                f"One or both series ('{variable_name1}', '{variable_name2}') are constant after interpolation. Correlation is undefined."
+            )
+            return np.nan
+        try:
+            correlation, p_value = pearsonr(interp_values1, interp_values2)
+        except (
+            ValueError
+        ) as e:  # Should be caught by constant check, but as a safeguard
+            self.logger.error(
+                f"Pearsonr calculation failed for '{variable_name1}' and '{variable_name2}': {e}"
+            )
+            return np.nan
+
+        if np.isnan(correlation):
+            self.logger.warning(
+                f"Correlation calculation resulted in NaN for '{variable_name1}' and '{variable_name2}'. Check data variability."
+            )
+            # This can happen if variance is zero for one of the series after interpolation
+        else:
+            self.logger.info(
+                f"Correlation between '{variable_name1}' and '{variable_name2}' ({days} days): {correlation:.4f} (p-value: {p_value:.4f})"
+            )
         return float(correlation)
 
     def generate_variable_report(
         self, variable_name: str, days: int = 30
     ) -> Dict[str, Any]:
         """
-        Generate a comprehensive report for a given variable.
+        Generate a comprehensive report for a given variable/series (Uses Monetarias v3.0 API).
 
-        :param variable_name: The name of the variable
-        :param days: The number of days to look back, defaults to 30
-        :return: A dictionary containing various statistics and information about the variable
-        :raises ValueError: If the variable is not found
+        :param variable_name: The name of the variable/series.
+        :param days: The number of days to look back, defaults to 30. Must be positive.
+        :return: A dictionary containing various statistics and information.
+        :raises ValueError: If the variable is not found or days is invalid.
+        :raises BCRAApiError: If the API request fails.
         """
+        if days <= 0:
+            raise ValueError("Number of days must be positive.")
         variable = self.get_variable_by_name(variable_name)
         if not variable:
             raise ValueError(f"Variable '{variable_name}' not found")
+        try:
+            data = self.get_variable_history(variable_name, days)
+        except BCRAApiError as e:
+            self.logger.error(
+                f"Failed to get history for report on '{variable_name}': {e}"
+            )
+            raise
 
-        data = self.get_variable_history(variable_name, days)
-
-        if not data:
-            return {"error": "No data available for the specified period"}
-
-        values = [d.valor for d in data]
-        dates = [d.fecha for d in data]
-
-        report = {
+        report_base = {
             "variable_name": variable_name,
             "variable_id": variable.idVariable,
             "description": variable.descripcion,
+            "category": getattr(
+                variable, "categoria", "N/A"
+            ),  # Uses updated PrincipalesVariables model
             "period": f"Last {days} days",
-            "start_date": min(dates).isoformat(),
-            "end_date": max(dates).isoformat(),
-            "latest_value": values[-1],
-            "latest_date": dates[-1].isoformat(),
-            "min_value": min(values),
-            "max_value": max(values),
-            "mean_value": sum(values) / len(values),
-            "median_value": sorted(values)[len(values) // 2],
-            "data_points": len(values),
-            "percent_change": (
-                (values[-1] - values[0]) / values[0] * 100 if values[0] != 0 else None
-            ),
         }
+        if not data:
+            self.logger.warning(
+                f"No data available for report on '{variable_name}' for the last {days} days."
+            )
+            return {
+                **report_base,
+                "error": "No data available for the specified period",
+            }
 
-        # Add 'unit' to the report only if it's available in the variable
-        if hasattr(variable, "unidad"):
-            report["unit"] = variable.unidad
+        values = np.array([d.valor for d in data], dtype=float)
+        dates = [d.fecha for d in data]
 
-        return report
+        # Calculate statistics, handling cases where values might be empty
+        mean_val = float(np.mean(values)) if values.size > 0 else None
+        median_val = float(np.median(values)) if values.size > 0 else None
+        min_val = float(np.min(values)) if values.size > 0 else None
+        max_val = float(np.max(values)) if values.size > 0 else None
+        std_dev_val = float(np.std(values)) if values.size > 0 else None
+        latest_val = float(values[-1]) if values.size > 0 else None
+        start_val = float(values[0]) if values.size > 0 else None
+
+        percent_change_val = None
+        if latest_val is not None and start_val is not None and start_val != 0:
+            percent_change_val = (latest_val - start_val) / start_val * 100.0
+
+        return {
+            **report_base,
+            "start_date": dates[0].isoformat() if dates else None,
+            "end_date": dates[-1].isoformat() if dates else None,
+            "latest_value": latest_val,
+            "latest_date": dates[-1].isoformat() if dates else None,
+            "min_value": min_val,
+            "max_value": max_val,
+            "mean_value": mean_val,
+            "median_value": median_val,
+            "std_dev": std_dev_val,
+            "data_points": len(values),
+            "percent_change": percent_change_val,
+        }

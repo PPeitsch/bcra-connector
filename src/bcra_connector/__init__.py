@@ -11,8 +11,15 @@ from .estadisticas_cambiarias import (
     DivisaResponse,
 )
 from .estadisticas_cambiarias import ErrorResponse as CambiariasErrorResponse
-from .estadisticas_cambiarias import Metadata, Resultset
-from .principales_variables import DatosVariable, PrincipalesVariables
+from .estadisticas_cambiarias import Metadata as EstadisticasCambiariasMetadata
+from .estadisticas_cambiarias import Resultset as EstadisticasCambiariasResultset
+
+# Import from principales_variables
+from .principales_variables import (
+    DatosVariable,
+    DatosVariableResponse,
+    PrincipalesVariables,
+)
 from .rate_limiter import RateLimitConfig
 from .timeout_config import TimeoutConfig
 
@@ -23,9 +30,10 @@ __all__ = [
     "BCRAApiError",
     "RateLimitConfig",
     "TimeoutConfig",
-    # Principales Variables
+    # Principales Variables / Monetarias v3.0
     "PrincipalesVariables",
     "DatosVariable",
+    "DatosVariableResponse",
     # Cheques
     "Entidad",
     "ChequeDetalle",
@@ -37,8 +45,8 @@ __all__ = [
     "Divisa",
     "CotizacionDetalle",
     "CotizacionFecha",
-    "Resultset",
-    "Metadata",
+    "EstadisticasCambiariasResultset",
+    "EstadisticasCambiariasMetadata",
     "DivisaResponse",
     "CotizacionResponse",
     "CotizacionesResponse",

@@ -8,7 +8,7 @@
 [![Tests](https://github.com/PPeitsch/bcra-connector/workflows/Test%20and%20Publish/badge.svg)](https://github.com/PPeitsch/bcra-connector/actions/workflows/test-and-publish.yaml)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](.github/CODE_OF_CONDUCT.md)
 
-A Python connector for the BCRA (Banco Central de la República Argentina) APIs, including Estadísticas v2.0, Cheques, and Estadísticas Cambiarias.
+A Python connector for the BCRA (Banco Central de la República Argentina) APIs, covering Principal Variables/Monetary Statistics, Cheques, and Exchange Rate Statistics.
 
 ## Features
 
