@@ -1,5 +1,5 @@
 """
-Example of different BCRA connector configurations.
+Example of different BCRA connector configurations (Monetarias v3.0 context).
 Demonstrates timeout settings, SSL verification, and debug mode.
 """
 
@@ -8,7 +8,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-# Add the parent directory to the Python path
+# Add the parent directory to the Python path to run examples directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.bcra_connector import BCRAApiError, BCRAConnector
@@ -19,59 +19,90 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def test_connection(connector, description):
-    logger.info(f"\n{description}:")
+def test_connection(connector: BCRAConnector, description: str) -> None:
+    """Tests basic connectivity and data fetching with the given connector."""
+    logger.info(f"\n--- Testing: {description} ---")
     try:
-        # Fetch principal variables
         variables = connector.get_principales_variables()
-        logger.info(f"Successfully fetched {len(variables)} principal variables.")
-        if variables:
-            logger.info(f"First variable: {variables[0].descripcion}")
+        logger.info(
+            f"Successfully fetched {len(variables)} principal variables/series."
+        )
+        if not variables:
+            logger.warning("No principal variables returned.")
+            return
 
-        # Fetch data for the last 30 days
+        first_var = variables[0]
+        logger.info(
+            f"First variable: ID={first_var.idVariable}, Desc='{first_var.descripcion}', Cat='{first_var.categoria}'"
+        )
+
+        variable_id_to_test = first_var.idVariable
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
+        start_date = end_date - timedelta(days=7)
 
-        # Assuming ID 1 is for international reserves
-        data = connector.get_datos_variable(1, start_date, end_date)
-        logger.info(f"Successfully fetched {len(data)} data points.")
-        if data:
+        logger.info(f"Fetching data for variable ID {variable_id_to_test}...")
+        response_data = connector.get_datos_variable(
+            variable_id_to_test, desde=start_date, hasta=end_date, limit=10
+        )
+
+        datos_list = response_data.results
+        logger.info(
+            f"Successfully fetched {len(datos_list)} data points for variable ID {variable_id_to_test}."
+        )
+        if datos_list:
+            latest_point = max(datos_list, key=lambda x: x.fecha)
             logger.info(
-                f"Latest data point: Date: {data[-1].fecha}, Value: {data[-1].valor}"
+                f"  Latest fetched data point: Date: {latest_point.fecha.isoformat()}, Value: {latest_point.valor}"
             )
+        else:
+            logger.info(
+                f"  No data points returned for variable ID {variable_id_to_test} in the specified range/limit."
+            )
+
     except BCRAApiError as e:
-        logger.error(f"API Error occurred: {str(e)}")
+        logger.error(f"API Error occurred during '{description}': {str(e)}")
+    except ValueError as e:
+        logger.error(f"Value Error occurred during '{description}': {str(e)}")
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(
+            f"Unexpected error during '{description}': {str(e)}", exc_info=True
+        )
 
 
-def main():
-    # Default usage (SSL verification enabled)
-    logger.warning(
-        "Testing with SSL verification enabled (this may fail if the certificate cannot be verified)"
+def main() -> None:
+    """Main function to demonstrate different connector configurations."""
+    logger.info("Starting connector configuration examples...")
+
+    logger.info(
+        "\nNOTE: Default connector test (SSL ON) might fail if system certs/proxy are not set up for api.bcra.gob.ar."
     )
-    connector_default = BCRAConnector()
-    test_connection(connector_default, "Default connector (SSL verification enabled)")
+    try:
+        connector_default = BCRAConnector()
+        test_connection(connector_default, "Default connector (SSL verification ON)")
+    except BCRAApiError as e:
+        logger.error(f"Default connector (SSL ON) API error: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error with default connector: {e}", exc_info=True)
 
-    # SSL verification disabled
-    logger.warning(
-        "\nWARNING: The following tests disable SSL verification. This is not recommended for production use."
+    logger.info(
+        "\nWARNING: The following tests disable SSL verification. This is not recommended for production."
     )
     connector_no_ssl = BCRAConnector(verify_ssl=False)
     test_connection(connector_no_ssl, "Connector with SSL verification disabled")
 
-    # SSL verification disabled and debug mode on
     connector_debug = BCRAConnector(verify_ssl=False, debug=True)
     test_connection(
-        connector_debug, "Connector with SSL verification disabled and debug mode on"
+        connector_debug, "Connector with SSL verification disabled and debug mode ON"
     )
 
-    # Different language setting
-    connector_en = BCRAConnector(verify_ssl=False, language="en-US")
-    test_connection(connector_en, "Connector with English language setting")
+    connector_en = BCRAConnector(verify_ssl=False, language="en-US", debug=True)
+    test_connection(
+        connector_en, "Connector with English language (en-US) and debug ON"
+    )
 
-    logger.warning(
-        "\nNOTE: In a production environment, always use SSL verification unless you have a specific reason not to."
+    logger.info(
+        "\nConnector configuration examples finished. "
+        "In a production environment, always prefer SSL verification (verify_ssl=True)."
     )
 
 

@@ -1,6 +1,6 @@
 """
-Example showing how to retrieve historical data for specific BCRA variables.
-Includes date range handling and time series visualization.
+Example showing how to retrieve historical data for specific BCRA variables (Monetarias v3.0).
+Includes date range handling, pagination (limit/offset), and time series visualization.
 """
 
 import logging
@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Add the parent directory to the Python path
+# Add the parent directory to the Python path to run examples directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.bcra_connector import BCRAApiError, BCRAConnector
@@ -22,7 +22,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def save_plot(fig, filename):
+def save_plot(fig, filename: str) -> None:
+    """Saves the given matplotlib figure to the docs static images directory."""
     static_dir = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "docs/build/_static/images")
     )
@@ -32,67 +33,90 @@ def save_plot(fig, filename):
     logger.info(f"Plot saved as '{filepath}'")
 
 
-def main():
+def main() -> None:
+    """Main function to demonstrate fetching historical data for a variable."""
     connector = BCRAConnector(verify_ssl=False)
 
     try:
-        variable_name = "Reservas Internacionales del BCRA"
-        variable = connector.get_variable_by_name(variable_name)
+        variable_name_to_fetch = "Reservas Internacionales del BCRA"
+        target_variable = connector.get_variable_by_name(variable_name_to_fetch)
 
-        if not variable:
-            logger.error(f"Variable '{variable_name}' not found")
-            return
+        if not target_variable:
+            logger.warning(
+                f"Variable '{variable_name_to_fetch}' not found by name. Trying first available variable."
+            )
+            all_variables = connector.get_principales_variables()
+            if not all_variables:
+                logger.error("No variables found at all. Cannot proceed.")
+                return
+            target_variable = all_variables[0]
+            logger.info(
+                f"Using variable ID: {target_variable.idVariable} ({target_variable.descripcion}) for demonstration."
+            )
+
+        variable_id_to_use = target_variable.idVariable
+        display_variable_name = target_variable.descripcion
 
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
+        start_date = end_date - timedelta(days=90)
+        limit_param = 50
+        offset_param = 0
 
         logger.info(
-            f"Fetching data for {variable_name} from {start_date.date()} to {end_date.date()}..."
+            f"Fetching data for '{display_variable_name}' (ID: {variable_id_to_use}) "
+            f"from {start_date.date().isoformat()} to {end_date.date().isoformat()} with limit={limit_param}, offset={offset_param}..."
         )
+
         response_data = connector.get_datos_variable(
-            variable.idVariable, start_date, end_date
+            variable_id_to_use,
+            desde=start_date,
+            hasta=end_date,
+            limit=limit_param,
+            offset=offset_param,
         )
 
-        # Access the list of data points via response_data.results
         datos_list = response_data.results
+        metadata = response_data.metadata
 
-        logger.info(f"Found {len(datos_list)} data points.")
+        logger.info(
+            f"Fetched {len(datos_list)} data points. "
+            f"Total available according to metadata: {metadata.resultset.count}. "
+            f"Offset: {metadata.resultset.offset}, Limit: {metadata.resultset.limit}."
+        )
 
-        logger.info("Last 5 data points:")
-        for dato in datos_list[-5:]:
-            logger.info(f"Date: {dato.fecha}, Value: {dato.valor}")
-
-        # Plot the data
-        fig, ax = plt.subplots(figsize=(12, 6))
-
-        if not datos_list:  # Check if the list is empty before processing
-            logger.warning(f"No data points found for {variable_name} to plot.")
-            plt.close(fig)  # Close the empty figure
+        if not datos_list:
+            logger.warning(
+                f"No data points returned for '{display_variable_name}'. Cannot plot or show details."
+            )
             return
 
-        # Convert dates and prepare data arrays for matplotlib
+        logger.info("Last 5 data points from the fetched page:")
+        for dato in datos_list[-5:]:
+            logger.info(f"  Date: {dato.fecha.isoformat()}, Value: {dato.valor}")
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+
         dates = [
             datetime.combine(dato.fecha, datetime.min.time()) for dato in datos_list
         ]
         values = [dato.valor for dato in datos_list]
 
-        dates_array = np.array(dates)
-        values_array = np.array(values)
-
-        ax.plot_date(dates_array, values_array, "-")
-        ax.set_title(f"{variable_name} - Last 30 Days")
+        ax.plot_date(np.array(dates), np.array(values), "-")
+        ax.set_title(
+            f"'{display_variable_name}'\n(Page with limit={limit_param}, offset={offset_param} in last 90 days)"
+        )
         ax.set_xlabel("Date")
         ax.set_ylabel("Value")
-        plt.xticks(rotation=45)
+        plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
-        save_plot(fig, f"variable_{variable.idVariable}_data.png")
+        save_plot(fig, f"variable_{variable_id_to_use}_data_v3_paginated.png")
 
     except BCRAApiError as e:
         logger.error(f"API Error occurred: {str(e)}")
     except ValueError as e:
         logger.error(f"Value Error: {str(e)}")
     except Exception as e:
-        logger.error(f"Unexpected error occurred: {str(e)}")
+        logger.error(f"Unexpected error occurred: {str(e)}", exc_info=True)
 
 
 if __name__ == "__main__":

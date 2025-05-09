@@ -1,5 +1,5 @@
 """
-Example of proper error handling for common BCRA API scenarios.
+Example of proper error handling for common BCRA API scenarios (Monetarias v3.0 context).
 Shows how to handle timeouts, rate limits, and API errors.
 """
 
@@ -7,11 +7,12 @@ import logging
 import os
 import sys
 from datetime import datetime, timedelta
+from typing import Any, Callable, Type
 
-# Add the parent directory to the Python path
+# Add the parent directory to the Python path to run examples directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.bcra_connector import BCRAConnector
+from src.bcra_connector import BCRAApiError, BCRAConnector
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -19,75 +20,122 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def test_case(description, func):
-    logger.info(f"\nTest case: {description}")
+def test_case(
+    description: str,
+    func: Callable[[], Any],
+    expected_exception: Type[BaseException] = Exception,
+) -> None:
+    """Helper function to run a test case and log results."""
+    logger.info(f"\n--- Test case: {description} ---")
     try:
         result = func()
-        logger.info(f"Test passed. Result: {result}")
+        logger.info(f"Test completed. Result (if any): {result}")
+    except expected_exception as e:
+        logger.info(f"Expected exception caught: {type(e).__name__}: {str(e)}")
     except Exception as e:
-        logger.error(f"Exception raised: {type(e).__name__}: {str(e)}")
-
-
-def main():
-    connector = BCRAConnector(verify_ssl=False)  # Set to False for testing purposes
-
-    # Test case 1: Invalid variable ID
-    test_case("Invalid variable ID", lambda: connector.get_latest_value(99999))
-
-    # Test case 2: Invalid date range
-    def invalid_date_range():
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=366)  # More than 1 year
-        return connector.get_datos_variable(1, start_date, end_date)
-
-    test_case("Invalid date range", invalid_date_range)
-
-    # Test case 3: Future date
-    def future_date():
-        future_date = datetime.now() + timedelta(days=30)
-        return connector.get_datos_variable(1, datetime.now(), future_date)
-
-    test_case("Future date", future_date)
-
-    # Test case 4: Non-existent variable name
-    test_case(
-        "Non-existent variable name",
-        lambda: connector.get_variable_by_name("Non-existent Variable"),
-    )
-
-    # Test case 5: API error simulation
-    def simulate_api_error():
-        # This assumes that ID -1 will cause an API error. Adjust if necessary.
-        return connector.get_datos_variable(
-            -1, datetime.now() - timedelta(days=30), datetime.now()
+        logger.error(
+            f"Unexpected exception raised: {type(e).__name__}: {str(e)} "
+            f"(Expected {expected_exception.__name__} or success to not raise)",
+            exc_info=True,
         )
 
-    test_case("API error simulation", simulate_api_error)
 
-    # Test case 6: Get currency evolution with invalid currency code
+def main() -> None:
+    """Main function to demonstrate error handling test cases."""
+    connector = BCRAConnector(verify_ssl=False, debug=True)
+
     test_case(
-        "Invalid currency code", lambda: connector.get_currency_evolution("INVALID")
+        "Invalid variable ID for get_latest_value",
+        lambda: connector.get_latest_value(9999999),
+        expected_exception=BCRAApiError,
     )
 
-    # Test case 7: Get currency pair evolution with invalid currency codes
+    def invalid_date_order():
+        return connector.get_datos_variable(
+            1, datetime(2023, 1, 10), datetime(2023, 1, 1)
+        )
+
     test_case(
-        "Invalid currency pair",
-        lambda: connector.get_currency_pair_evolution("INVALID1", "INVALID2"),
+        "Invalid date order (desde > hasta) for get_datos_variable",
+        invalid_date_order,
+        expected_exception=ValueError,
     )
 
-    # Test case 8: Generate report for non-existent variable
+    def invalid_limit_low():
+        return connector.get_datos_variable(1, limit=5)
+
+    test_case(
+        "Invalid limit (too low) for get_datos_variable",
+        invalid_limit_low,
+        expected_exception=ValueError,
+    )
+
+    def invalid_limit_high():
+        return connector.get_datos_variable(1, limit=3001)
+
+    test_case(
+        "Invalid limit (too high) for get_datos_variable",
+        invalid_limit_high,
+        expected_exception=ValueError,
+    )
+
+    def future_date_query():
+        today = datetime.now()
+        future_start = today + timedelta(days=30)
+        future_end = today + timedelta(days=60)
+        response = connector.get_datos_variable(1, future_start, future_end)
+        return f"Results count: {len(response.results)}"
+
+    test_case(
+        "Query with future date range (API behavior test)",
+        future_date_query,
+        expected_exception=BCRAApiError,
+    )
+
+    test_case(
+        "Non-existent variable name for get_variable_history",
+        lambda: connector.get_variable_history("This Variable Does Not Exist For Sure"),
+        expected_exception=ValueError,
+    )
+
+    def simulate_api_error_for_datos():
+        return connector.get_datos_variable(
+            9999999, datetime.now() - timedelta(days=1), datetime.now()
+        )
+
+    test_case(
+        "API error for non-existent ID with get_datos_variable",
+        simulate_api_error_for_datos,
+        expected_exception=BCRAApiError,
+    )
+
+    test_case(
+        "Invalid currency code for get_currency_evolution",
+        lambda: connector.get_currency_evolution("XZY"),
+        expected_exception=BCRAApiError,
+    )
+
+    test_case(
+        "Invalid currency pair for get_currency_pair_evolution",
+        lambda: connector.get_currency_pair_evolution("XZY", "ABC"),
+        expected_exception=BCRAApiError,
+    )
+
     test_case(
         "Generate report for non-existent variable",
-        lambda: connector.generate_variable_report("Non-existent Variable"),
+        lambda: connector.generate_variable_report("This Variable Also Does Not Exist"),
+        expected_exception=ValueError,
     )
 
-    # Test case 9: Get correlation between non-existent variables
     test_case(
         "Correlation between non-existent variables",
         lambda: connector.get_variable_correlation(
-            "Non-existent Variable 1", "Non-existent Variable 2"
+            "NonExistentVarAlpha", "NonExistentVarBeta"
         ),
+        expected_exception=ValueError,
     )
+
+    logger.info("\nError handling example script finished.")
 
 
 if __name__ == "__main__":
