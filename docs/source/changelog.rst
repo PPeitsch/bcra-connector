@@ -6,6 +6,34 @@ All notable changes to the BCRA API Connector will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+0.5.0 - 2025-05-09
+------------------
+
+Changed
+^^^^^
+* Migrated "Principales Variables" functionality to BCRA's "Estadísticas Monetarias v3.0" API.
+    - `PrincipalesVariables` model: `cdSerie` removed, `categoria` added.
+    - `get_datos_variable` method:
+        - Now uses query parameters for dates, `limit`, and `offset`.
+        - Returns `DatosVariableResponse` object (includes `metadata` and `results` list).
+        - Client-side 1-year date range restriction removed (API uses pagination).
+* Updated helper methods (`get_latest_value`, `get_variable_history`, etc.) for v3.0 API compatibility.
+
+Added
+^^^^^
+* `DatosVariableResponse` model for new API structure of historical data.
+
+Fixed
+^^^^^
+* MyPy type errors, unreachable code warnings, and module attribute resolution.
+* Corrected `scipy.stats.pearsonr` import.
+* Improved assertions in unit and integration tests for error handling.
+
+Updated
+^^^^^
+* Example scripts to demonstrate usage of Monetarias v3.0 API and new response types.
+* Unit and integration tests to cover v3.0 API changes and new models.
+
 0.4.2 - 2025-05-08
 ------------------
 
