@@ -332,13 +332,28 @@ class TestBCRAConnector:
         connector: BCRAConnector,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
     ) -> None:
-        """Test 404 HTTP error handling."""
+        """Test 404 HTTP error handling from _make_request."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
-            mock_resp = mock_api_response({"errorMessages": ["Not there"]}, 404)
+            variable_id_for_test = 99999
+            mocked_api_url_path = f"estadisticas/v3.0/monetarias/{variable_id_for_test}"
+            full_mocked_url = f"{BCRAConnector.BASE_URL}/{mocked_api_url_path}"
+            api_error_content_message = "Recurso Especifico No Encontrado"
+
+            mock_resp = mock_api_response(
+                {"errorMessages": [api_error_content_message]}, 404
+            )
+            mock_resp.url = full_mocked_url
+
             mock_get.return_value = mock_resp
 
-            with pytest.raises(BCRAApiError, match="Resource not found (404)"):
-                connector.get_datos_variable(99999)
+            expected_match_pattern = r"Resource not found \(404\)"
+
+            with pytest.raises(BCRAApiError, match=expected_match_pattern) as exc_info:
+                connector.get_datos_variable(variable_id_for_test)
+
+            assert full_mocked_url in str(exc_info.value)
+            assert api_error_content_message in str(exc_info.value)
+            assert "HTTP 404" in str(exc_info.value)
 
     def test_rate_limiting(self, connector: BCRAConnector) -> None:
         """Test rate limiting functionality."""
