@@ -33,10 +33,9 @@ def save_plot(fig, filename):
 
 
 def main():
-    connector = BCRAConnector(verify_ssl=False)  # Set to False only if necessary
+    connector = BCRAConnector(verify_ssl=False)
 
     try:
-        # Let's get data for Reservas Internacionales del BCRA (usually ID 1)
         variable_name = "Reservas Internacionales del BCRA"
         variable = connector.get_variable_by_name(variable_name)
 
@@ -45,26 +44,38 @@ def main():
             return
 
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)  # Last 30 days
+        start_date = end_date - timedelta(days=30)
 
         logger.info(
             f"Fetching data for {variable_name} from {start_date.date()} to {end_date.date()}..."
         )
-        datos = connector.get_datos_variable(variable.idVariable, start_date, end_date)
+        response_data = connector.get_datos_variable(
+            variable.idVariable, start_date, end_date
+        )
 
-        logger.info(f"Found {len(datos)} data points.")
+        # Access the list of data points via response_data.results
+        datos_list = response_data.results
+
+        logger.info(f"Found {len(datos_list)} data points.")
+
         logger.info("Last 5 data points:")
-        for dato in datos[-5:]:
+        for dato in datos_list[-5:]:
             logger.info(f"Date: {dato.fecha}, Value: {dato.valor}")
 
         # Plot the data
         fig, ax = plt.subplots(figsize=(12, 6))
 
-        # Convert dates and prepare data arrays for matplotlib
-        dates = [datetime.combine(dato.fecha, datetime.min.time()) for dato in datos]
-        values = [dato.valor for dato in datos]
+        if not datos_list:  # Check if the list is empty before processing
+            logger.warning(f"No data points found for {variable_name} to plot.")
+            plt.close(fig)  # Close the empty figure
+            return
 
-        # Convert to numpy arrays for matplotlib compatibility
+        # Convert dates and prepare data arrays for matplotlib
+        dates = [
+            datetime.combine(dato.fecha, datetime.min.time()) for dato in datos_list
+        ]
+        values = [dato.valor for dato in datos_list]
+
         dates_array = np.array(dates)
         values_array = np.array(values)
 

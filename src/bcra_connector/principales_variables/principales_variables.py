@@ -30,7 +30,7 @@ class Resultset:
             raise ValueError("Invalid types for Resultset fields")
         return cls(count=data["count"], offset=data["offset"], limit=data["limit"])
 
-    def to_dict(self) -> Dict[str, Any]:  # <--- ADD THIS METHOD
+    def to_dict(self) -> Dict[str, Any]:
         """Convert the Resultset instance to a dictionary."""
         return {
             "count": self.count,
@@ -124,17 +124,9 @@ class DatosVariable:
             raise ValueError("Variable ID must be a non-negative integer")
         if not isinstance(self.fecha, date):
             raise ValueError("Fecha must be a date object")
-
-        # Ensure self.valor is a float
-        if not isinstance(self.valor, float):  # If it's not already a float
-            try:  # line 132
-                self.valor = float(
-                    self.valor
-                )  # Attempt conversion (handles int, str representation of float)
-            except (ValueError, TypeError) as e:  # Catch if conversion fails
-                raise ValueError(
-                    f"Valor '{self.valor}' (type: {type(self.valor).__name__}) must be a float or convertible to float: {e}"
-                ) from e
+        # For valor, just validate it's a number but don't try to convert
+        if not isinstance(self.valor, (int, float)):
+            raise ValueError(f"Valor must be a number, got {type(self.valor).__name__}")
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DatosVariable":
