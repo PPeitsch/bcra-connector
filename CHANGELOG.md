@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- Updated `setuptools` to `>=78.1.1` to address path traversal vulnerability (GHSA-r9hx-vwmv-q579) in deprecated `PackageIndex.download` function.
+
 ## [0.5.1] - 2025-11-28
 
 ### Fixed
