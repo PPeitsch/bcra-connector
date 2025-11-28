@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Relaxed `scipy` version constraint to `scipy>=1.13.1,<1.15.0` to support Python 3.9 environments.
+- Updated mypy `python_version` configuration to `3.10` to support pattern matching syntax used by pytest.
+
 ## [0.5.0] - 2025-05-09
 
 ### Changed
