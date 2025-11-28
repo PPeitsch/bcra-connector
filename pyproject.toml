@@ -107,7 +107,9 @@ module = [
     "matplotlib.*",
     "matplotlib.pyplot",
     "bcra_connector",
-    "bcra_connector.*"
+    "bcra_connector.*",
+    "_pytest.*",
+    "pytest.*"
 ]
 ignore_missing_imports = true
 

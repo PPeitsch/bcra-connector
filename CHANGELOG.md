@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Relaxed `scipy` version constraint to `scipy>=1.13.1,<1.15.0` to support Python 3.9 environments.
+- Added `_pytest.*` and `pytest.*` to mypy overrides to prevent syntax errors from pytest's use of Python 3.10+ features.
 
 ## [0.5.0] - 2025-05-09
 
