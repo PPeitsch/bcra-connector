@@ -44,6 +44,7 @@ Para cada tarea asignada:
 5.  **Pull Request**:
     - Push: `git push origin nombre-rama`
     - Crear PR: `gh pr create --title "..." --body "..."`
+    - **CRÍTICO**: Usar el template de `.github/PULL_REQUEST_TEMPLATE.md` como base para el body. Asegurar que los checklists estén completos.
     - Merge: `gh pr merge --admin --merge --delete-branch` (Solo si tienes permisos y los tests pasan).
 
 ## 4. Protocolo de Release (Automatización)
