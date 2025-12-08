@@ -15,7 +15,7 @@ A Python connector for the BCRA (Banco Central de la República Argentina) APIs,
 - **Comprehensive Data Access**: Fetch Principal Variables, Monetary Statistics, Checks information, and Exchange Rates.
 - **Historical Data**: Easily retrieve and analyze historical time series for any variable.
 - **Robustness**: Built-in retry logic with exponential backoff and safe failure handling.
-- **Developer Friendly**: 
+- **Developer Friendly**:
   - Full **Type Hinting** for better IDE support.
   - Bilingual context (Spanish API / English Wrapper).
   - Detailed debug logging.
@@ -54,7 +54,7 @@ print(f"Found {len(variables)} variables.")
 if variables:
     target_var = variables[0]
     print(f"Fetching data for: {target_var.descripcion} (ID: {target_var.idVariable})")
-    
+
     latest = connector.get_latest_value(target_var.idVariable)
     print(f"Latest Value: {latest.valor} on {latest.fecha}")
 
