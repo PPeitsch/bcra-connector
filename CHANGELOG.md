@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2025-12-08
+
+### Added
+- Extended unit test suite achieving 100% coverage for `bcra_connector.py` and all models (#56).
+- Comprehensive edge case testing for error handling, parsing, and validation.
+
+### Changed
+- Configured pytest to ignore `InsecureRequestWarning` from urllib3 in test output.
+
+### Fixed
+- Minor bugs exposed by extended test coverage in data model validation.
+
 ## [0.6.0] - 2025-12-08
 
 ### Added
@@ -268,7 +280,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
-[Unreleased]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.5.4...v0.6.0
 [0.5.4]: https://github.com/PPeitsch/bcra-connector/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/PPeitsch/bcra-connector/compare/v0.5.2...v0.5.3
