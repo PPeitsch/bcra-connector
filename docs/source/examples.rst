@@ -63,4 +63,22 @@ This example showcases different configuration options for the BCRA API Connecto
    :language: python
    :lines: 11-
 
+Cheques Module Usage
+--------------------
+
+This example demonstrates how to interact with the Cheques API, including fetching financial entities and checking for reported checks.
+
+.. literalinclude:: ../../examples/06_cheques_api.py
+   :language: python
+   :lines: 11-
+
+Exchange Statistics Usage
+-------------------------
+
+This example shows how to use the Exchange Statistics (Estadísticas Cambiarias) API to fetch currencies, quotations, and evolution data.
+
+.. literalinclude:: ../../examples/07_exchange_statistics.py
+   :language: python
+   :lines: 11-
+
 These examples provide a comprehensive overview of the BCRA API Connector's capabilities and usage patterns.
