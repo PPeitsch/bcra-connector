@@ -9,6 +9,22 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Unreleased
 ----------
 
+0.6.0 - 2025-12-08
+------------------
+
+Added
+^^^^^
+* Documentation examples for `Cheques` and `Exchange Statistics` synced to ReadTheDocs.
+
+Changed
+^^^^^^^
+* Enforced strict CI/CD verification rules in Agent Workflow.
+
+Fixed
+^^^^^
+* Trailing whitespace in documentation files.
+* Consistency between `CHANGELOG.md` and `docs/source/changelog.rst`.
+
 0.5.4 - 2025-12-08
 ------------------
 
