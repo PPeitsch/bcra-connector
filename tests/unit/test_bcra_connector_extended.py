@@ -3,28 +3,17 @@ Extended test suite for BCRAConnector class to achieve 100% coverage.
 """
 
 import json
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import Any, Callable, Dict
-from unittest.mock import ANY, MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-import requests
-from requests.exceptions import (
-    ConnectionError,
-    HTTPError,
-    RequestException,
-    SSLError,
-    Timeout,
-)
+from requests.exceptions import ConnectionError, HTTPError, RequestException
 
 from bcra_connector import BCRAApiError, BCRAConnector
 from bcra_connector.cheques import Cheque, Entidad
-from bcra_connector.estadisticas_cambiarias import (
-    CotizacionDetalle,
-    CotizacionFecha,
-    Divisa,
-)
+from bcra_connector.estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha
 from bcra_connector.principales_variables import (
     DatosVariable,
     DatosVariableResponse,
