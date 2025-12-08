@@ -12,16 +12,14 @@ A Python connector for the BCRA (Banco Central de la República Argentina) APIs,
 
 ## Features
 
-- Fetch principal variables published by BCRA
-- Retrieve historical data for specific variables
-- Get the latest value for a variable
-- Access information about reported checks
-- Retrieve currency exchange rate data
-- Bilingual support (Spanish and English)
-- Error handling with custom exceptions
-- Retry logic with exponential backoff
-- SSL verification (optional)
-- Debug mode for detailed logging
+- **Comprehensive Data Access**: Fetch Principal Variables, Monetary Statistics, Checks information, and Exchange Rates.
+- **Historical Data**: Easily retrieve and analyze historical time series for any variable.
+- **Robustness**: Built-in retry logic with exponential backoff and safe failure handling.
+- **Developer Friendly**: 
+  - Full **Type Hinting** for better IDE support.
+  - Bilingual context (Spanish API / English Wrapper).
+  - Detailed debug logging.
+- **Configurable**: Options for SSL verification, retries, and timeouts.
 
 ## Documentation
 
@@ -37,6 +35,32 @@ pip install bcra-connector
 ```
 
 For detailed installation instructions and requirements, see our [Installation Guide](https://bcra-connector.readthedocs.io/en/latest/installation.html).
+
+## Quick Start
+
+Get up and running in seconds:
+
+```python
+from bcra_connector import BCRAConnector
+
+# Initialize the connector
+connector = BCRAConnector()
+
+# 1. List principal variables published by BCRA
+variables = connector.get_principales_variables()
+print(f"Found {len(variables)} variables.")
+
+# 2. Get the latest value for a specific variable (e.g., using the ID of the first one)
+if variables:
+    target_var = variables[0]
+    print(f"Fetching data for: {target_var.descripcion} (ID: {target_var.idVariable})")
+    
+    latest = connector.get_latest_value(target_var.idVariable)
+    print(f"Latest Value: {latest.valor} on {latest.fecha}")
+
+# 3. Get historical data (last 30 days)
+#    (Note: Date range filtering is handled by the API or post-processing)
+```
 
 ## Contributing
 
