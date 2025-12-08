@@ -43,11 +43,21 @@ Para cada tarea asignada:
 
 5.  **Pull Request**:
     - Push: `git push origin nombre-rama`
-    - Crear PR: `gh pr create --title "..." --body "..."`
     - **CRÍTICO**: Usar el template de `.github/PULL_REQUEST_TEMPLATE.md` como base para el body. Asegurar que los checklists estén completos.
-    - Merge: `gh pr merge --admin --merge --delete-branch` (Solo si tienes permisos y los tests pasan).
+    - **VERIFICACIÓN CI**:
+        - **JAMÁS MERGEAR SIN VERIFICACIÓN**: El agente TIENE PROHIBIDO mergear un PR sin antes validar que todos los checks de CI (GitHub Actions) hayan pasado exitosamente.
+        - Usar `gh run list --branch nombre-rama` para monitorear el estado.
+        - Si CI falla, arreglar el problema en la misma rama. JAMÁS ignorar un fallo de CI.
+    - Merge: `gh pr merge --admin --merge --delete-branch` (Solo y ÚNICAMENTE si todos los tests pasan en CI).
 
-## 4. Protocolo de Release (Automatización)
+## 4. Reglas de Calidad y Seguridad (Hard Rules)
+
+1.  **NO MERGEAR CON ERRORES**: Prohibido mergear si `pre-commit` o `pytest` fallan localmente.
+2.  **PRE-COMMIT OBLIGATORIO**: Ejecutar `pre-commit run --all-files` antes de CADA commit significativo. Si autocrige archivos, añadirlos y commitear de nuevo.
+3.  **TESTS OBLIGATORIOS**: Ejecutar `pytest` antes de crear el PR.
+4.  **No Inventar Comandos**: Usar solo los comandos definidos en el entorno (`hatch`, `pip`, etc.).
+
+## 5. Protocolo de Release (Automatización)
 
 Este proyecto usa **Release Automation**. El agente NO debe crear el release en GitHub manualmente, sino disparar el workflow mediante tags.
 
