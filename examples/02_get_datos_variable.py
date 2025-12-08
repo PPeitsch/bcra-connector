@@ -4,6 +4,7 @@ Includes date range handling, pagination (limit/offset), and time series visuali
 """
 
 import logging
+import os
 from datetime import datetime, timedelta
 
 import matplotlib.pyplot as plt
