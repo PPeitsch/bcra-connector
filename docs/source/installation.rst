@@ -27,14 +27,14 @@ If you're planning to contribute to the BCRA API Connector or need the latest de
 
 .. code-block:: bash
 
-   pip install git+https://github.com/yourusername/bcra-api-connector.git
+   pip install git+https://github.com/PPeitsch/bcra-connector.git
 
 Manual Installation
 -------------------
 
 For those who prefer manual installation or are working in environments without internet access:
 
-1. Download the source code from the `BCRA API Connector repository <https://github.com/yourusername/bcra-api-connector>`_.
+1. Download the source code from the `BCRA API Connector repository <https://github.com/PPeitsch/bcra-connector>`_.
 2. Navigate to the downloaded directory.
 3. Run the following command:
 
@@ -100,7 +100,7 @@ These will be automatically installed when using pip. If you're installing manua
 Troubleshooting
 ---------------
 
-If you encounter any issues during installation, please check our :doc:`troubleshooting` guide or open an issue on our `BCRA API Connector issues page <https://github.com/yourusername/bcra-api-connector/issues>`_.
+If you encounter any issues during installation, please check our :doc:`troubleshooting` guide or open an issue on our `BCRA API Connector issues page <https://github.com/PPeitsch/bcra-connector/issues>`_.
 
 Next Steps
 ----------
