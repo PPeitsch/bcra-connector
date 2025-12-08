@@ -130,3 +130,6 @@ python_files = ["*_tests.py", "test_*.py"]
 markers = [
     "integration: mark a test as an integration test",
 ]
+filterwarnings = [
+    "ignore::urllib3.exceptions.InsecureRequestWarning",
+]

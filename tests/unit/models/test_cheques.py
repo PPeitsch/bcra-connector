@@ -50,6 +50,16 @@ class TestEntidad:
         assert entidad1 != entidad3
         assert entidad1 != "not an entidad"
 
+    def test_entidad_to_dict(self) -> None:
+        """Test conversion of Entidad to dictionary."""
+        entidad = Entidad(codigo_entidad=1, denominacion="Test")
+        assert entidad.to_dict() == {"codigoEntidad": 1, "denominacion": "Test"}
+
+    def test_entidad_negative_code(self) -> None:
+        """Test validation of negative entity code."""
+        with pytest.raises(ValueError, match="non-negative"):
+            Entidad(codigo_entidad=-1, denominacion="Test")
+
 
 class TestChequeDetalle:
     """Test suite for ChequeDetalle model."""
@@ -248,3 +258,14 @@ class TestValidation:
         """Test validation of empty entity names."""
         with pytest.raises(ValueError):
             Entidad(codigo_entidad=1, denominacion="")
+
+    def test_cheque_empty_entity_name(self) -> None:
+        """Test validation of empty entity names in Cheque."""
+        with pytest.raises(ValueError, match="cannot be empty"):
+            Cheque(
+                numero_cheque=1,
+                denunciado=False,
+                fecha_procesamiento=date.today(),
+                denominacion_entidad="   ",
+                detalles=[],
+            )
