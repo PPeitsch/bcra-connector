@@ -1,3 +1,9 @@
+"""
+Cheques Module.
+
+This module provides data models and response handlers for the BCRA Checks API.
+"""
+
 from .cheques import (
     Cheque,
     ChequeDetalle,

@@ -1,3 +1,13 @@
+"""
+BCRA Connector Package.
+
+This package provides a Python client for interacting with the Central Bank of Argentina (BCRA) APIs.
+It includes modules for retrieving:
+- Principal Variables (Principales Variables)
+- Checks (Cheques)
+- Exchange Statistics (Estadísticas Cambiarias)
+"""
+
 from .__about__ import __version__
 from .bcra_connector import BCRAApiError, BCRAConnector
 from .cheques import Cheque, ChequeDetalle, ChequeResponse, Entidad, EntidadResponse
