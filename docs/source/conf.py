@@ -10,7 +10,7 @@ copyright = "2024, Pablo Peitsch"
 author = "Pablo Peitsch"
 
 # The full version, including alpha/beta/rc tags
-release = "0.2.0"
+release = "0.5.4"
 
 # -- General configuration ---------------------------------------------------
 extensions = [
