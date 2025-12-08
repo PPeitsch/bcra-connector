@@ -10,6 +10,8 @@ When creating a new instance of the `BCRAConnector`, you can pass the following 
 
 .. code-block:: python
 
+   from bcra_connector import BCRAConnector
+
    connector = BCRAConnector(
        language="es-AR",
        verify_ssl=True,
@@ -28,6 +30,8 @@ Example:
 
 .. code-block:: python
 
+   from bcra_connector import BCRAConnector
+
    connector = BCRAConnector(language="en-US")
 
 SSL Verification
@@ -39,6 +43,8 @@ To disable SSL verification (not recommended for production):
 
 .. code-block:: python
 
+   from bcra_connector import BCRAConnector
+
    connector = BCRAConnector(verify_ssl=False)
 
 Debug Mode
@@ -49,6 +55,8 @@ The `debug` parameter enables detailed logging when set to `True`. This is usefu
 Example:
 
 .. code-block:: python
+
+   from bcra_connector import BCRAConnector
 
    connector = BCRAConnector(debug=True)
 
@@ -63,6 +71,8 @@ The connector implements a retry mechanism with exponential backoff. You can mod
 To change these values, subclass `BCRAConnector`:
 
 .. code-block:: python
+
+   from bcra_connector import BCRAConnector
 
    class CustomBCRAConnector(BCRAConnector):
        MAX_RETRIES = 5

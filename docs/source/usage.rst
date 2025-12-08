@@ -10,8 +10,8 @@ To start using the BCRA API Connector, first import the necessary classes and cr
 
 .. code-block:: python
 
-   from bcra_connector import BCRAConnector
    from datetime import datetime, timedelta
+   from bcra_connector import BCRAConnector
 
    # Initialize the connector (default language is Spanish)
    connector = BCRAConnector()

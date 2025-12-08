@@ -4,14 +4,9 @@ Demonstrates timeout settings, SSL verification, and debug mode.
 """
 
 import logging
-import os
-import sys
 from datetime import datetime, timedelta
 
-# Add the parent directory to the Python path to run examples directly
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from src.bcra_connector import BCRAApiError, BCRAConnector
+from bcra_connector import BCRAApiError, BCRAConnector
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

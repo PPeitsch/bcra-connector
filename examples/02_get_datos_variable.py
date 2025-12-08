@@ -5,16 +5,12 @@ Includes date range handling, pagination (limit/offset), and time series visuali
 
 import logging
 import os
-import sys
 from datetime import datetime, timedelta
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Add the parent directory to the Python path to run examples directly
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from src.bcra_connector import BCRAApiError, BCRAConnector
+from bcra_connector import BCRAApiError, BCRAConnector
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

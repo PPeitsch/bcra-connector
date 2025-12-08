@@ -4,13 +4,8 @@ Shows how to fetch financial entities and check reported checks.
 """
 
 import logging
-import os
-import sys
 
-# Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from src.bcra_connector import BCRAApiError, BCRAConnector
+from bcra_connector import BCRAApiError, BCRAConnector
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

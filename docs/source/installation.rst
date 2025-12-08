@@ -16,7 +16,7 @@ For most users, installing via pip is the simplest method:
 
 .. code-block:: bash
 
-   pip install bcra-api-connector
+   pip install bcra-connector
 
 This command will install the BCRA API Connector and all its dependencies.
 
@@ -71,7 +71,7 @@ It's often recommended to install Python packages in a virtual environment to av
 
    .. code-block:: bash
 
-      pip install bcra-api-connector
+      pip install bcra-connector
 
 Verifying the Installation
 --------------------------
