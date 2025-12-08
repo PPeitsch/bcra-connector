@@ -4,8 +4,6 @@ Shows how to handle timeouts, rate limits, and API errors.
 """
 
 import logging
-import os
-import sys
 from datetime import datetime, timedelta
 from typing import Any, Callable, Type
 

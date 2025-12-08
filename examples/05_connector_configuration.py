@@ -4,8 +4,6 @@ Demonstrates timeout settings, SSL verification, and debug mode.
 """
 
 import logging
-import os
-import sys
 from datetime import datetime, timedelta
 
 from bcra_connector import BCRAApiError, BCRAConnector

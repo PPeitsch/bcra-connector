@@ -4,8 +4,6 @@ Shows how to fetch financial entities and check reported checks.
 """
 
 import logging
-import os
-import sys
 
 from bcra_connector import BCRAApiError, BCRAConnector
 

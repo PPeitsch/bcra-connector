@@ -4,8 +4,6 @@ Shows how to fetch currencies, quotations, and evolutions.
 """
 
 import logging
-import os
-import sys
 
 import matplotlib.pyplot as plt
 

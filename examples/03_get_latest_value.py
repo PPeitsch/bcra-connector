@@ -4,8 +4,6 @@ Demonstrates multi-variable analysis and visualization.
 """
 
 import logging
-import os
-import sys
 
 import matplotlib.pyplot as plt
 
