@@ -1,3 +1,9 @@
+"""
+Estadísticas Cambiarias Module.
+
+This module provides data models and response handlers for the BCRA Exchange Statistics API (Estadísticas Cambiarias).
+"""
+
 from .estadisticas_cambiarias import (
     CotizacionDetalle,
     CotizacionesResponse,
