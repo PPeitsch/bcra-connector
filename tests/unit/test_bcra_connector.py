@@ -255,6 +255,45 @@ class TestBCRAConnector:
         mock_get_datos_variable.assert_any_call(1, limit=10)
         mock_get_datos_variable.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
 
+    @patch("bcra_connector.bcra_connector.BCRAConnector.get_datos_variable")
+    def test_get_latest_value_fallback_success(
+        self, mock_get_datos_variable: Mock, connector: BCRAConnector
+    ) -> None:
+        """Test fallback scenario where first query is empty but 30-day query succeeds."""
+        # First call with limit=10 returns empty results
+        mock_empty_response = DatosVariableResponse(
+            status=200,
+            metadata=Mock(resultset=Mock(count=0, offset=0, limit=10)),
+            results=[],
+        )
+        # Second call (30-day fallback) returns data
+        mock_fallback_response = DatosVariableResponse(
+            status=200,
+            metadata=Mock(resultset=Mock(count=2, offset=0, limit=30)),
+            results=[
+                DatosVariable(
+                    idVariable=1,
+                    detalle=[
+                        DetalleMonetaria(fecha=date(2024, 2, 1), valor=50.0),
+                        DetalleMonetaria(fecha=date(2024, 2, 15), valor=75.0),
+                    ],
+                )
+            ],
+        )
+        mock_get_datos_variable.side_effect = [mock_empty_response, mock_fallback_response]
+
+        result = connector.get_latest_value(1)
+
+        # Verify both calls were made
+        assert mock_get_datos_variable.call_count == 2
+        mock_get_datos_variable.assert_any_call(1, limit=10)
+        mock_get_datos_variable.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
+        
+        # Verify we got the latest from fallback data
+        assert isinstance(result, DetalleMonetaria)
+        assert result.fecha == date(2024, 2, 15)
+        assert result.valor == 75.0
+
     @patch("bcra_connector.bcra_connector.requests.Session.get")
     def test_get_entidades_success(
         self,
