@@ -133,3 +133,18 @@ markers = [
 filterwarnings = [
     "ignore::urllib3.exceptions.InsecureRequestWarning",
 ]
+
+[tool.coverage.run]
+omit = [
+    "*/bcra_connector/_version.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
