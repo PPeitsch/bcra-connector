@@ -1,5 +1,5 @@
 """
-Example demonstrating how to fetch and analyze principal variables from BCRA (Monetarias v3.0).
+Example demonstrating how to fetch and analyze principal variables from BCRA (Monetarias v4.0).
 Shows basic usage, error handling, and data visualization.
 """
 
@@ -33,7 +33,7 @@ def main() -> None:
     connector = BCRAConnector(verify_ssl=False)
 
     try:
-        logger.info("Fetching principal variables/monetary series (v3.0)...")
+        logger.info("Fetching principal variables/monetary series (v4.0)...")
         variables = connector.get_principales_variables()
         logger.info(f"Found {len(variables)} variables/series.")
 
@@ -45,26 +45,42 @@ def main() -> None:
         for var in variables[:5]:
             logger.info(
                 f"ID: {var.idVariable}, Description: {var.descripcion}, "
-                f"Category: {var.categoria}"
+                f"Category: {var.categoria if var.categoria else 'N/A'}"
             )
-            logger.info(f"  Latest value: {var.valor} ({var.fecha.isoformat()})")
+            if var.ultValorInformado is not None and var.ultFechaInformada:
+                logger.info(
+                    f"  Latest value: {var.ultValorInformado} ({var.ultFechaInformada.isoformat()})"
+                )
+            else:
+                logger.info("  Latest value: Not available")
 
         plot_count = min(10, len(variables))
         if plot_count > 0:
-            fig, ax = plt.subplots(figsize=(12, 6))
-            ax.bar(
-                [
-                    var.descripcion[:30] + f" ({var.categoria[:10]})"
-                    for var in variables[:plot_count]
-                ],
-                [var.valor for var in variables[:plot_count]],
-            )
-            ax.set_title(f"Top {plot_count} Principal Variables/Series (v3.0)")
-            ax.set_xlabel("Variables/Series (Category)")
-            ax.set_ylabel("Value")
-            plt.xticks(rotation=45, ha="right")
-            plt.tight_layout()
-            save_plot(fig, "principal_variables_v3.png")
+            # Filter variables that have ultValorInformado
+            plottable_vars = [
+                v for v in variables[:plot_count] if v.ultValorInformado is not None
+            ]
+
+            if plottable_vars:
+                fig, ax = plt.subplots(figsize=(12, 6))
+                ax.bar(
+                    [
+                        (v.descripcion[:30] if v.descripcion else "N/A")
+                        + (f" ({v.categoria[:10]})" if v.categoria else "")
+                        for v in plottable_vars
+                    ],
+                    [v.ultValorInformado for v in plottable_vars],
+                )
+                ax.set_title(
+                    f"Top {len(plottable_vars)} Principal Variables/Series (v4.0)"
+                )
+                ax.set_xlabel("Variables/Series (Category)")
+                ax.set_ylabel("Value")
+                plt.xticks(rotation=45, ha="right")
+                plt.tight_layout()
+                save_plot(fig, "principal_variables_v4.png")
+            else:
+                logger.info("No variables with values to plot.")
         else:
             logger.info("No variables to plot.")
 

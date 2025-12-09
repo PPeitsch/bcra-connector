@@ -1,5 +1,5 @@
 """
-Example of fetching and comparing latest values for multiple BCRA variables (Monetarias v3.0).
+Example of fetching and comparing latest values for multiple BCRA variables (Monetarias v4.0).
 Demonstrates multi-variable analysis and visualization.
 """
 
@@ -88,9 +88,10 @@ def main() -> None:
                 )
                 continue
 
+            # v4.0: get_latest_value() returns DetalleMonetaria (not DatosVariable)
             latest_data_point = connector.get_latest_value(variable_obj.idVariable)
             logger.info(
-                f"  ID: {latest_data_point.idVariable}, Value: {latest_data_point.valor}, "
+                f"  ID: {variable_obj.idVariable}, Value: {latest_data_point.valor}, "
                 f"Date: {latest_data_point.fecha.isoformat()}, Category: {getattr(variable_obj, 'categoria', 'N/A')}"
             )
             latest_values_data.append(
@@ -112,12 +113,12 @@ def main() -> None:
         plot_values = [item[1] for item in latest_values_data]
 
         ax.bar(plot_names, plot_values)
-        ax.set_title("Latest Values for Different Variables/Series (v3.0)")
+        ax.set_title("Latest Values for Different Variables/Series (v4.0)")
         ax.set_xlabel("Variable/Series")
         ax.set_ylabel("Value")
         plt.xticks(rotation=45, ha="right", fontsize=9)
         plt.tight_layout()
-        save_plot(fig, "latest_values_v3.png")
+        save_plot(fig, "latest_values_v4.png")
     else:
         logger.warning("No data to plot for latest values.")
 

@@ -18,8 +18,8 @@ from scipy.stats import pearsonr
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .principales_variables import (
-    DatosVariable,
     DatosVariableResponse,
+    DetalleMonetaria,
     PrincipalesVariables,
 )
 from .rate_limiter import RateLimitConfig, RateLimiter
@@ -37,7 +37,7 @@ class BCRAConnector:
     A connector for the BCRA (Banco Central de la República Argentina) APIs.
 
     This class provides methods to interact with various BCRA APIs, including
-    Principales Variables (Monetarias v3.0), Cheques, and Estadísticas Cambiarias.
+    Principales Variables (Monetarias v4.0), Cheques, and Estadísticas Cambiarias.
     """
 
     BASE_URL = "https://api.bcra.gob.ar"
@@ -176,17 +176,17 @@ class BCRAConnector:
             f"Maximum retry attempts ({self.MAX_RETRIES}) reached for {url}"
         )
 
-    # Principales Variables / Monetarias methods (v3.0)
+    # Principales Variables / Monetarias methods (v4.0)
     def get_principales_variables(self) -> List[PrincipalesVariables]:
         """
-        Fetch the list of all monetary series and principal variables published by BCRA (API v3.0).
+        Fetch the list of all monetary series and principal variables published by BCRA (API v4.0).
 
-        :return: A list of PrincipalesVariables objects (Note: structure changed in v3.0, 'categoria' added, 'cdSerie' removed)
+        :return: A list of PrincipalesVariables objects with extended metadata
         :raises BCRAApiError: If the API request fails or returns unexpected data
         """
-        self.logger.info("Fetching monetary series and principal variables (v3.0)")
+        self.logger.info("Fetching monetary series and principal variables (v4.0)")
         try:
-            data = self._make_request("estadisticas/v3.0/monetarias")
+            data = self._make_request("estadisticas/v4.0/Monetarias")
             if not isinstance(data.get("results"), list):
                 raise BCRAApiError(
                     "Unexpected response format: 'results' is not a list or missing"
@@ -211,13 +211,13 @@ class BCRAConnector:
                 self.logger.warning("No valid variables found in the response")
             else:
                 self.logger.info(
-                    f"Successfully fetched and parsed {len(variables)} variables (v3.0)"
+                    f"Successfully fetched and parsed {len(variables)} variables (v4.0)"
                 )
             return variables
         except BCRAApiError:
             raise
         except Exception as e:
-            error_msg = f"Error fetching principal variables (v3.0): {str(e)}"
+            error_msg = f"Error fetching principal variables (v4.0): {str(e)}"
             self.logger.exception(error_msg)
             raise BCRAApiError(error_msg) from e
 
@@ -230,7 +230,7 @@ class BCRAConnector:
         offset: Optional[int] = None,
     ) -> DatosVariableResponse:
         """
-        Fetch the list of values for a variable/series (API v3.0).
+        Fetch the list of values for a variable/series (API v4.0).
 
         Uses pagination via limit and offset. If desde/hasta are omitted, API defaults apply.
 
@@ -252,7 +252,7 @@ class BCRAConnector:
             log_msg_parts.append(f"limit {limit}")
         if offset is not None:
             log_msg_parts.append(f"offset {offset}")
-        self.logger.info(" ".join(log_msg_parts) + " (v3.0)")
+        self.logger.info(" ".join(log_msg_parts) + " (v4.0)")
 
         if desde and hasta and desde > hasta:
             raise ValueError(
@@ -265,61 +265,68 @@ class BCRAConnector:
 
         params: Dict[str, Any] = {}
         if desde:
-            params["desde"] = desde.strftime("%Y-%m-%d")
+            params["Desde"] = desde.strftime("%Y-%m-%d")
         if hasta:
-            params["hasta"] = hasta.strftime("%Y-%m-%d")
+            params["Hasta"] = hasta.strftime("%Y-%m-%d")
         if limit is not None:
-            params["limit"] = limit
+            params["Limit"] = limit
         if offset is not None:
-            params["offset"] = offset
+            params["Offset"] = offset
 
-        endpoint = f"estadisticas/v3.0/monetarias/{id_variable}"
+        endpoint = f"estadisticas/v4.0/Monetarias/{id_variable}"
 
         try:
             raw_api_data = self._make_request(
                 endpoint, params=params if params else None
             )
             response_obj = DatosVariableResponse.from_dict(raw_api_data)
+            # Count total data points across all results
+            total_points = sum(len(r.detalle) for r in response_obj.results)
             self.logger.info(
-                f"Successfully fetched and parsed {len(response_obj.results)} data points "
-                f"(total available: {response_obj.metadata.resultset.count}) for variable {id_variable} (v3.0)"
+                f"Successfully fetched and parsed {total_points} data points "
+                f"(total available: {response_obj.metadata.resultset.count}) for variable {id_variable} (v4.0)"
             )
             return response_obj
         except (ValueError, KeyError) as e:
-            error_msg = f"Error parsing response for variable {id_variable} (v3.0): {e}"
+            error_msg = f"Error parsing response for variable {id_variable} (v4.0): {e}"
             self.logger.exception(error_msg)
             raise BCRAApiError(error_msg) from e
         except BCRAApiError:
             self.logger.error(
-                f"API Error fetching data for variable {id_variable} (v3.0)"
+                f"API Error fetching data for variable {id_variable} (v4.0)"
             )
             raise
         except Exception as e:
             error_msg = (
-                f"Unexpected error fetching data for variable {id_variable} (v3.0): {e}"
+                f"Unexpected error fetching data for variable {id_variable} (v4.0): {e}"
             )
             self.logger.exception(error_msg)
             raise BCRAApiError(error_msg) from e
 
-    def get_latest_value(self, id_variable: int) -> DatosVariable:
+    def get_latest_value(self, id_variable: int) -> "DetalleMonetaria":
         """
-        Fetch the latest value for a specific variable using API v3.0.
+        Fetch the latest value for a specific variable using API v4.0.
 
         :param id_variable: The ID of the desired variable.
-        :return: The latest data point (DatosVariable object) for the specified variable.
+        :return: The latest data point (DetalleMonetaria object) for the specified variable.
         :raises BCRAApiError: If the API request fails or if no data is available.
         """
+        from .principales_variables import DetalleMonetaria
+
         self.logger.info(
-            f"Fetching latest value for variable {id_variable} (using v3.0 logic)"
+            f"Fetching latest value for variable {id_variable} (using v4.0 logic)"
         )
         response_data = self.get_datos_variable(
             id_variable, limit=10
         )  # Small limit for efficiency
 
-        if not response_data.results:
+        # Collect all data points from all results
+        all_detalles: List[DetalleMonetaria] = []
+        for result in response_data.results:
+            all_detalles.extend(result.detalle)
+
+        if not all_detalles:
             # Fallback: If no data with small limit, query last 30 days.
-            # This could happen if the "latest" is older than the few records fetched by limit=10
-            # Or if the API default sort isn't strictly by date descending without a 'desde'
             end_date = datetime.now()
             start_date = end_date - timedelta(days=30)
             self.logger.info(
@@ -332,12 +339,17 @@ class BCRAConnector:
             response_data = self.get_datos_variable(
                 id_variable, desde=start_date, hasta=end_date, limit=effective_limit
             )
-            if not response_data.results:
+            # Collect all data points again
+            all_detalles = []
+            for result in response_data.results:
+                all_detalles.extend(result.detalle)
+
+            if not all_detalles:
                 raise BCRAApiError(
                     f"No data available for variable {id_variable} in the last 30 days."
                 )
 
-        latest = max(response_data.results, key=lambda x: x.fecha)
+        latest = max(all_detalles, key=lambda x: x.fecha)
         self.logger.info(
             f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha.isoformat()})"
         )
@@ -569,20 +581,22 @@ class BCRAConnector:
         days: int = 30,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[DatosVariable]:
+    ) -> List["DetalleMonetaria"]:
         """
-        Get the historical data for a variable/series by name for the last n days (Uses Monetarias v3.0 API).
+        Get the historical data for a variable/series by name for the last n days (Uses Monetarias v4.0 API).
 
-        This method returns just the list of data points for convenience.
+        This method returns a flat list of data points for convenience.
 
         :param variable_name: The name of the variable/series.
         :param days: The number of days to look back, defaults to 30. Must be positive.
         :param limit: Maximum number of results (10-3000). Optional.
         :param offset: Number of results to skip for pagination. Optional.
-        :return: A list of DatosVariable objects.
+        :return: A list of DetalleMonetaria objects.
         :raises ValueError: If the variable is not found or days/limit/offset are invalid.
         :raises BCRAApiError: If the API request fails.
         """
+        from .principales_variables import DetalleMonetaria
+
         variable = self.get_variable_by_name(variable_name)
         if not variable:
             raise ValueError(f"Variable '{variable_name}' not found")
@@ -599,7 +613,11 @@ class BCRAConnector:
             limit=limit,
             offset=offset,
         )
-        return response_obj.results
+        # Flatten the results - extract all DetalleMonetaria from all DatosVariable
+        all_detalles: List[DetalleMonetaria] = []
+        for result in response_obj.results:
+            all_detalles.extend(result.detalle)
+        return all_detalles
 
     def get_currency_evolution(
         self, currency_code: str, days: int = 30, limit: int = 1000, offset: int = 0

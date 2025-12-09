@@ -10,6 +10,9 @@ To start using the BCRA API Connector, first import the necessary classes and cr
 
 .. code-block:: python
 
+   import os
+   import sys
+   import logging
    from datetime import datetime, timedelta
    from bcra_connector import BCRAConnector
 
@@ -116,7 +119,12 @@ The connector uses custom exceptions to handle errors. Always wrap your code in 
 
 .. code-block:: python
 
-   from bcra_connector import BCRAApiError
+   import os
+   import sys
+   import logging
+   from typing import Callable, Type, Any
+   from datetime import datetime, timedelta
+   from bcra_connector import BCRAApiError, BCRAConnector
 
    try:
        variables = connector.get_principales_variables()

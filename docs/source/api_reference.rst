@@ -16,7 +16,7 @@ BCRAConnector
    :undoc-members:
    :show-inheritance:
 
-Principales Variables (Monetarias v3.0)
+Principales Variables (Monetarias v4.0)
 ---------------------------------------
 
 .. automodule:: src.bcra_connector.principales_variables.principales_variables

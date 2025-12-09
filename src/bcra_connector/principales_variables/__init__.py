@@ -7,15 +7,17 @@ This module provides data models and response handlers for the BCRA Monetary Sta
 from .principales_variables import (
     DatosVariable,
     DatosVariableResponse,
+    DetalleMonetaria,
     Metadata,
     PrincipalesVariables,
     Resultset,
 )
 
 __all__ = [
-    "PrincipalesVariables",
     "DatosVariable",
     "DatosVariableResponse",
+    "DetalleMonetaria",
     "Metadata",
+    "PrincipalesVariables",
     "Resultset",
 ]

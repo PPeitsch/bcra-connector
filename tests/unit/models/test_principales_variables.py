@@ -1,4 +1,4 @@
-"""Unit tests for principal variables models (Monetarias v3.0)."""
+"""Unit tests for principal variables models (Monetarias v4.0)."""
 
 from datetime import date
 from typing import Any, Dict, List
@@ -8,6 +8,7 @@ import pytest
 from bcra_connector.principales_variables import (
     DatosVariable,
     DatosVariableResponse,
+    DetalleMonetaria,
     Metadata,
     PrincipalesVariables,
     Resultset,
@@ -59,59 +60,124 @@ class TestMetadata:
             Metadata.from_dict({"resultset": "not a dict"})
 
 
-class TestPrincipalesVariables:
-    """Test suite for PrincipalesVariables model (v3.0)."""
+class TestDetalleMonetaria:
+    """Test suite for DetalleMonetaria model (v4.0)."""
 
     @pytest.fixture
-    def sample_v3_variable_data(self) -> Dict[str, Any]:
-        """Fixture providing sample variable data for v3.0."""
+    def sample_detalle_data(self) -> Dict[str, Any]:
+        """Fixture providing sample detalle data."""
+        return {"fecha": "2024-03-05", "valor": 100.0}
+
+    def test_detalle_monetaria_from_dict(
+        self, sample_detalle_data: Dict[str, Any]
+    ) -> None:
+        """Test creation of DetalleMonetaria from dictionary."""
+        detalle = DetalleMonetaria.from_dict(sample_detalle_data)
+        assert detalle.fecha == date(2024, 3, 5)
+        assert detalle.valor == 100.0
+
+    def test_detalle_monetaria_to_dict(
+        self, sample_detalle_data: Dict[str, Any]
+    ) -> None:
+        """Test conversion of DetalleMonetaria to dictionary."""
+        detalle = DetalleMonetaria.from_dict(sample_detalle_data)
+        result = detalle.to_dict()
+        assert result == sample_detalle_data
+
+    def test_detalle_monetaria_invalid_date(self) -> None:
+        """Test handling of invalid date format."""
+        with pytest.raises(
+            ValueError, match="Invalid data type or format in DetalleMonetaria data"
+        ):
+            DetalleMonetaria.from_dict({"fecha": "invalid-date", "valor": 100.0})
+
+    def test_detalle_monetaria_invalid_valor(self) -> None:
+        """Test handling of invalid valor type."""
+        with pytest.raises(
+            ValueError, match="Invalid data type or format in DetalleMonetaria data"
+        ):
+            DetalleMonetaria.from_dict({"fecha": "2024-01-01", "valor": "not-a-float"})
+
+    def test_detalle_monetaria_missing_fecha(self) -> None:
+        """Test handling of missing fecha key."""
+        with pytest.raises(ValueError, match="Missing key in DetalleMonetaria data"):
+            DetalleMonetaria.from_dict({"valor": 100.0})
+
+    def test_detalle_monetaria_missing_valor(self) -> None:
+        """Test handling of missing valor key."""
+        with pytest.raises(ValueError, match="Missing key in DetalleMonetaria data"):
+            DetalleMonetaria.from_dict({"fecha": "2024-01-01"})
+
+
+class TestPrincipalesVariables:
+    """Test suite for PrincipalesVariables model (v4.0)."""
+
+    @pytest.fixture
+    def sample_v4_variable_data(self) -> Dict[str, Any]:
+        """Fixture providing sample variable data for v4.0."""
         return {
             "idVariable": 1,
-            "descripcion": "Test Variable v3",
-            "fecha": "2024-03-05",
-            "valor": 100.0,
+            "descripcion": "Test Variable v4",
             "categoria": "Principales Indicadores",
+            "tipoSerie": "Diaria",
+            "periodicidad": "D",
+            "unidadExpresion": "Millones",
+            "moneda": "ARS",
+            "primerFechaInformada": "2020-01-01",
+            "ultFechaInformada": "2024-03-05",
+            "ultValorInformado": 100.0,
         }
 
-    def test_principales_variables_from_dict_v3(
-        self, sample_v3_variable_data: Dict[str, Any]
+    def test_principales_variables_from_dict_v4(
+        self, sample_v4_variable_data: Dict[str, Any]
     ) -> None:
-        """Test creation of PrincipalesVariables from dictionary (v3.0 format)."""
-        variable: PrincipalesVariables = PrincipalesVariables.from_dict(
-            sample_v3_variable_data
-        )
+        """Test creation of PrincipalesVariables from dictionary (v4.0 format)."""
+        variable = PrincipalesVariables.from_dict(sample_v4_variable_data)
 
         assert variable.idVariable == 1
-        assert variable.descripcion == "Test Variable v3"
-        assert variable.fecha == date(2024, 3, 5)
-        assert variable.valor == 100.0
+        assert variable.descripcion == "Test Variable v4"
         assert variable.categoria == "Principales Indicadores"
+        assert variable.tipoSerie == "Diaria"
+        assert variable.periodicidad == "D"
+        assert variable.unidadExpresion == "Millones"
+        assert variable.moneda == "ARS"
+        assert variable.primerFechaInformada == date(2020, 1, 1)
+        assert variable.ultFechaInformada == date(2024, 3, 5)
+        assert variable.ultValorInformado == 100.0
 
-    def test_principales_variables_to_dict_v3(
-        self, sample_v3_variable_data: Dict[str, Any]
+    def test_principales_variables_to_dict_v4(
+        self, sample_v4_variable_data: Dict[str, Any]
     ) -> None:
-        """Test conversion of PrincipalesVariables to dictionary (v3.0 format)."""
-        variable = PrincipalesVariables.from_dict(sample_v3_variable_data)
+        """Test conversion of PrincipalesVariables to dictionary (v4.0 format)."""
+        variable = PrincipalesVariables.from_dict(sample_v4_variable_data)
         result = variable.to_dict()
 
         assert result["idVariable"] == 1
-        assert "cdSerie" not in result  # Ensure cdSerie is not in dict
-        assert result["descripcion"] == "Test Variable v3"
-        assert result["fecha"] == "2024-03-05"
-        assert result["valor"] == 100.0
+        assert result["descripcion"] == "Test Variable v4"
         assert result["categoria"] == "Principales Indicadores"
+        assert result["tipoSerie"] == "Diaria"
+        assert result["periodicidad"] == "D"
+        assert result["unidadExpresion"] == "Millones"
+        assert result["moneda"] == "ARS"
+        assert result["primerFechaInformada"] == "2020-01-01"
+        assert result["ultFechaInformada"] == "2024-03-05"
+        assert result["ultValorInformado"] == 100.0
 
-    def test_principales_variables_missing_categoria(self) -> None:
-        """Test handling of missing 'categoria' field (v3.0)."""
+    def test_principales_variables_minimal_data(self) -> None:
+        """Test creation with only required field (idVariable)."""
+        minimal_data = {"idVariable": 1}
+        variable = PrincipalesVariables.from_dict(minimal_data)
+        assert variable.idVariable == 1
+        assert variable.descripcion is None
+        assert variable.categoria is None
+
+    def test_principales_variables_missing_id(self) -> None:
+        """Test handling of missing idVariable field."""
         invalid_data: Dict[str, Any] = {
-            "idVariable": 1,
             "descripcion": "Test Variable",
-            "fecha": "2024-03-05",
-            "valor": 100.0,
-            # "categoria" is missing
         }
         with pytest.raises(
-            ValueError, match="Missing key in PrincipalesVariables data: 'categoria'"
+            ValueError, match="Missing key in PrincipalesVariables data"
         ):
             PrincipalesVariables.from_dict(invalid_data)
 
@@ -119,24 +185,7 @@ class TestPrincipalesVariables:
         """Test handling of invalid date format."""
         invalid_data: Dict[str, Any] = {
             "idVariable": 1,
-            "descripcion": "Test",
-            "fecha": "invalid-date",
-            "valor": 100.0,
-            "categoria": "TestCat",
-        }
-        with pytest.raises(
-            ValueError, match="Invalid data type or format in PrincipalesVariables data"
-        ):
-            PrincipalesVariables.from_dict(invalid_data)
-
-    def test_principales_variables_invalid_value_type(self) -> None:
-        """Test handling of invalid valor type."""
-        invalid_data: Dict[str, Any] = {
-            "idVariable": 1,
-            "descripcion": "Test",
-            "fecha": "2024-01-01",
-            "valor": "not-a-float",
-            "categoria": "TestCat",
+            "primerFechaInformada": "invalid-date",
         }
         with pytest.raises(
             ValueError, match="Invalid data type or format in PrincipalesVariables data"
@@ -145,94 +194,79 @@ class TestPrincipalesVariables:
 
 
 class TestDatosVariable:
-    """Test suite for DatosVariable model."""
+    """Test suite for DatosVariable model (v4.0)."""
 
     @pytest.fixture
     def sample_datos_data(self) -> Dict[str, Any]:
-        """Fixture providing sample data point."""
-        return {"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0}
+        """Fixture providing sample data with detalle array."""
+        return {
+            "idVariable": 1,
+            "detalle": [
+                {"fecha": "2024-03-05", "valor": 100.0},
+                {"fecha": "2024-03-06", "valor": 105.0},
+            ],
+        }
 
     def test_datos_variable_from_dict(self, sample_datos_data: Dict[str, Any]) -> None:
         """Test creation of DatosVariable from dictionary."""
-        dato: DatosVariable = DatosVariable.from_dict(sample_datos_data)
+        dato = DatosVariable.from_dict(sample_datos_data)
         assert dato.idVariable == 1
-        assert dato.fecha == date(2024, 3, 5)
-        assert dato.valor == 100.0
+        assert len(dato.detalle) == 2
+        assert isinstance(dato.detalle[0], DetalleMonetaria)
+        assert dato.detalle[0].fecha == date(2024, 3, 5)
+        assert dato.detalle[0].valor == 100.0
 
     def test_datos_variable_to_dict(self, sample_datos_data: Dict[str, Any]) -> None:
         """Test conversion of DatosVariable to dictionary."""
         dato = DatosVariable.from_dict(sample_datos_data)
         result = dato.to_dict()
-        assert result == sample_datos_data  # Assuming valor is float in sample
+        assert result["idVariable"] == 1
+        assert len(result["detalle"]) == 2
+        assert result["detalle"][0]["fecha"] == "2024-03-05"
+        assert result["detalle"][0]["valor"] == 100.0
+
+    def test_datos_variable_empty_detalle(self) -> None:
+        """Test DatosVariable with empty detalle list."""
+        data = {"idVariable": 1, "detalle": []}
+        dato = DatosVariable.from_dict(data)
+        assert dato.idVariable == 1
+        assert len(dato.detalle) == 0
 
     def test_datos_variable_post_init_validation(self) -> None:
         """Test __post_init__ validation logic."""
-        # Valid cases
-        DatosVariable(idVariable=1, fecha=date(2024, 1, 1), valor=10.0)
-        DatosVariable(
-            idVariable=0, fecha=date(2024, 1, 1), valor=0
-        )  # int valor converted
+        # Valid case
+        DatosVariable(idVariable=1, detalle=[])
 
         # Invalid idVariable
         with pytest.raises(
             ValueError, match="Variable ID must be a non-negative integer"
         ):
-            DatosVariable(idVariable=-1, fecha=date(2024, 1, 1), valor=10.0)
-        with pytest.raises(
-            ValueError, match="Variable ID must be a non-negative integer"
-        ):
-            DatosVariable(idVariable="1", fecha=date(2024, 1, 1), valor=10.0)
+            DatosVariable(idVariable=-1, detalle=[])
 
-        # Invalid fecha
-        with pytest.raises(ValueError, match="Fecha must be a date object"):
-            DatosVariable(idVariable=1, fecha="2024-01-01", valor=10.0)
-
-        # Invalid valor type (after from_dict would attempt float conversion)
-        # This tests direct instantiation with a bad type that __post_init__ should catch.
-        # The __post_init__ you used: if not isinstance(self.valor, (int, float)):
-        with pytest.raises(ValueError, match="Valor must be a number, got str"):
-            DatosVariable(idVariable=1, fecha=date(2024, 1, 1), valor="abc")
-
-    def test_datos_variable_from_dict_invalid_data(self) -> None:
-        """Test from_dict with various invalid input data."""
-        with pytest.raises(
-            ValueError, match="Missing key in DatosVariable data: 'idVariable'"
-        ):
-            DatosVariable.from_dict({"fecha": "2024-01-01", "valor": 10.0})
-        with pytest.raises(
-            ValueError, match="Invalid data type or format in DatosVariable data"
-        ):
-            DatosVariable.from_dict(
-                {"idVariable": 1, "fecha": "invalid", "valor": 10.0}
-            )
-        with pytest.raises(
-            ValueError, match="Invalid data type or format in DatosVariable data"
-        ):
-            DatosVariable.from_dict(
-                {"idVariable": 1, "fecha": "2024-01-01", "valor": "abc"}
-            )
+        # Invalid detalle type
+        with pytest.raises(ValueError, match="Detalle must be a list"):
+            DatosVariable(idVariable=1, detalle="not a list")
 
     def test_datos_variable_equality(self) -> None:
         """Test equality comparison of DatosVariable instances."""
-        d1 = DatosVariable(idVariable=1, fecha=date(2024, 1, 1), valor=10.0)
-        d2 = DatosVariable(
-            idVariable=1, fecha=date(2024, 1, 1), valor=20.0
-        )  # Same ID and date
-        d3 = DatosVariable(
-            idVariable=1, fecha=date(2024, 1, 2), valor=10.0
-        )  # Different date
-        d4 = DatosVariable(
-            idVariable=2, fecha=date(2024, 1, 1), valor=10.0
-        )  # Different ID
+        d1 = DatosVariable(idVariable=1, detalle=[])
+        d2 = DatosVariable(idVariable=1, detalle=[])
+        d3 = DatosVariable(idVariable=2, detalle=[])
 
         assert d1 == d2
         assert d1 != d3
-        assert d1 != d4
         assert d1 != "not a DatosVariable"
+
+    def test_datos_variable_missing_id(self) -> None:
+        """Test handling of missing idVariable key."""
+        with pytest.raises(ValueError, match="Missing key in DatosVariable data"):
+            DatosVariable.from_dict(
+                {"detalle": [{"fecha": "2024-01-01", "valor": 10.0}]}
+            )
 
 
 class TestDatosVariableResponse:
-    """Test suite for DatosVariableResponse model."""
+    """Test suite for DatosVariableResponse model (v4.0)."""
 
     @pytest.fixture
     def sample_metadata_dict(self) -> Dict[str, Any]:
@@ -241,10 +275,15 @@ class TestDatosVariableResponse:
 
     @pytest.fixture
     def sample_results_list_dict(self) -> List[Dict[str, Any]]:
-        """Sample list of results dictionaries."""
+        """Sample list of results dictionaries (v4.0 format)."""
         return [
-            {"idVariable": 1, "fecha": "2024-01-01", "valor": 10.0},
-            {"idVariable": 1, "fecha": "2024-01-02", "valor": 12.5},
+            {
+                "idVariable": 1,
+                "detalle": [
+                    {"fecha": "2024-01-01", "valor": 10.0},
+                    {"fecha": "2024-01-02", "valor": 12.5},
+                ],
+            }
         ]
 
     @pytest.fixture
@@ -253,8 +292,12 @@ class TestDatosVariableResponse:
         sample_metadata_dict: Dict[str, Any],
         sample_results_list_dict: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """Sample complete response dictionary."""
-        return {"metadata": sample_metadata_dict, "results": sample_results_list_dict}
+        """Sample complete response dictionary (v4.0 format)."""
+        return {
+            "status": 200,
+            "metadata": sample_metadata_dict,
+            "results": sample_results_list_dict,
+        }
 
     def test_datos_variable_response_from_dict(
         self, sample_response_data_dict: Dict[str, Any]
@@ -262,11 +305,13 @@ class TestDatosVariableResponse:
         """Test creation of DatosVariableResponse from dictionary."""
         response = DatosVariableResponse.from_dict(sample_response_data_dict)
 
+        assert response.status == 200
         assert isinstance(response.metadata, Metadata)
         assert response.metadata.resultset.count == 2
-        assert len(response.results) == 2
+        assert len(response.results) == 1
         assert isinstance(response.results[0], DatosVariable)
-        assert response.results[0].valor == 10.0
+        assert len(response.results[0].detalle) == 2
+        assert response.results[0].detalle[0].valor == 10.0
 
     def test_datos_variable_response_to_dict(
         self, sample_response_data_dict: Dict[str, Any]
@@ -275,50 +320,58 @@ class TestDatosVariableResponse:
         response = DatosVariableResponse.from_dict(sample_response_data_dict)
         result_dict = response.to_dict()
 
+        # Status
+        assert result_dict["status"] == 200
         # Metadata part
         assert (
             result_dict["metadata"]
             == sample_response_data_dict["metadata"]["resultset"]
         )
         # Results part
-        assert len(result_dict["results"]) == len(sample_response_data_dict["results"])
-        for original, converted in zip(
-            sample_response_data_dict["results"], result_dict["results"]
-        ):
-            assert converted["idVariable"] == original["idVariable"]
-            assert converted["fecha"] == original["fecha"]
-            assert converted["valor"] == original["valor"]
+        assert len(result_dict["results"]) == 1
+        assert result_dict["results"][0]["idVariable"] == 1
+        assert len(result_dict["results"][0]["detalle"]) == 2
 
     def test_datos_variable_response_missing_keys(self) -> None:
-        """Test from_dict with missing 'metadata' or 'results' keys."""
+        """Test from_dict with missing required keys."""
+        with pytest.raises(ValueError, match="Missing 'status'"):
+            DatosVariableResponse.from_dict({"metadata": {}, "results": []})
         with pytest.raises(ValueError, match="Missing or invalid 'metadata'"):
-            DatosVariableResponse.from_dict({"results": []})
+            DatosVariableResponse.from_dict({"status": 200, "results": []})
         with pytest.raises(ValueError, match="Missing or invalid 'results'"):
             DatosVariableResponse.from_dict(
-                {"metadata": {"resultset": {"count": 0, "offset": 0, "limit": 0}}}
+                {
+                    "status": 200,
+                    "metadata": {"resultset": {"count": 0, "offset": 0, "limit": 0}},
+                }
             )
 
     def test_datos_variable_response_invalid_types(self) -> None:
-        """Test from_dict with invalid types for 'metadata' or 'results'."""
+        """Test from_dict with invalid types for fields."""
         with pytest.raises(ValueError, match="Missing or invalid 'metadata'"):
-            DatosVariableResponse.from_dict({"metadata": "not a dict", "results": []})
+            DatosVariableResponse.from_dict(
+                {"status": 200, "metadata": "not a dict", "results": []}
+            )
         with pytest.raises(ValueError, match="Missing or invalid 'results'"):
             DatosVariableResponse.from_dict(
-                {"metadata": {"resultset": {}}, "results": "not a list"}
+                {
+                    "status": 200,
+                    "metadata": {"resultset": {"count": 0, "offset": 0, "limit": 0}},
+                    "results": "not a list",
+                }
             )
 
     def test_datos_variable_response_parsing_error_in_children(self) -> None:
         """Test error handling when child models fail to parse."""
         invalid_results_data = [
-            {"idVariable": 1, "fecha": "2024-01-01", "valor": 10.0},
             {
-                "idVariable": "invalid",
-                "fecha": "2024-01-02",
-                "valor": 12.5,
-            },  # bad idVariable
+                "idVariable": "invalid",  # Should be int
+                "detalle": [{"fecha": "2024-01-01", "valor": 10.0}],
+            }
         ]
         data = {
-            "metadata": {"resultset": {"count": 2, "offset": 0, "limit": 10}},
+            "status": 200,
+            "metadata": {"resultset": {"count": 1, "offset": 0, "limit": 10}},
             "results": invalid_results_data,
         }
         with pytest.raises(

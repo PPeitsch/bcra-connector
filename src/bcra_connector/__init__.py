@@ -28,6 +28,7 @@ from .estadisticas_cambiarias import Resultset as EstadisticasCambiariasResultse
 from .principales_variables import (
     DatosVariable,
     DatosVariableResponse,
+    DetalleMonetaria,
     PrincipalesVariables,
 )
 from .rate_limiter import RateLimitConfig
@@ -40,10 +41,11 @@ __all__ = [
     "BCRAApiError",
     "RateLimitConfig",
     "TimeoutConfig",
-    # Principales Variables / Monetarias v3.0
+    # Principales Variables / Monetarias v4.0
     "PrincipalesVariables",
     "DatosVariable",
     "DatosVariableResponse",
+    "DetalleMonetaria",
     # Cheques
     "Entidad",
     "ChequeDetalle",

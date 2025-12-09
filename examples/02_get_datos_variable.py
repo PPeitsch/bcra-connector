@@ -1,5 +1,5 @@
 """
-Example showing how to retrieve historical data for specific BCRA variables (Monetarias v3.0).
+Example showing how to retrieve historical data for specific BCRA variables (Monetarias v4.0).
 Includes date range handling, pagination (limit/offset), and time series visualization.
 """
 
@@ -74,38 +74,45 @@ def main() -> None:
         datos_list = response_data.results
         metadata = response_data.metadata
 
+        # In v4.0, results is a list of DatosVariable objects, each with a detalle array
+        # Flatten all detalle arrays into a single list
+        all_data_points = []
+        for datos_variable in datos_list:
+            all_data_points.extend(datos_variable.detalle)
+
         logger.info(
-            f"Fetched {len(datos_list)} data points. "
+            f"Fetched {len(all_data_points)} data points from {len(datos_list)} result groups. "
             f"Total available according to metadata: {metadata.resultset.count}. "
             f"Offset: {metadata.resultset.offset}, Limit: {metadata.resultset.limit}."
         )
 
-        if not datos_list:
+        if not all_data_points:
             logger.warning(
                 f"No data points returned for '{display_variable_name}'. Cannot plot or show details."
             )
             return
 
-        logger.info("Last 5 data points from the fetched page:")
-        for dato in datos_list[-5:]:
+        logger.info("Last 5 data points from the fetched data:")
+        for dato in all_data_points[-5:]:
             logger.info(f"  Date: {dato.fecha.isoformat()}, Value: {dato.valor}")
 
         fig, ax = plt.subplots(figsize=(12, 6))
 
         dates = [
-            datetime.combine(dato.fecha, datetime.min.time()) for dato in datos_list
+            datetime.combine(dato.fecha, datetime.min.time())
+            for dato in all_data_points
         ]
-        values = [dato.valor for dato in datos_list]
+        values = [dato.valor for dato in all_data_points]
 
         ax.plot_date(np.array(dates), np.array(values), "-")
         ax.set_title(
-            f"'{display_variable_name}'\n(Page with limit={limit_param}, offset={offset_param} in last 90 days)"
+            f"'{display_variable_name}\\n(Page with limit={limit_param}, offset={offset_param} in last 90 days)"
         )
         ax.set_xlabel("Date")
         ax.set_ylabel("Value")
         plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
-        save_plot(fig, f"variable_{variable_id_to_use}_data_v3_paginated.png")
+        save_plot(fig, f"variable_{variable_id_to_use}_data_v4_paginated.png")
 
     except BCRAApiError as e:
         logger.error(f"API Error occurred: {str(e)}")

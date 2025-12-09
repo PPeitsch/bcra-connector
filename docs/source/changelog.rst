@@ -9,6 +9,61 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Unreleased
 ----------
 
+0.7.0 - 2025-12-09
+------------------
+
+⚠️ BREAKING CHANGES
+^^^^^^^^^^^^^^^^^^^
+
+**Upgraded Principales Variables API from v3.0 to v4.0**
+
+* ``get_latest_value()`` now returns ``DetalleMonetaria`` (with ``fecha`` and ``valor`` fields) instead of ``DatosVariable``
+* ``get_variable_history()`` now returns ``List[DetalleMonetaria]`` instead of ``List[DatosVariable]``
+* ``PrincipalesVariables`` model updated with new v4.0 structure:
+
+  - Removed direct ``fecha`` and ``valor`` fields
+  - Added: ``tipoSerie``, ``periodicidad``, ``unidadExpresion``, ``moneda``
+  - Added: ``primerFechaInformada``, ``ultFechaInformada``, ``ultValorInformado``
+
+* ``DatosVariable`` now contains a list of ``DetalleMonetaria`` objects in ``detalle`` field
+* API endpoint changed: ``estadisticas/v3.0/monetarias`` → ``estadisticas/v4.0/Monetarias``
+* Query parameters now capitalized: ``Desde``, ``Hasta``, ``Limit``, ``Offset``
+
+Added
+^^^^^
+
+* New ``DetalleMonetaria`` class for individual monetary data points (#75)
+* Extended metadata fields in ``PrincipalesVariables`` model (#75)
+* ``status`` field added to ``DatosVariableResponse`` for HTTP status tracking (#75)
+* Comprehensive test coverage for KeyError edge cases in data models (#75)
+* Coverage configuration in ``pyproject.toml`` to exclude auto-generated files (#75)
+* Test for fallback scenario in ``get_latest_value()`` method (#75)
+
+Changed
+^^^^^^^
+
+* Updated all Principales Variables endpoints to v4.0 (#75)
+* Capitalized query parameter names to match v4.0 API specification (#75)
+* Enhanced ``get_datos_variable()`` to handle nested ``detalle`` arrays (#75)
+* Improved ``get_latest_value()`` with 30-day fallback mechanism (#75)
+* Updated ``get_variable_history()`` to return flattened list of data points (#75)
+* Completely rewrote unit tests for v4.0 data model structure (#75)
+* Updated integration tests to validate v4.0 API responses (#75)
+
+Fixed
+^^^^^
+
+* Type annotations added to ``get_latest_value()`` and ``get_variable_history()`` (#75)
+* Improved error handling for missing keys in API responses (#75)
+
+Testing
+^^^^^^^
+
+* **100% code coverage** achieved (825/825 statements)
+* 185 tests passing (4 new tests added)
+* All integration tests validated against live v4.0 API
+* MyPy type checking passing without errors
+
 0.6.1 - 2025-12-08
 ------------------
 
