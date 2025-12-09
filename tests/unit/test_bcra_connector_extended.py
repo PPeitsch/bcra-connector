@@ -17,6 +17,7 @@ from bcra_connector.estadisticas_cambiarias import CotizacionDetalle, Cotizacion
 from bcra_connector.principales_variables import (
     DatosVariable,
     DatosVariableResponse,
+    DetalleMonetaria,
     PrincipalesVariables,
 )
 from bcra_connector.rate_limiter import RateLimitConfig
@@ -139,18 +140,17 @@ class TestBCRAConnectorExtended:
                 {
                     "idVariable": 1,
                     "descripcion": "Valid",
-                    "fecha": "2024-01-01",
-                    "valor": 1.0,
                     "categoria": "C",
                 },
-                {"idVariable": 2},  # Missing fields
+                {
+                    "idVariable": 2
+                },  # Missing fields is OK in v4.0 since most are optional
             ]
         }
         with patch.object(connector, "_make_request", return_value=data):
-            # Should log warning and skip invalid, return valid
+            # Should parse both successfully in v4.0
             res = connector.get_principales_variables()
-            assert len(res) == 1
-            assert res[0].idVariable == 1
+            assert len(res) == 2
 
     def test_get_principales_variables_all_parsing_failed(
         self, connector: BCRAConnector
@@ -366,9 +366,6 @@ class TestBCRAConnectorExtended:
             PrincipalesVariables(
                 idVariable=1,
                 descripcion="Reserva",
-                fecha=date.today(),
-                valor=10.0,
-                categoria="C",
             )
         ]
         with patch.object(
@@ -382,9 +379,6 @@ class TestBCRAConnectorExtended:
             PrincipalesVariables(
                 idVariable=1,
                 descripcion="Base",
-                fecha=date.today(),
-                valor=10.0,
-                categoria="C",
             )
         ]
         with patch.object(
@@ -405,9 +399,6 @@ class TestBCRAConnectorExtended:
         mock_var = PrincipalesVariables(
             idVariable=1,
             descripcion="Var",
-            fecha=date.today(),
-            valor=10.0,
-            categoria="C",
         )
 
         # Scenario 1: Variable found, but days invalid
@@ -424,9 +415,13 @@ class TestBCRAConnectorExtended:
         with patch.object(connector, "get_variable_by_name", return_value=mock_var):
             with patch.object(connector, "get_datos_variable") as mock_get_datos:
                 mock_get_datos.return_value = DatosVariableResponse(
+                    status=200,
                     metadata=Mock(),
                     results=[
-                        DatosVariable(idVariable=1, fecha=date.today(), valor=10.0)
+                        DatosVariable(
+                            idVariable=1,
+                            detalle=[DetalleMonetaria(fecha=date.today(), valor=10.0)],
+                        )
                     ],
                 )
                 res = connector.get_variable_history("Var", days=10)
@@ -624,15 +619,15 @@ class TestBCRAConnectorExtended:
             assert np.isnan(connector.get_variable_correlation("A", "B"))
 
         # Insufficient unique dates
-        d1 = DatosVariable(1, date(2024, 1, 1), 10.0)
+        d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
         with patch.object(connector, "get_variable_history", return_value=[d1, d1]):
             # Same date twice (set len < 2)
             assert np.isnan(connector.get_variable_correlation("A", "B"))
 
         # Safe mock for success
-        d1 = DatosVariable(1, date(2024, 1, 1), 10.0)
-        d2 = DatosVariable(1, date(2024, 1, 2), 20.0)
-        d3 = DatosVariable(1, date(2024, 1, 3), 30.0)
+        d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
+        d2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=20.0)
+        d3 = DetalleMonetaria(fecha=date(2024, 1, 3), valor=30.0)
 
         with patch.object(
             connector, "get_variable_history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
@@ -641,8 +636,8 @@ class TestBCRAConnectorExtended:
             assert corr == pytest.approx(1.0)  # Check floating point equality
 
         # Constants => NaN
-        dc1 = DatosVariable(1, date(2024, 1, 1), 10.0)
-        dc2 = DatosVariable(1, date(2024, 1, 2), 10.0)
+        dc1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
+        dc2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=10.0)
         with patch.object(
             connector, "get_variable_history", side_effect=[[dc1, dc2], [d1, d2]]
         ):
@@ -692,9 +687,9 @@ class TestBCRAConnectorExtended:
 
     def test_get_variable_correlation_pearson_error(self, connector: BCRAConnector):
         # Setup valid data
-        d1 = DatosVariable(1, date(2024, 1, 1), 10.0)
-        d2 = DatosVariable(1, date(2024, 1, 2), 20.0)
-        d3 = DatosVariable(1, date(2024, 1, 3), 30.0)
+        d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
+        d2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=20.0)
+        d3 = DetalleMonetaria(fecha=date(2024, 1, 3), valor=30.0)
 
         with patch.object(
             connector, "get_variable_history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
@@ -707,9 +702,9 @@ class TestBCRAConnectorExtended:
                 assert np.isnan(res)
 
     def test_get_variable_correlation_pearson_nan(self, connector: BCRAConnector):
-        d1 = DatosVariable(1, date(2024, 1, 1), 10.0)
-        d2 = DatosVariable(1, date(2024, 1, 2), 20.0)
-        d3 = DatosVariable(1, date(2024, 1, 3), 30.0)
+        d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
+        d2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=20.0)
+        d3 = DetalleMonetaria(fecha=date(2024, 1, 3), valor=30.0)
 
         with patch.object(
             connector, "get_variable_history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
@@ -730,7 +725,7 @@ class TestBCRAConnectorExtended:
             with pytest.raises(ValueError, match="not found"):
                 connector.generate_variable_report("Missing")
 
-        mock_var = PrincipalesVariables(1, "Desc", date.today(), 1.0, "Cat")
+        mock_var = PrincipalesVariables(idVariable=1, descripcion="Desc")
         with patch.object(connector, "get_variable_by_name", return_value=mock_var):
 
             # API Error
@@ -746,8 +741,8 @@ class TestBCRAConnectorExtended:
                 assert "error" in rep
 
             # Success
-            d1 = DatosVariable(1, date(2024, 1, 1), 100.0)
-            d2 = DatosVariable(1, date(2024, 1, 2), 200.0)
+            d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=100.0)
+            d2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=200.0)
             with patch.object(connector, "get_variable_history", return_value=[d1, d2]):
                 rep = connector.generate_variable_report("A")
                 assert rep["min_value"] == 100.0

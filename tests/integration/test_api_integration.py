@@ -1,4 +1,4 @@
-"""Integration tests for BCRA API endpoints, including Monetarias v3.0."""
+"""Integration tests for BCRA API endpoints, including Monetarias v4.0."""
 
 from datetime import datetime, timedelta
 from typing import List
@@ -11,6 +11,7 @@ from bcra_connector.estadisticas_cambiarias import CotizacionFecha, Divisa
 from bcra_connector.principales_variables import (
     DatosVariable,
     DatosVariableResponse,
+    DetalleMonetaria,
     PrincipalesVariables,
 )
 from bcra_connector.rate_limiter import RateLimitConfig
@@ -18,7 +19,7 @@ from bcra_connector.rate_limiter import RateLimitConfig
 
 @pytest.mark.integration
 class TestBCRAIntegration:
-    """Integration test suite for BCRA API, including Monetarias v3.0."""
+    """Integration test suite for BCRA API, including Monetarias v4.0."""
 
     @pytest.fixture(scope="class")
     def connector(self) -> BCRAConnector:
@@ -30,7 +31,7 @@ class TestBCRAIntegration:
         )
 
     def test_get_principales_variables_v3(self, connector: BCRAConnector) -> None:
-        """Test retrieval of principal variables/monetary series (Monetarias v3.0)."""
+        """Test retrieval of principal variables/monetary series (Monetarias v4.0)."""
         variables: List[PrincipalesVariables] = connector.get_principales_variables()
 
         assert variables, "Should retrieve a list of variables"
@@ -40,13 +41,13 @@ class TestBCRAIntegration:
         assert isinstance(first_var, PrincipalesVariables)
         assert hasattr(first_var, "idVariable") and first_var.idVariable > 0
         assert hasattr(first_var, "descripcion") and first_var.descripcion
-        assert hasattr(first_var, "fecha") and first_var.fecha is not None
-        assert hasattr(first_var, "valor")
-        assert hasattr(first_var, "categoria") and first_var.categoria
-        assert not hasattr(first_var, "cdSerie")
+        # v4.0 has ultFechaInformada and ultValorInformado instead of fecha/valor
+        assert hasattr(first_var, "ultFechaInformada")
+        assert hasattr(first_var, "ultValorInformado")
+        assert hasattr(first_var, "categoria")
 
     def test_get_historical_data_v3(self, connector: BCRAConnector) -> None:
-        """Test retrieval of historical data for a variable (Monetarias v3.0)."""
+        """Test retrieval of historical data for a variable (Monetarias v4.0)."""
         variables: List[PrincipalesVariables] = connector.get_principales_variables()
         if not variables:
             pytest.skip(
@@ -67,6 +68,7 @@ class TestBCRAIntegration:
         )
 
         assert isinstance(response_data, DatosVariableResponse)
+        assert response_data.status == 200
         assert response_data.metadata is not None
         assert response_data.metadata.resultset is not None
         assert response_data.metadata.resultset.limit == 10
@@ -80,7 +82,11 @@ class TestBCRAIntegration:
             first_data_point = response_data.results[0]
             assert isinstance(first_data_point, DatosVariable)
             assert first_data_point.idVariable == variable_id
-            assert start_date.date() <= first_data_point.fecha <= end_date.date()
+            # v4.0 has detalle array instead of direct fecha/valor
+            assert len(first_data_point.detalle) > 0
+            assert all(
+                isinstance(d, DetalleMonetaria) for d in first_data_point.detalle
+            )
 
         response_offset: DatosVariableResponse = connector.get_datos_variable(
             id_variable=variable_id, limit=15, offset=5
@@ -124,7 +130,7 @@ class TestBCRAIntegration:
         assert all(e.codigo_entidad > 0 for e in entities)
 
     def test_complete_variable_workflow_v3(self, connector: BCRAConnector) -> None:
-        """Test complete workflow for Monetarias v3.0 data."""
+        """Test complete workflow for Monetarias v4.0 data."""
         variables: List[PrincipalesVariables] = connector.get_principales_variables()
         assert (
             variables and len(variables) > 0
@@ -144,9 +150,10 @@ class TestBCRAIntegration:
         )
         assert isinstance(historical_response, DatosVariableResponse)
 
-        latest_value: DatosVariable = connector.get_latest_value(variable_id)
+        # v4.0 returns DetalleMonetaria instead of DatosVariable
+        latest_value: DetalleMonetaria = connector.get_latest_value(variable_id)
         assert latest_value is not None
-        assert latest_value.idVariable == variable_id
+        assert isinstance(latest_value, DetalleMonetaria)
         assert latest_value.fecha <= end_date.date()
 
     def test_currency_evolution(self, connector: BCRAConnector) -> None:
@@ -212,7 +219,7 @@ class TestBCRAIntegration:
     def test_api_error_for_nonexistent_variable_v3(
         self, connector: BCRAConnector
     ) -> None:
-        """Test API error handling for a non-existent variable ID (Monetarias v3.0)."""
+        """Test API error handling for a non-existent variable ID (Monetarias v4.0)."""
         non_existent_id = 9999999
         end_date: datetime = datetime.now()
         start_date: datetime = end_date - timedelta(days=1)

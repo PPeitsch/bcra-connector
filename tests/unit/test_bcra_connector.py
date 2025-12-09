@@ -14,6 +14,7 @@ from bcra_connector.cheques import Cheque, Entidad
 from bcra_connector.principales_variables import (
     DatosVariable,
     DatosVariableResponse,
+    DetalleMonetaria,
     PrincipalesVariables,
 )
 from bcra_connector.rate_limiter import RateLimitConfig
@@ -78,23 +79,28 @@ class TestBCRAConnector:
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
         connector: BCRAConnector,
     ) -> None:
-        """Test successful retrieval of principal variables (v3.0 format)."""
-        mock_data_v3: Dict[str, Any] = {
+        """Test successful retrieval of principal variables (v4.0 format)."""
+        mock_data_v4: Dict[str, Any] = {
             "results": [
                 {
                     "idVariable": 1,
-                    "descripcion": "Test Variable v3",
-                    "fecha": "2024-03-05",
-                    "valor": 100.0,
+                    "descripcion": "Test Variable v4",
                     "categoria": "Indicadores Monetarios",
+                    "tipoSerie": "Diaria",
+                    "periodicidad": "D",
+                    "unidadExpresion": "Millones",
+                    "moneda": "ARS",
+                    "primerFechaInformada": "2020-01-01",
+                    "ultFechaInformada": "2024-03-05",
+                    "ultValorInformado": 100.0,
                 }
             ]
         }
-        mock_get.return_value = mock_api_response(mock_data_v3, 200)
+        mock_get.return_value = mock_api_response(mock_data_v4, 200)
         result: List[PrincipalesVariables] = connector.get_principales_variables()
 
         mock_get.assert_called_once_with(
-            f"{BCRAConnector.BASE_URL}/estadisticas/v3.0/monetarias",
+            f"{BCRAConnector.BASE_URL}/estadisticas/v4.0/Monetarias",
             params=None,
             verify=False,
             timeout=ANY,
@@ -103,11 +109,9 @@ class TestBCRAConnector:
         pv = result[0]
         assert isinstance(pv, PrincipalesVariables)
         assert pv.idVariable == 1
-        assert pv.descripcion == "Test Variable v3"
-        assert pv.fecha == date(2024, 3, 5)
-        assert pv.valor == 100.0
+        assert pv.descripcion == "Test Variable v4"
         assert pv.categoria == "Indicadores Monetarios"
-        assert not hasattr(pv, "cdSerie")
+        assert pv.ultValorInformado == 100.0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
     def test_get_principales_variables_empty_response_v3(
@@ -116,7 +120,7 @@ class TestBCRAConnector:
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
         connector: BCRAConnector,
     ) -> None:
-        """Test handling of empty response for principal variables (v3.0)."""
+        """Test handling of empty response for principal variables (v4.0)."""
         mock_get.return_value = mock_api_response({"results": []}, 200)
         result: List[PrincipalesVariables] = connector.get_principales_variables()
 
@@ -130,12 +134,21 @@ class TestBCRAConnector:
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
         connector: BCRAConnector,
     ) -> None:
-        """Test successful retrieval of variable data (v3.0 format)."""
-        mock_data_v3: Dict[str, Any] = {
-            "metadata": {"resultset": {"count": 1, "offset": 0, "limit": 10}},
-            "results": [{"idVariable": 1, "fecha": "2024-03-05", "valor": 100.0}],
+        """Test successful retrieval of variable data (v4.0 format)."""
+        mock_data_v4: Dict[str, Any] = {
+            "status": 200,
+            "metadata": {"resultset": {"count": 2, "offset": 0, "limit": 10}},
+            "results": [
+                {
+                    "idVariable": 1,
+                    "detalle": [
+                        {"fecha": "2024-03-04", "valor": 95.0},
+                        {"fecha": "2024-03-05", "valor": 100.0},
+                    ],
+                }
+            ],
         }
-        mock_get.return_value = mock_api_response(mock_data_v3, 200)
+        mock_get.return_value = mock_api_response(mock_data_v4, 200)
 
         start_date = datetime(2024, 3, 1)
         end_date = datetime(2024, 3, 5)
@@ -144,32 +157,34 @@ class TestBCRAConnector:
             1, desde=start_date, hasta=end_date, limit=10, offset=0
         )
 
-        expected_url = f"{BCRAConnector.BASE_URL}/estadisticas/v3.0/monetarias/1"
+        expected_url = f"{BCRAConnector.BASE_URL}/estadisticas/v4.0/Monetarias/1"
         expected_params = {
-            "desde": "2024-03-01",
-            "hasta": "2024-03-05",
-            "limit": 10,
-            "offset": 0,
+            "Desde": "2024-03-01",
+            "Hasta": "2024-03-05",
+            "Limit": 10,
+            "Offset": 0,
         }
         mock_get.assert_called_once_with(
             expected_url, params=expected_params, verify=False, timeout=ANY
         )
 
         assert isinstance(response, DatosVariableResponse)
-        assert response.metadata.resultset.count == 1
+        assert response.status == 200
+        assert response.metadata.resultset.count == 2
         assert response.metadata.resultset.offset == 0
         assert response.metadata.resultset.limit == 10
         assert len(response.results) == 1
         dv = response.results[0]
         assert isinstance(dv, DatosVariable)
         assert dv.idVariable == 1
-        assert dv.fecha == date(2024, 3, 5)
-        assert dv.valor == 100.0
+        assert len(dv.detalle) == 2
+        assert dv.detalle[1].fecha == date(2024, 3, 5)
+        assert dv.detalle[1].valor == 100.0
 
     def test_get_datos_variable_invalid_dates_v3(
         self, connector: BCRAConnector
     ) -> None:
-        """Test handling of invalid date ranges (v3.0)."""
+        """Test handling of invalid date ranges (v4.0)."""
         with pytest.raises(
             ValueError,
             match="'desde' date must be earlier than or equal to 'hasta' date",
@@ -179,7 +194,7 @@ class TestBCRAConnector:
     def test_get_datos_variable_invalid_limit_offset_v3(
         self, connector: BCRAConnector
     ) -> None:
-        """Test validation for limit and offset in get_datos_variable (v3.0)."""
+        """Test validation for limit and offset in get_datos_variable (v4.0)."""
         valid_date = datetime(2024, 1, 1)
         with pytest.raises(ValueError, match="Limit must be between 10 and 3000"):
             connector.get_datos_variable(1, desde=valid_date, limit=5)
@@ -196,23 +211,28 @@ class TestBCRAConnector:
     def test_get_latest_value_success_v3(
         self, mock_get_datos_variable: Mock, connector: BCRAConnector
     ) -> None:
-        """Test successful retrieval of latest value (using v3.0)."""
+        """Test successful retrieval of latest value (using v4.0)."""
         mock_response_data = DatosVariableResponse(
+            status=200,
             metadata=Mock(resultset=Mock(count=3, offset=0, limit=10)),
             results=[
-                DatosVariable(idVariable=1, fecha=date(2024, 3, 3), valor=95.0),
-                DatosVariable(idVariable=1, fecha=date(2024, 3, 5), valor=100.0),
-                DatosVariable(idVariable=1, fecha=date(2024, 3, 4), valor=97.5),
+                DatosVariable(
+                    idVariable=1,
+                    detalle=[
+                        DetalleMonetaria(fecha=date(2024, 3, 3), valor=95.0),
+                        DetalleMonetaria(fecha=date(2024, 3, 5), valor=100.0),
+                        DetalleMonetaria(fecha=date(2024, 3, 4), valor=97.5),
+                    ],
+                )
             ],
         )
         mock_get_datos_variable.return_value = mock_response_data
 
-        result: DatosVariable = connector.get_latest_value(1)
+        result = connector.get_latest_value(1)
 
         mock_get_datos_variable.assert_any_call(1, limit=10)
 
-        assert isinstance(result, DatosVariable)
-        assert result.idVariable == 1
+        assert isinstance(result, DetalleMonetaria)
         assert result.fecha == date(2024, 3, 5)
         assert result.valor == 100.0
 
@@ -220,9 +240,11 @@ class TestBCRAConnector:
     def test_get_latest_value_no_data_v3(
         self, mock_get_datos_variable: Mock, connector: BCRAConnector
     ) -> None:
-        """Test handling of no data for latest value (using v3.0)."""
+        """Test handling of no data for latest value (using v4.0)."""
         mock_empty_response = DatosVariableResponse(
-            metadata=Mock(resultset=Mock(count=0, offset=0, limit=10)), results=[]
+            status=200,
+            metadata=Mock(resultset=Mock(count=0, offset=0, limit=10)),
+            results=[],
         )
         mock_get_datos_variable.side_effect = [mock_empty_response, mock_empty_response]
 
@@ -335,7 +357,7 @@ class TestBCRAConnector:
         """Test 404 HTTP error handling from _make_request."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             variable_id_for_test = 99999
-            mocked_api_url_path = f"estadisticas/v3.0/monetarias/{variable_id_for_test}"
+            mocked_api_url_path = f"estadisticas/v4.0/Monetarias/{variable_id_for_test}"
             full_mocked_url = f"{BCRAConnector.BASE_URL}/{mocked_api_url_path}"
             api_error_content_message = "Recurso Especifico No Encontrado"
 
@@ -392,7 +414,7 @@ class TestBCRAConnector:
         expected_match: str,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
     ) -> None:
-        """Test handling of various error responses using a v3.0 endpoint."""
+        """Test handling of various error responses using a v4.0 endpoint."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             mock_response_obj: Mock = mock_api_response(
                 {"errorMessages": error_messages},
