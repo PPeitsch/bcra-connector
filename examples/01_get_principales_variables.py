@@ -48,26 +48,32 @@ def main() -> None:
                 f"Category: {var.categoria if var.categoria else 'N/A'}"
             )
             if var.ultValorInformado is not None and var.ultFechaInformada:
-                logger.info(f"  Latest value: {var.ultValorInformado} ({var.ultFechaInformada.isoformat()})")
+                logger.info(
+                    f"  Latest value: {var.ultValorInformado} ({var.ultFechaInformada.isoformat()})"
+                )
             else:
                 logger.info("  Latest value: Not available")
 
         plot_count = min(10, len(variables))
         if plot_count > 0:
             # Filter variables that have ultValorInformado
-            plottable_vars = [v for v in variables[:plot_count] if v.ultValorInformado is not None]
-            
+            plottable_vars = [
+                v for v in variables[:plot_count] if v.ultValorInformado is not None
+            ]
+
             if plottable_vars:
                 fig, ax = plt.subplots(figsize=(12, 6))
                 ax.bar(
                     [
-                        (v.descripcion[:30] if v.descripcion else "N/A") + 
-                        (f" ({v.categoria[:10]})" if v.categoria else "")
+                        (v.descripcion[:30] if v.descripcion else "N/A")
+                        + (f" ({v.categoria[:10]})" if v.categoria else "")
                         for v in plottable_vars
                     ],
                     [v.ultValorInformado for v in plottable_vars],
                 )
-                ax.set_title(f"Top {len(plottable_vars)} Principal Variables/Series (v4.0)")
+                ax.set_title(
+                    f"Top {len(plottable_vars)} Principal Variables/Series (v4.0)"
+                )
                 ax.set_xlabel("Variables/Series (Category)")
                 ax.set_ylabel("Value")
                 plt.xticks(rotation=45, ha="right")

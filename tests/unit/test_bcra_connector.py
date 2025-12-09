@@ -280,7 +280,10 @@ class TestBCRAConnector:
                 )
             ],
         )
-        mock_get_datos_variable.side_effect = [mock_empty_response, mock_fallback_response]
+        mock_get_datos_variable.side_effect = [
+            mock_empty_response,
+            mock_fallback_response,
+        ]
 
         result = connector.get_latest_value(1)
 
@@ -288,7 +291,7 @@ class TestBCRAConnector:
         assert mock_get_datos_variable.call_count == 2
         mock_get_datos_variable.assert_any_call(1, limit=10)
         mock_get_datos_variable.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
-        
+
         # Verify we got the latest from fallback data
         assert isinstance(result, DetalleMonetaria)
         assert result.fecha == date(2024, 2, 15)

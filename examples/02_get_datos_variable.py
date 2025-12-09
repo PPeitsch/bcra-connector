@@ -99,7 +99,8 @@ def main() -> None:
         fig, ax = plt.subplots(figsize=(12, 6))
 
         dates = [
-            datetime.combine(dato.fecha, datetime.min.time()) for dato in all_data_points
+            datetime.combine(dato.fecha, datetime.min.time())
+            for dato in all_data_points
         ]
         values = [dato.valor for dato in all_data_points]
 

@@ -18,8 +18,8 @@ from scipy.stats import pearsonr
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .principales_variables import (
-    DatosVariable,
     DatosVariableResponse,
+    DetalleMonetaria,
     PrincipalesVariables,
 )
 from .rate_limiter import RateLimitConfig, RateLimiter

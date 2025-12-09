@@ -260,7 +260,9 @@ class TestDatosVariable:
     def test_datos_variable_missing_id(self) -> None:
         """Test handling of missing idVariable key."""
         with pytest.raises(ValueError, match="Missing key in DatosVariable data"):
-            DatosVariable.from_dict({"detalle": [{"fecha": "2024-01-01", "valor": 10.0}]})
+            DatosVariable.from_dict(
+                {"detalle": [{"fecha": "2024-01-01", "valor": 10.0}]}
+            )
 
 
 class TestDatosVariableResponse:
