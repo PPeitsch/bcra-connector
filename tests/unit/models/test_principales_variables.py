@@ -98,6 +98,16 @@ class TestDetalleMonetaria:
         ):
             DetalleMonetaria.from_dict({"fecha": "2024-01-01", "valor": "not-a-float"})
 
+    def test_detalle_monetaria_missing_fecha(self) -> None:
+        """Test handling of missing fecha key."""
+        with pytest.raises(ValueError, match="Missing key in DetalleMonetaria data"):
+            DetalleMonetaria.from_dict({"valor": 100.0})
+
+    def test_detalle_monetaria_missing_valor(self) -> None:
+        """Test handling of missing valor key."""
+        with pytest.raises(ValueError, match="Missing key in DetalleMonetaria data"):
+            DetalleMonetaria.from_dict({"fecha": "2024-01-01"})
+
 
 class TestPrincipalesVariables:
     """Test suite for PrincipalesVariables model (v4.0)."""
@@ -246,6 +256,11 @@ class TestDatosVariable:
         assert d1 == d2
         assert d1 != d3
         assert d1 != "not a DatosVariable"
+
+    def test_datos_variable_missing_id(self) -> None:
+        """Test handling of missing idVariable key."""
+        with pytest.raises(ValueError, match="Missing key in DatosVariable data"):
+            DatosVariable.from_dict({"detalle": [{"fecha": "2024-01-01", "valor": 10.0}]})
 
 
 class TestDatosVariableResponse:
