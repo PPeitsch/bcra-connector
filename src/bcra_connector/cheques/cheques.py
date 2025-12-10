@@ -5,7 +5,10 @@ Defines classes for handling bank entities, check details, and API responses.
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 @dataclass
@@ -37,6 +40,24 @@ class Entidad:
     def to_dict(self) -> Dict[str, Any]:
         """Convert the instance to a dictionary."""
         return {"codigoEntidad": self.codigo_entidad, "denominacion": self.denominacion}
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """
+        Convert the Entidad instance to a pandas DataFrame.
+
+        Requires pandas: ``pip install bcra-connector[pandas]``
+
+        :return: A single-row DataFrame with entity information.
+        :raises ImportError: If pandas is not installed.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError(
+                "pandas is required for to_dataframe(). "
+                "Install with: pip install bcra-connector[pandas]"
+            )
+        return pd.DataFrame([self.to_dict()])
 
 
 @dataclass
@@ -116,6 +137,52 @@ class Cheque:
             "denominacionEntidad": self.denominacion_entidad,
             "detalles": [d.to_dict() for d in self.detalles],
         }
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """
+        Convert the Cheque instance to a pandas DataFrame.
+
+        Returns a DataFrame with check information and flattened details.
+        Each row represents one detail entry from the detalles list.
+
+        Requires pandas: ``pip install bcra-connector[pandas]``
+
+        :return: DataFrame with check data and details.
+        :raises ImportError: If pandas is not installed.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError(
+                "pandas is required for to_dataframe(). "
+                "Install with: pip install bcra-connector[pandas]"
+            )
+        rows = [
+            {
+                "numeroCheque": self.numero_cheque,
+                "denunciado": self.denunciado,
+                "fechaProcesamiento": self.fecha_procesamiento,
+                "denominacionEntidad": self.denominacion_entidad,
+                "sucursal": d.sucursal,
+                "numeroCuenta": d.numero_cuenta,
+                "causal": d.causal,
+            }
+            for d in self.detalles
+        ]
+        if not rows:
+            # Return single row without details if no detalles exist
+            rows = [
+                {
+                    "numeroCheque": self.numero_cheque,
+                    "denunciado": self.denunciado,
+                    "fechaProcesamiento": self.fecha_procesamiento,
+                    "denominacionEntidad": self.denominacion_entidad,
+                    "sucursal": None,
+                    "numeroCuenta": None,
+                    "causal": None,
+                }
+            ]
+        return pd.DataFrame(rows)
 
 
 @dataclass
