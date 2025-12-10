@@ -9,15 +9,24 @@ project = "BCRA API Connector"
 copyright = "2024, Pablo Peitsch"
 author = "Pablo Peitsch"
 
-# The full version, including alpha/beta/rc tags
-release = "0.7.1"
+# Import version dynamically from package (single source of truth)
+from bcra_connector.__about__ import __version__  # noqa: E402
+
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
+    "myst_parser",
 ]
+
+# Support both RST and Markdown files
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

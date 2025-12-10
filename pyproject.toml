@@ -34,7 +34,22 @@ classifiers = [
     "Environment :: Console",
     "Typing :: Typed",
 ]
-keywords = ["bcra", "api", "connector", "argentina", "banco-central", "financial", "currency", "exchange-rates"]
+keywords = [
+    "bcra",
+    "bcra-api",
+    "python-bcra",
+    "banco-central-argentina",
+    "argentina-api",
+    "financial-data",
+    "exchange-rates",
+    "monetary-statistics",
+    "central-bank",
+    "economic-indicators",
+    "currency-exchange",
+    "tipo-cambio",
+    "dolar",
+    "inflation",
+]
 dependencies = [
     "requests>=2.32.0,<2.33.0",
     "urllib3>=2.2.1,<3.0.0",
