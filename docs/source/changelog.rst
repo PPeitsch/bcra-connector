@@ -64,6 +64,18 @@ Testing
 * All integration tests validated against live v4.0 API
 * MyPy type checking passing without errors
 
+0.6.2 - 2025-12-08
+------------------
+
+Fixed
+^^^^^
+* Corrected package name from ``bcra-api-connector`` to ``bcra-connector`` in installation documentation (#73).
+* Added missing imports to code examples in ``usage.rst`` and ``configuration.rst`` so they can be copied and run directly.
+* Updated ``examples.rst`` to include import statements by changing ``:lines: 11-`` to ``:lines: 6-`` for all example files.
+* Fixed all example files to use ``from bcra_connector import`` instead of ``from src.bcra_connector import``.
+* Removed unnecessary ``sys.path`` manipulation from example files (users should use ``pip install -e .`` for development).
+* Cleaned up unused imports (``sys``) from example files while keeping necessary ones (``os`` for ``save_plot()``).
+
 0.6.1 - 2025-12-08
 ------------------
 
