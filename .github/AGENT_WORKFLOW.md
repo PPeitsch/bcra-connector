@@ -70,6 +70,7 @@ Este proyecto usa **Release Automation**. El agente NO debe crear el release en 
 2.  **Editar Archivos de Versión**:
     - **`src/bcra_connector/__about__.py`**:
         - Actualizar variable `__version__ = "X.Y.Z"`.
+        - **NOTA**: `docs/source/conf.py` lee esta versión automáticamente, no requiere edición manual.
     - **`CHANGELOG.md`**:
         - Cambiar el título `## [Unreleased]` por `## [X.Y.Z] - YYYY-MM-DD`.
         - Añadir una nueva sección vacía `## [Unreleased]` arriba.
