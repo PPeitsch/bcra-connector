@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2025-12-10
+
+### Added
+
+- `AGENT.md` with project context for AI assistants (#78)
+- `myst_parser` integration for including `CHANGELOG.md` in ReadTheDocs (#78)
+
+### Changed
+
+- `docs/source/conf.py` now imports version dynamically from `__about__.py` (single source of truth) (#78)
+- Expanded PyPI keywords for better discoverability (`bcra-api`, `python-bcra`, `tipo-cambio`, etc.) (#78)
+- Updated `AGENT_WORKFLOW.md` with note about automatic version synchronization (#78)
+
 ## [0.7.1] - 2025-12-10
 
 ### Fixed
@@ -345,6 +358,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[0.7.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.1...v0.6.2
