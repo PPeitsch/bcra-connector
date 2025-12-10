@@ -5,7 +5,10 @@ Defines classes for handling economic indicators, their historical data, and API
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 # src/bcra_connector/principales_variables/principales_variables.py
@@ -147,6 +150,24 @@ class PrincipalesVariables:
             result["ultValorInformado"] = self.ultValorInformado
         return result
 
+    def to_dataframe(self) -> "pd.DataFrame":
+        """
+        Convert the PrincipalesVariables instance to a pandas DataFrame.
+
+        Requires pandas to be installed: ``pip install bcra-connector[pandas]``
+
+        :return: A single-row DataFrame with all variable attributes.
+        :raises ImportError: If pandas is not installed.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError(
+                "pandas is required for to_dataframe(). "
+                "Install with: pip install bcra-connector[pandas]"
+            )
+        return pd.DataFrame([self.to_dict()])
+
 
 @dataclass
 class DetalleMonetaria:
@@ -181,6 +202,24 @@ class DetalleMonetaria:
             "fecha": self.fecha.isoformat(),
             "valor": self.valor,
         }
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """
+        Convert the DetalleMonetaria instance to a pandas DataFrame.
+
+        Requires pandas: ``pip install bcra-connector[pandas]``
+
+        :return: A single-row DataFrame with fecha and valor.
+        :raises ImportError: If pandas is not installed.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError(
+                "pandas is required for to_dataframe(). "
+                "Install with: pip install bcra-connector[pandas]"
+            )
+        return pd.DataFrame([self.to_dict()])
 
 
 @dataclass
@@ -229,6 +268,31 @@ class DatosVariable:
             "idVariable": self.idVariable,
             "detalle": [item.to_dict() for item in self.detalle],
         }
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """
+        Convert the historical data to a pandas DataFrame.
+
+        Returns a DataFrame with columns: idVariable, fecha, valor.
+        Each row represents one data point from the detalle list.
+
+        Requires pandas: ``pip install bcra-connector[pandas]``
+
+        :return: DataFrame with all historical data points.
+        :raises ImportError: If pandas is not installed.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError(
+                "pandas is required for to_dataframe(). "
+                "Install with: pip install bcra-connector[pandas]"
+            )
+        rows = [
+            {"idVariable": self.idVariable, "fecha": d.fecha, "valor": d.valor}
+            for d in self.detalle
+        ]
+        return pd.DataFrame(rows)
 
     def __eq__(self, other: object) -> bool:
         """Compare DatosVariable instances based on idVariable."""

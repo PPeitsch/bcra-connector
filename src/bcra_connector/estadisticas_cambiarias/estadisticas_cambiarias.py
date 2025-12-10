@@ -5,7 +5,10 @@ Provides classes for currency quotations, historical data, and response handling
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 @dataclass
@@ -94,6 +97,37 @@ class CotizacionFecha:
                 for d in self.detalle
             ],
         }
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """
+        Convert the CotizacionFecha instance to a pandas DataFrame.
+
+        Returns a DataFrame with exchange rate information for each currency.
+        Columns: fecha, codigoMoneda, descripcion, tipoPase, tipoCotizacion.
+
+        Requires pandas: ``pip install bcra-connector[pandas]``
+
+        :return: DataFrame with exchange rate data.
+        :raises ImportError: If pandas is not installed.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError(
+                "pandas is required for to_dataframe(). "
+                "Install with: pip install bcra-connector[pandas]"
+            )
+        rows = [
+            {
+                "fecha": self.fecha,
+                "codigoMoneda": d.codigo_moneda,
+                "descripcion": d.descripcion,
+                "tipoPase": d.tipo_pase,
+                "tipoCotizacion": d.tipo_cotizacion,
+            }
+            for d in self.detalle
+        ]
+        return pd.DataFrame(rows)
 
 
 @dataclass
