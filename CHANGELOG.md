@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-12-10
+
+### Added
+
+- `to_dataframe()` method to `PrincipalesVariables` model for pandas DataFrame conversion (#79)
+- `to_dataframe()` method to `DetalleMonetaria` and `DatosVariable` models (#79)
+- `to_dataframe()` method to `Entidad` and `Cheque` models (#79)
+- `to_dataframe()` method to `CotizacionFecha` model (#79)
+- Optional `pandas` dependency: `pip install bcra-connector[pandas]` (#79)
+
+### Changed
+
+- Added `pandas` to mypy `ignore_missing_imports` configuration (#79)
+
 ## [0.7.2] - 2025-12-10
 
 ### Added
@@ -358,6 +372,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[0.8.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.2...v0.7.0
