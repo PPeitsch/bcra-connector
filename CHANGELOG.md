@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2025-12-10
+
+### Fixed
+
+- Updated `usage.rst` examples to use v4.0 API structure (`ultValorInformado`/`ultFechaInformada` instead of obsolete `valor`/`fecha`) (#76)
+- Fixed `get_datos_variable()` example in documentation to handle `DatosVariableResponse` correctly (#76)
+- Added missing 0.6.2 entry to `changelog.rst` (#76)
+- Updated comparison links in `CHANGELOG.md` to include v0.7.0 (#76)
+
 ## [0.7.0] - 2025-12-09
 
 ### ⚠️ BREAKING CHANGES
@@ -336,7 +345,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
-[Unreleased]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.0...HEAD
+[0.7.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.6.0...v0.6.1
