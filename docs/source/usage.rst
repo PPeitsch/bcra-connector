@@ -31,9 +31,9 @@ To retrieve all principal variables published by BCRA:
 
    variables = connector.get_principales_variables()
    for var in variables[:5]:  # Print first 5 for brevity
-       print(f"{var.descripcion}: {var.valor} ({var.fecha})")
+       print(f"{var.descripcion}: {var.ultValorInformado} ({var.ultFechaInformada})")
 
-This will return a list of `PrincipalesVariables` objects, each containing information about a specific variable.
+This will return a list of `PrincipalesVariables` objects, each containing information about a specific variable including metadata like `tipoSerie`, `periodicidad`, and `moneda`.
 
 Retrieving Historical Data
 --------------------------
@@ -45,11 +45,12 @@ To fetch historical data for a specific variable:
    id_variable = 1  # e.g., Reservas Internacionales del BCRA
    end_date = datetime.now()
    start_date = end_date - timedelta(days=30)
-   datos = connector.get_datos_variable(id_variable, start_date, end_date)
-   for dato in datos[-5:]:  # Print last 5 for brevity
-       print(f"{dato.fecha}: {dato.valor}")
+   response = connector.get_datos_variable(id_variable, desde=start_date, hasta=end_date)
+   for result in response.results:
+       for detalle in result.detalle[-5:]:  # Print last 5 for brevity
+           print(f"{detalle.fecha}: {detalle.valor}")
 
-This returns a list of `DatosVariable` objects, each representing a data point for the specified variable within the given date range.
+This returns a `DatosVariableResponse` object containing metadata and a list of `DatosVariable` results, each with a `detalle` list of `DetalleMonetaria` data points.
 
 Getting the Latest Value
 ------------------------
