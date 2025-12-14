@@ -3,7 +3,6 @@ Unit tests for to_dataframe() methods across all data models.
 Tests DataFrame conversion functionality for pandas integration.
 """
 
-from datetime import date
 from unittest.mock import patch
 
 import pytest
