@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2025-12-14
+
+### Added
+
+- Unit tests for `to_dataframe()` methods to improve coverage (#80)
+- `pandas` and `pandas-stubs` to pre-commit mypy environment (#80)
+
+### Changed
+
+- Removed unused `pandas` from mypy `ignore_missing_imports` (#80)
+
 ## [0.8.0] - 2025-12-10
 
 ### Added
@@ -372,6 +383,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[0.8.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.0...v0.7.1
