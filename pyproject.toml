@@ -125,8 +125,6 @@ module = [
     "scipy.*",
     "matplotlib.*",
     "matplotlib.pyplot",
-    "pandas",
-    "pandas.*",
     "bcra_connector",
     "bcra_connector.*",
     "_pytest.*",
