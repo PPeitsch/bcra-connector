@@ -30,21 +30,27 @@ class TestCentralDeDeudoresIntegration:
         with pytest.raises(BCRAApiError) as exc_info:
             connector.get_deudas(self.TEST_CUIT)
         # API returns 404 for unknown CUITs
-        assert "404" in str(exc_info.value) or "not found" in str(exc_info.value).lower()
+        assert (
+            "404" in str(exc_info.value) or "not found" in str(exc_info.value).lower()
+        )
 
     @pytest.mark.integration
     def test_get_deudas_historicas_not_found(self, connector: BCRAConnector) -> None:
         """Test that querying unknown CUIT for historical debts returns error."""
         with pytest.raises(BCRAApiError) as exc_info:
             connector.get_deudas_historicas(self.TEST_CUIT)
-        assert "404" in str(exc_info.value) or "not found" in str(exc_info.value).lower()
+        assert (
+            "404" in str(exc_info.value) or "not found" in str(exc_info.value).lower()
+        )
 
     @pytest.mark.integration
     def test_get_cheques_rechazados_not_found(self, connector: BCRAConnector) -> None:
         """Test that querying unknown CUIT for rejected checks returns error."""
         with pytest.raises(BCRAApiError) as exc_info:
             connector.get_cheques_rechazados(self.TEST_CUIT)
-        assert "404" in str(exc_info.value) or "not found" in str(exc_info.value).lower()
+        assert (
+            "404" in str(exc_info.value) or "not found" in str(exc_info.value).lower()
+        )
 
     @pytest.mark.integration
     def test_get_deudas_invalid_cuit_length(self, connector: BCRAConnector) -> None:

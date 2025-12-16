@@ -17,31 +17,37 @@ class EntidadDeuda:
     Represents a debt record from a financial entity.
 
     :param entidad: Name of the financial entity
-    :param situacion: Debtor classification (1-5 scale)
+    :param situacion: Debtor classification (1-5 scale, None if not applicable)
     :param monto: Amount in thousands of pesos
     :param en_revision: Whether the information is under review (Law 25.326)
     :param proceso_jud: Whether the information is under judicial process
     """
 
     entidad: str
-    situacion: int
+    situacion: Optional[int]
     monto: float
     en_revision: bool
     proceso_jud: bool
 
     def __post_init__(self) -> None:
         """Validate instance after initialization."""
-        if not 1 <= self.situacion <= 6:
-            raise ValueError("Situacion must be between 1 and 6")
+        if self.situacion is not None and not 1 <= self.situacion <= 5:
+            raise ValueError("Situacion must be between 1 and 5 when present")
         if self.monto < 0:
             raise ValueError("Monto must be non-negative")
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "EntidadDeuda":
         """Create an EntidadDeuda instance from a dictionary."""
+        # API returns 0 for "no situation", treat as None
+        situacion_raw = data.get("situacion")
+        situacion = None
+        if situacion_raw is not None and int(situacion_raw) != 0:
+            situacion = int(situacion_raw)
+
         return cls(
             entidad=data["entidad"],
-            situacion=int(data["situacion"]),
+            situacion=situacion,
             monto=float(data["monto"]),
             en_revision=bool(data.get("enRevision", False)),
             proceso_jud=bool(data.get("procesoJud", False)),
@@ -51,7 +57,7 @@ class EntidadDeuda:
         """Convert the instance to a dictionary."""
         return {
             "entidad": self.entidad,
-            "situacion": self.situacion,
+            "situacion": self.situacion if self.situacion is not None else 0,
             "monto": self.monto,
             "enRevision": self.en_revision,
             "procesoJud": self.proceso_jud,

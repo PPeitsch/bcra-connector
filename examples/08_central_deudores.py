@@ -39,7 +39,9 @@ def demonstrate_central_deudores() -> None:
             latest_periodo = deudor.periodos[0]
             print(f"   Último periodo: {latest_periodo.periodo}")
             for entidad in latest_periodo.entidades:
-                print(f"     - {entidad.entidad}: Sit. {entidad.situacion}, ${entidad.monto}k")
+                print(
+                    f"     - {entidad.entidad}: Sit. {entidad.situacion}, ${entidad.monto}k"
+                )
 
             # Convert to DataFrame (requires pandas)
             try:
@@ -63,7 +65,9 @@ def demonstrate_central_deudores() -> None:
             for periodo in historico.periodos[:5]:
                 total_entidades = len(periodo.entidades)
                 total_deuda = sum(e.monto for e in periodo.entidades)
-                print(f"     - {periodo.periodo}: {total_entidades} entities, ${total_deuda}k total")
+                print(
+                    f"     - {periodo.periodo}: {total_entidades} entities, ${total_deuda}k total"
+                )
 
     except BCRAApiError as e:
         print(f"   Error: {e}")

@@ -63,23 +63,46 @@ class TestEntidadDeuda:
 
     def test_invalid_situacion(self) -> None:
         """Test validation of situacion range."""
-        with pytest.raises(ValueError, match="Situacion must be between 1 and 6"):
+        with pytest.raises(ValueError, match="Situacion must be between 1 and 5"):
             EntidadDeuda(
-                entidad="TEST", situacion=0, monto=100.0, en_revision=False, proceso_jud=False
+                entidad="TEST",
+                situacion=0,
+                monto=100.0,
+                en_revision=False,
+                proceso_jud=False,
             )
 
     def test_invalid_situacion_too_high(self) -> None:
         """Test validation of situacion max value."""
-        with pytest.raises(ValueError, match="Situacion must be between 1 and 6"):
+        with pytest.raises(ValueError, match="Situacion must be between 1 and 5"):
             EntidadDeuda(
-                entidad="TEST", situacion=7, monto=100.0, en_revision=False, proceso_jud=False
+                entidad="TEST",
+                situacion=6,
+                monto=100.0,
+                en_revision=False,
+                proceso_jud=False,
             )
+
+    def test_situacion_none_allowed(self) -> None:
+        """Test that situacion can be None."""
+        entidad = EntidadDeuda(
+            entidad="TEST",
+            situacion=None,
+            monto=100.0,
+            en_revision=False,
+            proceso_jud=False,
+        )
+        assert entidad.situacion is None
 
     def test_negative_monto(self) -> None:
         """Test validation of negative monto."""
         with pytest.raises(ValueError, match="Monto must be non-negative"):
             EntidadDeuda(
-                entidad="TEST", situacion=1, monto=-10.0, en_revision=False, proceso_jud=False
+                entidad="TEST",
+                situacion=1,
+                monto=-10.0,
+                en_revision=False,
+                proceso_jud=False,
             )
 
 
@@ -113,7 +136,11 @@ class TestPeriodo:
             periodo="202412",
             entidades=[
                 EntidadDeuda(
-                    entidad="BANK", situacion=1, monto=50.0, en_revision=False, proceso_jud=False
+                    entidad="BANK",
+                    situacion=1,
+                    monto=50.0,
+                    en_revision=False,
+                    proceso_jud=False,
                 )
             ],
         )
@@ -133,7 +160,9 @@ class TestDeudor:
             "periodos": [
                 {
                     "periodo": "202403",
-                    "entidades": [{"entidad": "BANCO A", "situacion": 1, "monto": 100.0}],
+                    "entidades": [
+                        {"entidad": "BANCO A", "situacion": 1, "monto": 100.0}
+                    ],
                 }
             ],
         }
