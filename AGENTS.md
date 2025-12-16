@@ -78,7 +78,7 @@ cd docs && sphinx-build -b html source build/html
 
 ### Release Process
 
-See [AGENT_WORKFLOW.md](.github/AGENT_WORKFLOW.md) for detailed SOP.
+See [WORKFLOW.md](WORKFLOW.md) for detailed SOP.
 
 ---
 
