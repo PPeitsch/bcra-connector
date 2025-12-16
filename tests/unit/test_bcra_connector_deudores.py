@@ -214,3 +214,78 @@ class TestGetChequesRechazados:
         connector = BCRAConnector()
         with pytest.raises(BCRAApiError):
             connector.get_cheques_rechazados("20123456789")
+
+    @patch.object(BCRAConnector, "_make_request")
+    def test_get_cheques_rechazados_invalid_response(
+        self, mock_request: MagicMock
+    ) -> None:
+        """Test handling of invalid API response (missing results)."""
+        mock_request.return_value = {"status": 200}
+
+        connector = BCRAConnector()
+        with pytest.raises(BCRAApiError, match="Invalid response format"):
+            connector.get_cheques_rechazados("20123456789")
+
+    @patch.object(BCRAConnector, "_make_request")
+    def test_get_cheques_rechazados_results_not_dict(
+        self, mock_request: MagicMock
+    ) -> None:
+        """Test handling when results is not a dict."""
+        mock_request.return_value = {"status": 200, "results": []}
+
+        connector = BCRAConnector()
+        with pytest.raises(BCRAApiError, match="Invalid response format"):
+            connector.get_cheques_rechazados("20123456789")
+
+
+class TestConnectorExceptionHandling:
+    """Tests for exception handling branches in Central de Deudores methods."""
+
+    @patch.object(BCRAConnector, "_make_request")
+    def test_get_deudas_key_error(self, mock_request: MagicMock) -> None:
+        """Test KeyError handling when parsing response."""
+        # Missing required 'identificacion' key
+        mock_request.return_value = {
+            "status": 200,
+            "results": {"denominacion": "TEST", "periodos": []},
+        }
+
+        connector = BCRAConnector()
+        with pytest.raises(BCRAApiError, match="Unexpected response format"):
+            connector.get_deudas("20123456789")
+
+    @patch.object(BCRAConnector, "_make_request")
+    def test_get_deudas_historicas_invalid_response(
+        self, mock_request: MagicMock
+    ) -> None:
+        """Test handling when results is not a dict."""
+        mock_request.return_value = {"status": 200, "results": "invalid"}
+
+        connector = BCRAConnector()
+        with pytest.raises(BCRAApiError, match="Invalid response format"):
+            connector.get_deudas_historicas("20123456789")
+
+    @patch.object(BCRAConnector, "_make_request")
+    def test_get_deudas_historicas_key_error(self, mock_request: MagicMock) -> None:
+        """Test KeyError handling when parsing historical response."""
+        mock_request.return_value = {
+            "status": 200,
+            "results": {"identificacion": 20123456789, "periodos": []},
+        }
+
+        connector = BCRAConnector()
+        with pytest.raises(BCRAApiError, match="Unexpected response format"):
+            connector.get_deudas_historicas("20123456789")
+
+    @patch.object(BCRAConnector, "_make_request")
+    def test_get_cheques_rechazados_key_error(self, mock_request: MagicMock) -> None:
+        """Test KeyError handling when parsing cheques response."""
+        mock_request.return_value = {
+            "status": 200,
+            "results": {"identificacion": 20123456789, "causales": []},
+        }
+
+        connector = BCRAConnector()
+        with pytest.raises(BCRAApiError, match="Unexpected response format"):
+            connector.get_cheques_rechazados("20123456789")
+
