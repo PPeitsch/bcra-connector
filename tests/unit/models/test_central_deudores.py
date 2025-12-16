@@ -318,6 +318,30 @@ class TestEntidadCheques:
         assert entidad.entidad == 1
         assert len(entidad.detalle) == 1
 
+    def test_to_dict(self) -> None:
+        """Test converting EntidadCheques to dict."""
+        entidad = EntidadCheques(
+            entidad=1,
+            detalle=[
+                ChequeRechazado(
+                    nro_cheque=123,
+                    fecha_rechazo=date(2024, 1, 1),
+                    monto=1000.0,
+                    fecha_pago=None,
+                    fecha_pago_multa=None,
+                    estado_multa="IMPAGA",
+                    cta_personal=False,
+                    denom_juridica=None,
+                    en_revision=False,
+                    proceso_jud=False,
+                )
+            ],
+        )
+        result = entidad.to_dict()
+        assert result["entidad"] == 1
+        assert len(result["detalle"]) == 1
+        assert result["detalle"][0]["nroCheque"] == 123
+
 
 class TestCausalCheques:
     """Tests for CausalCheques dataclass."""
@@ -349,6 +373,35 @@ class TestCausalCheques:
         causal = CausalCheques.from_dict(data)
         assert causal.causal == "SIN FONDOS"
         assert len(causal.entidades) == 1
+
+    def test_to_dict(self) -> None:
+        """Test converting CausalCheques to dict."""
+        causal = CausalCheques(
+            causal="SIN FONDOS",
+            entidades=[
+                EntidadCheques(
+                    entidad=1,
+                    detalle=[
+                        ChequeRechazado(
+                            nro_cheque=456,
+                            fecha_rechazo=date(2024, 2, 1),
+                            monto=5000.0,
+                            fecha_pago=None,
+                            fecha_pago_multa=None,
+                            estado_multa="IMPAGA",
+                            cta_personal=False,
+                            denom_juridica=None,
+                            en_revision=False,
+                            proceso_jud=False,
+                        )
+                    ],
+                )
+            ],
+        )
+        result = causal.to_dict()
+        assert result["causal"] == "SIN FONDOS"
+        assert len(result["entidades"]) == 1
+        assert result["entidades"][0]["entidad"] == 1
 
 
 class TestChequesRechazados:
@@ -388,6 +441,42 @@ class TestChequesRechazados:
         assert cheques.identificacion == 20123456789
         assert cheques.denominacion == "PERSONA TEST"
         assert len(cheques.causales) == 1
+
+    def test_to_dict(self) -> None:
+        """Test converting ChequesRechazados to dict."""
+        cheques = ChequesRechazados(
+            identificacion=20123456789,
+            denominacion="TEST",
+            causales=[
+                CausalCheques(
+                    causal="SIN FONDOS",
+                    entidades=[
+                        EntidadCheques(
+                            entidad=1,
+                            detalle=[
+                                ChequeRechazado(
+                                    nro_cheque=789,
+                                    fecha_rechazo=date(2024, 3, 1),
+                                    monto=25000.0,
+                                    fecha_pago=None,
+                                    fecha_pago_multa=None,
+                                    estado_multa="IMPAGA",
+                                    cta_personal=True,
+                                    denom_juridica=None,
+                                    en_revision=False,
+                                    proceso_jud=False,
+                                )
+                            ],
+                        )
+                    ],
+                )
+            ],
+        )
+        result = cheques.to_dict()
+        assert result["identificacion"] == 20123456789
+        assert result["denominacion"] == "TEST"
+        assert len(result["causales"]) == 1
+        assert result["causales"][0]["causal"] == "SIN FONDOS"
 
     def test_to_dataframe_with_data(self) -> None:
         """Test converting to DataFrame with data."""
