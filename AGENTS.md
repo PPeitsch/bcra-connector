@@ -89,7 +89,7 @@ See [WORKFLOW.md](WORKFLOW.md) for detailed SOP.
 | Estadísticas Monetarias (Principales Variables) | v4.0 | ✅ Implemented |
 | Cheques Denunciados | v1.0 | ✅ Implemented |
 | Estadísticas Cambiarias | v1.0 | ✅ Implemented |
-| Central de Deudores | v1.0 | ❌ Not yet |
+| Central de Deudores | v1.0 | ✅ Implemented |
 
 ---
 

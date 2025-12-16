@@ -6,10 +6,20 @@ It includes modules for retrieving:
 - Principal Variables (Principales Variables)
 - Checks (Cheques)
 - Exchange Statistics (Estadísticas Cambiarias)
+- Central de Deudores (Debtor Registry)
 """
 
 from .__about__ import __version__
 from .bcra_connector import BCRAApiError, BCRAConnector
+from .central_deudores import (
+    CausalCheques,
+    ChequeRechazado,
+    ChequesRechazados,
+    Deudor,
+    EntidadCheques,
+    EntidadDeuda,
+    Periodo,
+)
 from .cheques import Cheque, ChequeDetalle, ChequeResponse, Entidad, EntidadResponse
 from .cheques import ErrorResponse as ChequesErrorResponse
 from .estadisticas_cambiarias import (
@@ -63,4 +73,12 @@ __all__ = [
     "CotizacionResponse",
     "CotizacionesResponse",
     "CambiariasErrorResponse",
+    # Central de Deudores
+    "EntidadDeuda",
+    "Periodo",
+    "Deudor",
+    "ChequeRechazado",
+    "EntidadCheques",
+    "CausalCheques",
+    "ChequesRechazados",
 ]

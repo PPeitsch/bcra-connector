@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-12-15
+
+### Added
+
+- **Central de Deudores API (v1.0)**: Full support for BCRA's Debtor Registry (#81)
+  - New dataclasses: `EntidadDeuda`, `Periodo`, `Deudor`, `ChequeRechazado`, `EntidadCheques`, `CausalCheques`, `ChequesRechazados`
+  - `get_deudas(identificacion)`: Query current debts by CUIT/CUIL/CDI
+  - `get_deudas_historicas(identificacion)`: Query historical debts (24 months)
+  - `get_cheques_rechazados(identificacion)`: Query rejected checks with causals
+  - `to_dataframe()` support for all new models
+- Example script `08_central_deudores.py` demonstrating API usage (#81)
+- Unit tests for Central de Deudores models and connector methods (#81)
+
+### Changed
+
+- Updated README with Central de Deudores feature and DataFrame support documentation (#81, #82)
+- Renamed agent docs: `AGENT.md` → `AGENTS.md`, moved `AGENT_WORKFLOW.md` → `WORKFLOW.md`
+
 ## [0.8.1] - 2025-12-14
 
 ### Added
@@ -383,6 +401,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[0.9.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/PPeitsch/bcra-connector/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.7.1...v0.7.2
