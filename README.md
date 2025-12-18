@@ -8,11 +8,13 @@
 [![Tests](https://github.com/PPeitsch/bcra-connector/workflows/Test%20and%20Publish/badge.svg)](https://github.com/PPeitsch/bcra-connector/actions/workflows/test-and-publish.yaml)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](.github/CODE_OF_CONDUCT.md)
 
-A Python connector for the BCRA (Banco Central de la República Argentina) APIs, covering Principal Variables/Monetary Statistics, Cheques, and Exchange Rate Statistics.
+A Python connector for the BCRA (Banco Central de la República Argentina) APIs, covering Principal Variables/Monetary Statistics, Cheques, Exchange Rate Statistics, and Central de Deudores (Debtor Registry).
 
 ## Features
 
-- **Comprehensive Data Access**: Fetch Principal Variables, Monetary Statistics, Checks information, and Exchange Rates.
+- **Comprehensive Data Access**: Fetch Principal Variables, Monetary Statistics, Checks information, Exchange Rates, and Debtor Registry data.
+- **Central de Deudores**: Query debtor information, historical debts, and rejected checks by CUIT/CUIL.
+- **DataFrame Support**: Convert API responses to pandas DataFrames with `to_dataframe()` methods.
 - **Historical Data**: Easily retrieve and analyze historical time series for any variable.
 - **Robustness**: Built-in retry logic with exponential backoff and safe failure handling.
 - **Developer Friendly**:
@@ -32,6 +34,9 @@ Full documentation, including installation instructions, usage examples, and API
 
 ```bash
 pip install bcra-connector
+
+# With pandas support for DataFrame conversion
+pip install bcra-connector[pandas]
 ```
 
 For detailed installation instructions and requirements, see our [Installation Guide](https://bcra-connector.readthedocs.io/en/latest/installation.html).

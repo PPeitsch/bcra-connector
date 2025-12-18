@@ -15,6 +15,7 @@ import requests
 import urllib3  # For urllib3.disable_warnings
 from scipy.stats import pearsonr
 
+from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .principales_variables import (
@@ -972,3 +973,123 @@ class BCRAConnector:
             "data_points": len(values),
             "percent_change": percent_change_val,
         }
+
+    # Central de Deudores methods (v1.0)
+    def get_deudas(self, identificacion: str) -> Deudor:
+        """
+        Fetch current debts for a CUIT/CUIL/CDI from the Central de Deudores.
+
+        :param identificacion: The CUIT/CUIL/CDI (11 digits) to query.
+        :return: A Deudor object with current debt information.
+        :raises ValueError: If identificacion is not 11 digits.
+        :raises BCRAApiError: If the API request fails.
+        """
+        identificacion = identificacion.replace("-", "").replace(" ", "")
+        if len(identificacion) != 11 or not identificacion.isdigit():
+            raise ValueError("Identificacion must be exactly 11 digits")
+
+        self.logger.info(f"Fetching current debts for identificacion: {identificacion}")
+        try:
+            data = self._make_request(f"CentralDeDeudores/v1.0/Deudas/{identificacion}")
+            if "results" not in data or not isinstance(data["results"], dict):
+                raise BCRAApiError(
+                    "Invalid response format: 'results' key missing or not a dict."
+                )
+            deudor = Deudor.from_dict(data["results"])
+            self.logger.info(
+                f"Successfully fetched debts for {deudor.denominacion} "
+                f"({len(deudor.periodos)} periods)"
+            )
+            return deudor
+        except (KeyError, ValueError) as e:
+            raise BCRAApiError(
+                f"Unexpected response format for deudas: {str(e)}"
+            ) from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            self.logger.exception(f"Unexpected error fetching deudas: {e}")
+            raise BCRAApiError(f"Error fetching deudas: {str(e)}") from e
+
+    def get_deudas_historicas(self, identificacion: str) -> Deudor:
+        """
+        Fetch historical debts (24 months) for a CUIT/CUIL/CDI.
+
+        :param identificacion: The CUIT/CUIL/CDI (11 digits) to query.
+        :return: A Deudor object with historical debt information.
+        :raises ValueError: If identificacion is not 11 digits.
+        :raises BCRAApiError: If the API request fails.
+        """
+        identificacion = identificacion.replace("-", "").replace(" ", "")
+        if len(identificacion) != 11 or not identificacion.isdigit():
+            raise ValueError("Identificacion must be exactly 11 digits")
+
+        self.logger.info(
+            f"Fetching historical debts for identificacion: {identificacion}"
+        )
+        try:
+            data = self._make_request(
+                f"CentralDeDeudores/v1.0/Deudas/Historicas/{identificacion}"
+            )
+            if "results" not in data or not isinstance(data["results"], dict):
+                raise BCRAApiError(
+                    "Invalid response format: 'results' key missing or not a dict."
+                )
+            deudor = Deudor.from_dict(data["results"])
+            self.logger.info(
+                f"Successfully fetched historical debts for {deudor.denominacion} "
+                f"({len(deudor.periodos)} periods)"
+            )
+            return deudor
+        except (KeyError, ValueError) as e:
+            raise BCRAApiError(
+                f"Unexpected response format for deudas historicas: {str(e)}"
+            ) from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            self.logger.exception(f"Unexpected error fetching deudas historicas: {e}")
+            raise BCRAApiError(f"Error fetching deudas historicas: {str(e)}") from e
+
+    def get_cheques_rechazados(self, identificacion: str) -> ChequesRechazados:
+        """
+        Fetch rejected checks for a CUIT/CUIL/CDI from the Central de Deudores.
+
+        :param identificacion: The CUIT/CUIL/CDI (11 digits) to query.
+        :return: A ChequesRechazados object with rejected check details.
+        :raises ValueError: If identificacion is not 11 digits.
+        :raises BCRAApiError: If the API request fails.
+        """
+        identificacion = identificacion.replace("-", "").replace(" ", "")
+        if len(identificacion) != 11 or not identificacion.isdigit():
+            raise ValueError("Identificacion must be exactly 11 digits")
+
+        self.logger.info(
+            f"Fetching rejected checks for identificacion: {identificacion}"
+        )
+        try:
+            data = self._make_request(
+                f"CentralDeDeudores/v1.0/Deudas/ChequesRechazados/{identificacion}"
+            )
+            if "results" not in data or not isinstance(data["results"], dict):
+                raise BCRAApiError(
+                    "Invalid response format: 'results' key missing or not a dict."
+                )
+            cheques = ChequesRechazados.from_dict(data["results"])
+            total_cheques = sum(
+                len(e.detalle) for c in cheques.causales for e in c.entidades
+            )
+            self.logger.info(
+                f"Successfully fetched {total_cheques} rejected checks "
+                f"for {cheques.denominacion}"
+            )
+            return cheques
+        except (KeyError, ValueError) as e:
+            raise BCRAApiError(
+                f"Unexpected response format for cheques rechazados: {str(e)}"
+            ) from e
+        except BCRAApiError:
+            raise
+        except Exception as e:
+            self.logger.exception(f"Unexpected error fetching cheques rechazados: {e}")
+            raise BCRAApiError(f"Error fetching cheques rechazados: {str(e)}") from e
