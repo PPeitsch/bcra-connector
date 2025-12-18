@@ -113,6 +113,52 @@ To fetch the evolution of a specific currency:
    for quotation in evolution[:5]:  # Print first 5 for brevity
        print(f"{quotation.fecha}: {quotation.detalle[0].tipo_cotizacion}")
 
+Using the Central de Deudores Module
+------------------------------------
+
+To query debtor information, historical debts, and rejected checks by CUIT/CUIL:
+
+.. code-block:: python
+
+   identificacion = "20123456789"  # Example CUIT
+   
+   # Get current debts
+   deudor = connector.get_deudas(identificacion)
+   print(f"Debtor: {deudor.denominacion}")
+   for periodo in deudor.periodos:
+       for entidad in periodo.entidades:
+           print(f"- {entidad.entidad}: Situación {entidad.situacion}, ${entidad.monto}k")
+
+   # Get historical debts (last 24 months)
+   historico = connector.get_deudas_historicas(identificacion)
+   print(f"Historical periods found: {len(historico.periodos)}")
+
+   # Get rejected checks
+   rejected = connector.get_cheques_rechazados(identificacion)
+   for causal in rejected.causales:
+       print(f"Causal: {causal.causal}")
+       for entidad in causal.entidades:
+           print(f"  - Entity {entidad.entidad}: {len(entidad.detalle)} checks")
+
+DataFrame Conversion
+--------------------
+
+Most data models include a `to_dataframe()` method for easy integration with data analysis workflows. This requires `pandas` to be installed (``pip install bcra-connector[pandas]``).
+
+.. code-block:: python
+
+   # Convert Principal Variables to DataFrame
+   variables = connector.get_principales_variables()
+   df_vars = variables.to_dataframe()
+
+   # Convert Central de Deudores info to DataFrame
+   deudor = connector.get_deudas(identificacion)
+   df_deudas = deudor.to_dataframe()
+
+   # Convert Rejected Checks to DataFrame
+   rejected = connector.get_cheques_rechazados(identificacion)
+   df_checks = rejected.to_dataframe()
+
 Error Handling
 --------------
 
