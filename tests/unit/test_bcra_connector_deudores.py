@@ -288,4 +288,3 @@ class TestConnectorExceptionHandling:
         connector = BCRAConnector()
         with pytest.raises(BCRAApiError, match="Unexpected response format"):
             connector.get_cheques_rechazados("20123456789")
-

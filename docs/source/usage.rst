@@ -121,7 +121,7 @@ To query debtor information, historical debts, and rejected checks by CUIT/CUIL:
 .. code-block:: python
 
    identificacion = "20123456789"  # Example CUIT
-   
+
    # Get current debts
    deudor = connector.get_deudas(identificacion)
    print(f"Debtor: {deudor.denominacion}")
