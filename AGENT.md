@@ -115,3 +115,48 @@ See [WORKFLOW.md](WORKFLOW.md) for detailed SOP.
 - [PyPI Package](https://pypi.org/project/bcra-connector/)
 - [Documentation](https://bcra-connector.readthedocs.io/)
 - [BCRA API Catalog](https://www.bcra.gob.ar/Catalogo/apis.asp)
+
+---
+
+## Skills & Tools (`.skills` submodule)
+
+This repository includes a Git submodule at `.skills/` containing a library of **reusable agent tools**.
+
+> ⚠️ **Never modify files inside `.skills/`** — it is a shared submodule used across multiple projects.
+
+### How to invoke a tool
+
+```bash
+# General syntax (run from repo root)
+python .skills/run_skill.py <tool_name> [arguments...]
+
+# Example: run tests and print report
+python .skills/run_skill.py run_tests_and_report --command "pytest tests/ -v"
+```
+
+### Tool index
+
+The full list of available tools with arguments and examples is at:
+```
+.skills/tools/AGENT_MANIFEST.md
+```
+
+### Most relevant tools for this project
+
+| Tool | Purpose |
+|------|---------|
+| `run_tests_and_report` | Run `pytest` and optionally comment results on a PR |
+| `update_changelog` | Parse git log and update `CHANGELOG.md` for a new release |
+| `release_tag_push` | Wait for CI to pass then safely push a version tag |
+| `lint_and_format_pr` | Checkout a PR, run `ruff`/`black`, push fixes |
+| `check_security_vulnerabilities` | Run `bandit` + `safety` for SAST/dependency scan |
+| `create_github_pr` | Open a Pull Request from CLI |
+| `read_github_issues` | Fetch and summarize open issues |
+| `generate_api_docs` | Generate HTML docs via `pdoc` |
+| `detect_os_and_terminal` | Detect OS/shell before running platform-specific commands |
+
+### Workflows
+
+Common agent workflows using these tools are documented as slash-command files in `.agent/workflows/`.
+Use them with `/workflow-name` or read the `.md` file directly.
+
