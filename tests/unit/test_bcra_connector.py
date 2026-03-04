@@ -444,7 +444,8 @@ class TestBCRAConnector:
         [
             (400, ["Bad Request"], "HTTP 400"),
             (404, ["Not Found"], "Resource not found"),
-            (500, ["Internal Server Error"], "HTTP 500"),
+            (500, ["Internal Server Error"], "El servidor del BCRA rechazó la conexión (HTTP 500)"),
+            (503, ["Service Unavailable"], "El servidor del BCRA rechazó la conexión (HTTP 503)"),
             (429, ["Too Many Requests"], "HTTP 429"),
         ],
     )
@@ -475,6 +476,37 @@ class TestBCRAConnector:
             assert expected_match in str(exc_info.value)
             if error_messages:
                 assert all(msg in str(exc_info.value) for msg in error_messages)
+
+    @patch("bcra_connector.bcra_connector.requests.Session.get")
+    def test_error_handling_http_500_html_body(
+        self,
+        mock_get: Mock,
+        connector: BCRAConnector,
+    ) -> None:
+        """Test that HTTP 500 with an HTML (non-JSON) body yields a clear BCRAApiError.
+
+        This simulates the real scenario where the BCRA server is down and returns
+        an HTML error page instead of JSON, which previously caused confusing internal
+        parse errors ('DatosVariable object has no attribute ...' style).
+        """
+        mock_resp = Mock()
+        mock_resp.status_code = 500
+        mock_resp.url = f"{BCRAConnector.BASE_URL}/estadisticas/v4.0/Monetarias"
+        mock_resp.reason = "Internal Server Error"
+        # Simulate a server returning HTML instead of JSON
+        mock_resp.json.side_effect = ValueError("No JSON object could be decoded")
+        mock_resp.raise_for_status.side_effect = HTTPError(response=mock_resp)
+        mock_get.return_value = mock_resp
+
+        with pytest.raises(BCRAApiError) as exc_info:
+            connector.get_principales_variables()
+
+        error_text = str(exc_info.value)
+        assert "El servidor del BCRA rechazó la conexión (HTTP 500)" in error_text
+        assert "caído o sobrecargado" in error_text
+        # Must NOT surface an internal parse error
+        assert "has no attribute" not in error_text
+        assert "JSONDecodeError" not in error_text
 
     def test_retry_mechanism(
         self,
