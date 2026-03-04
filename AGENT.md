@@ -159,4 +159,3 @@ The full list of available tools with arguments and examples is at:
 
 Common agent workflows using these tools are documented as slash-command files in `.agent/workflows/`.
 Use them with `/workflow-name` or read the `.md` file directly.
-

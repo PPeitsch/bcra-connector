@@ -444,8 +444,16 @@ class TestBCRAConnector:
         [
             (400, ["Bad Request"], "HTTP 400"),
             (404, ["Not Found"], "Resource not found"),
-            (500, ["Internal Server Error"], "El servidor del BCRA rechazó la conexión (HTTP 500)"),
-            (503, ["Service Unavailable"], "El servidor del BCRA rechazó la conexión (HTTP 503)"),
+            (
+                500,
+                ["Internal Server Error"],
+                "El servidor del BCRA rechazó la conexión (HTTP 500)",
+            ),
+            (
+                503,
+                ["Service Unavailable"],
+                "El servidor del BCRA rechazó la conexión (HTTP 503)",
+            ),
             (429, ["Too Many Requests"], "HTTP 429"),
         ],
     )
