@@ -136,6 +136,12 @@ class BCRAConnector:
 
                 if status_code == 404:
                     raise BCRAApiError(f"Resource not found (404): {error_msg}") from e
+                if 500 <= status_code <= 599:
+                    raise BCRAApiError(
+                        f"El servidor del BCRA rechazó la conexión (HTTP {status_code}). "
+                        f"El servidor puede estar caído o sobrecargado. "
+                        f"Detalle: {error_msg}"
+                    ) from e
                 raise BCRAApiError(error_msg) from e
 
             except requests.Timeout as e:
