@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `.gitignore` entries for the local agent workspace directories `_ref/`, `_wip/`
+  and `_done/` (#87)
+
+### Changed
+- Restructured agent documentation around a canonical `AGENTS.md` following the
+  [agents.md](https://agents.md) convention. `CLAUDE.md` and `AGENT.md` are now thin
+  pointers to it, so no entry point can dangle (#89)
+- Rewrote `WORKFLOW.md` for Linux/bash, replacing the incorrect Windows/PowerShell
+  environment and snippets (#89)
+- Reconciled the documented commit format with the repository's actual history
+  (`[type]: Description`, lowercase with colon) (#89)
+
 ### Fixed
 - `get_latest_value()` 30-day fallback reused `metadata.resultset.limit` from the
   preceding `limit=10` request, capping the fallback query at 10 results instead of
@@ -17,10 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore` had an entry appended as UTF-16LE, embedding NUL bytes mid-file so git
   never matched the pattern and `central-deudores-v1.pdf` was not actually ignored
   (#87)
-
-### Added
-- `.gitignore` entries for the local agent workspace directories `_ref/`, `_wip/`
-  and `_done/` (#87)
+- `CLAUDE.md` instructed agents to read `AGENTS.md`, which did not exist (the file was
+  `AGENT.md`), so a literal read failed (#89)
+- `WORKFLOW.md`, which holds the mandatory SOP, was not reachable from the documented
+  entry point and is now linked prominently (#89)
+- Documented the `.skills/` submodule bootstrap; without it every
+  `.agent/workflows/*.md` command fails (#89)
 
 ## [0.9.2] - 2026-03-04
 
