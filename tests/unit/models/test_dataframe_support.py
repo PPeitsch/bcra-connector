@@ -69,7 +69,7 @@ class TestPrincipalesVariablesToDataframe:
 
     def test_to_dataframe_returns_dataframe(self) -> None:
         """Test that to_dataframe returns a pandas DataFrame."""
-        import pandas as pd
+        pd = pytest.importorskip("pandas")
 
         from bcra_connector.principales_variables import PrincipalesVariables
 
@@ -97,7 +97,7 @@ class TestDetalleMonetariaToDataframe:
 
     def test_to_dataframe_returns_dataframe(self) -> None:
         """Test that to_dataframe returns a pandas DataFrame."""
-        import pandas as pd
+        pd = pytest.importorskip("pandas")
 
         from bcra_connector.principales_variables import DetalleMonetaria
 
@@ -114,7 +114,7 @@ class TestDatosVariableToDataframe:
 
     def test_to_dataframe_returns_flattened_dataframe(self) -> None:
         """Test that to_dataframe returns a flattened DataFrame."""
-        import pandas as pd
+        pd = pytest.importorskip("pandas")
 
         from bcra_connector.principales_variables import DatosVariable
 
@@ -133,7 +133,7 @@ class TestEntidadToDataframe:
 
     def test_to_dataframe_returns_dataframe(self) -> None:
         """Test that to_dataframe returns a pandas DataFrame."""
-        import pandas as pd
+        pd = pytest.importorskip("pandas")
 
         from bcra_connector.cheques import Entidad
 
@@ -151,7 +151,7 @@ class TestChequeToDataframe:
 
     def test_to_dataframe_returns_flattened_dataframe(self) -> None:
         """Test that to_dataframe returns flattened check data."""
-        import pandas as pd
+        pd = pytest.importorskip("pandas")
 
         from bcra_connector.cheques import Cheque
 
@@ -166,7 +166,7 @@ class TestChequeToDataframe:
 
     def test_to_dataframe_with_no_detalles(self) -> None:
         """Test to_dataframe when cheque has no detalles."""
-        import pandas as pd
+        pd = pytest.importorskip("pandas")
 
         from bcra_connector.cheques import Cheque
 
@@ -184,7 +184,7 @@ class TestCotizacionFechaToDataframe:
 
     def test_to_dataframe_returns_flattened_dataframe(self) -> None:
         """Test that to_dataframe returns flattened exchange rate data."""
-        import pandas as pd
+        pd = pytest.importorskip("pandas")
 
         from bcra_connector.estadisticas_cambiarias import CotizacionFecha
 

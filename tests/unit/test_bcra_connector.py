@@ -516,6 +516,59 @@ class TestBCRAConnector:
         assert "has no attribute" not in error_text
         assert "JSONDecodeError" not in error_text
 
+    @pytest.mark.parametrize("transient_code", [429, 500, 502, 503, 504])
+    def test_transient_http_errors_are_retried(
+        self,
+        connector: BCRAConnector,
+        transient_code: int,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+    ) -> None:
+        """Transient 429/5xx responses retry with backoff instead of failing."""
+        with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
+            with patch("bcra_connector.bcra_connector.time.sleep") as mock_sleep:
+                error_response: Mock = mock_api_response(
+                    {"errorMessages": ["Transient"]}, transient_code
+                )
+                error_response.raise_for_status.side_effect = HTTPError(
+                    response=error_response
+                )
+                mock_get.side_effect = [
+                    error_response,
+                    mock_api_response({"results": []}, 200),
+                ]
+
+                result: List[PrincipalesVariables] = (
+                    connector.get_principales_variables()
+                )
+
+                assert result == []
+                assert mock_get.call_count == 2
+                mock_sleep.assert_called_once_with(BCRAConnector.RETRY_DELAY)
+
+    def test_transient_http_error_raises_after_max_retries(
+        self,
+        connector: BCRAConnector,
+        mock_api_response: Callable[[Dict[str, Any], int], Mock],
+    ) -> None:
+        """A 5xx that never recovers raises only after MAX_RETRIES attempts."""
+        with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
+            with patch("bcra_connector.bcra_connector.time.sleep"):
+                error_response: Mock = mock_api_response(
+                    {"errorMessages": ["Service Unavailable"]}, 503
+                )
+                error_response.raise_for_status.side_effect = HTTPError(
+                    response=error_response
+                )
+                mock_get.return_value = error_response
+
+                with pytest.raises(BCRAApiError) as exc_info:
+                    connector.get_principales_variables()
+
+                assert mock_get.call_count == BCRAConnector.MAX_RETRIES
+                assert f"tras {BCRAConnector.MAX_RETRIES} intentos" in str(
+                    exc_info.value
+                )
+
     def test_retry_mechanism(
         self,
         connector: BCRAConnector,

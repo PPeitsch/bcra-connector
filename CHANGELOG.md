@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `_make_request()` now retries transient `429` and `5xx` responses with the same
+  exponential backoff already used for timeouts and connection errors, raising
+  `BCRAApiError` only after `MAX_RETRIES` attempts (#86)
+
+### Fixed
+- DataFrame tests imported `pandas` directly, so they errored instead of skipping
+  when the optional `[pandas]` extra was not installed (#86)
+
 ## [0.9.3] - 2026-09-17
 
 ### Added
