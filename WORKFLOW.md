@@ -146,6 +146,26 @@ Only when every check passes:
 gh pr merge --admin --merge --delete-branch
 ```
 
+**Always delete the branch on merge.** Use `--delete-branch`, or the "Delete branch"
+button when merging through the web UI. This is not housekeeping:
+
+- GitHub re-targets a **stacked** PR onto `main` only when its base branch is
+  **deleted** on merge. If the base branch survives, the stacked PR keeps pointing at
+  an already-merged branch, receives **no CI**, and goes stale unnoticed.
+- This is exactly what happened to #86 after #85 was merged without deleting its
+  branch.
+
+After merging a PR that another PR was stacked on, verify the re-target:
+
+```bash
+gh pr view <N> --json baseRefName     # expect "main"
+gh pr edit <N> --base main            # if it did not re-target
+```
+
+> **Repository setting:** enable **Settings -> General -> Automatically delete head
+> branches**. The `--delete-branch` flag only covers CLI merges; the setting also
+> covers merges done through the web UI, which is where this is most often missed.
+
 ---
 
 ## 4. Hard rules

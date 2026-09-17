@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entry point and is now linked prominently (#89)
 - Documented the `.skills/` submodule bootstrap; without it every
   `.agent/workflows/*.md` command fails (#89)
+- Documented that branches must be deleted on merge: leaving a base branch alive
+  prevents GitHub from re-targeting stacked PRs, which then receive no CI (#89)
 
 ## [0.9.2] - 2026-03-04
 
