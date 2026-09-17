@@ -136,12 +136,21 @@ class BCRAConnector:
 
                 if status_code == 404:
                     raise BCRAApiError(f"Resource not found (404): {error_msg}") from e
-                if 500 <= status_code <= 599:
-                    raise BCRAApiError(
-                        f"El servidor del BCRA rechazó la conexión (HTTP {status_code}). "
-                        f"El servidor puede estar caído o sobrecargado. "
-                        f"Detalle: {error_msg}"
-                    ) from e
+                # Server-side (5xx) and rate-limit (429) errors are transient: retry
+                # with exponential backoff before giving up.
+                if status_code == 429 or 500 <= status_code <= 599:
+                    self.logger.warning(
+                        f"Transient HTTP {status_code} from {url} "
+                        f"(attempt {attempt + 1}/{self.MAX_RETRIES}): {error_msg}"
+                    )
+                    if attempt == self.MAX_RETRIES - 1:
+                        raise BCRAApiError(
+                            f"El servidor del BCRA devolvió HTTP {status_code} tras "
+                            f"{self.MAX_RETRIES} intentos. El servidor puede estar caído "
+                            f"o sobrecargado. Detalle: {error_msg}"
+                        ) from e
+                    time.sleep(self.RETRY_DELAY * (2**attempt))
+                    continue
                 raise BCRAApiError(error_msg) from e
 
             except requests.Timeout as e:
