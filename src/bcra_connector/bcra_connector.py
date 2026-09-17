@@ -339,10 +339,10 @@ class BCRAConnector:
             self.logger.info(
                 f"No recent data found for {id_variable} with limit=10, checking last 30 days."
             )
-            # Use a limit that covers roughly a month of daily data if the API allows
-            effective_limit = (
-                response_data.metadata.resultset.limit if response_data.metadata else 30
-            )
+            # Use a limit that comfortably covers a month of daily data. Note we must
+            # NOT reuse metadata.resultset.limit here: it reflects the previous limit=10
+            # call and would cap the fallback query at 10 results.
+            effective_limit = 100
             response_data = self.get_datos_variable(
                 id_variable, desde=start_date, hasta=end_date, limit=effective_limit
             )

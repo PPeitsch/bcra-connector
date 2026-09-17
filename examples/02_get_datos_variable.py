@@ -104,7 +104,7 @@ def main() -> None:
         ]
         values = [dato.valor for dato in all_data_points]
 
-        ax.plot_date(np.array(dates), np.array(values), "-")
+        ax.plot(np.array(dates), np.array(values), "-")
         ax.set_title(
             f"'{display_variable_name}\\n(Page with limit={limit_param}, offset={offset_param} in last 90 days)"
         )
