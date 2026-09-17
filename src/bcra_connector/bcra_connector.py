@@ -145,9 +145,10 @@ class BCRAConnector:
                     )
                     if attempt == self.MAX_RETRIES - 1:
                         raise BCRAApiError(
-                            f"El servidor del BCRA devolvió HTTP {status_code} tras "
-                            f"{self.MAX_RETRIES} intentos. El servidor puede estar caído "
-                            f"o sobrecargado. Detalle: {error_msg}"
+                            f"El servidor del BCRA rechazó la conexión "
+                            f"(HTTP {status_code}) tras {self.MAX_RETRIES} intentos. "
+                            f"El servidor puede estar caído o sobrecargado. "
+                            f"Detalle: {error_msg}"
                         ) from e
                     time.sleep(self.RETRY_DELAY * (2**attempt))
                     continue
