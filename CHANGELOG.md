@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `get_latest_value()` 30-day fallback reused `metadata.resultset.limit` from the
+  preceding `limit=10` request, capping the fallback query at 10 results instead of
+  covering a month of daily data (#85)
+- `examples/02_get_datos_variable.py` used `Axes.plot_date`, which matplotlib removed
+  from its type stubs, breaking the Code Quality job (#85)
+- `.gitignore` had an entry appended as UTF-16LE, embedding NUL bytes mid-file so git
+  never matched the pattern and `central-deudores-v1.pdf` was not actually ignored
+  (#87)
+
+### Added
+- `.gitignore` entries for the local agent workspace directories `_ref/`, `_wip/`
+  and `_done/` (#87)
+
 ## [0.9.2] - 2026-03-04
 
 ### Changed
