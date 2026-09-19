@@ -1,4 +1,4 @@
-
-sphinx>=4.0.0
-sphinx_rtd_theme
-myst-parser>=2.0.0
+# Kept for tools that expect a requirements file. The list of docs dependencies
+# lives in pyproject.toml's [docs] extra; Read the Docs installs that (see
+# .readthedocs.yaml).
+.[docs]

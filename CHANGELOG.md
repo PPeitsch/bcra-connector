@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `docs` extra with the documentation dependencies (`sphinx`, `sphinx-rtd-theme`,
+  `myst-parser`), so `pip install -e ".[docs]"` is enough to build the docs locally.
+  `docs/requirements.txt` and `.readthedocs.yaml` now point at it instead of keeping a
+  second list (#115)
+
+### Changed
+- `pre-commit` hooks updated (`pre-commit-hooks` v6.0.0, `black` 26.5.1, `isort` 9.0.1,
+  `flake8` 7.3.0, `mypy` v2.3.1), which removes the deprecated stage-name warnings. The
+  mypy hook now pins the newest pandas/numpy that still support Python 3.10, the
+  project's minimum: pandas 3 and pandas-stubs 3 require 3.11+, and mypy silently typed
+  their `DataFrame` as `Any` (#115)
+
+### Fixed
+- Documentation: the installation guide listed `matplotlib` and `setuptools` as runtime
+  dependencies and an outdated `requests` range, and linked to a `troubleshooting` page
+  that doesn't exist (#115)
+
 ## [0.12.0] - 2026-09-19
 
 ### Added
