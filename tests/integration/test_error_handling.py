@@ -21,7 +21,6 @@ class TestErrorHandling:
         """Create a connector with very short timeouts."""
         timeout_config = TimeoutConfig(connect=0.001, read=0.001)
         return BCRAConnector(
-            verify_ssl=False,
             timeout=timeout_config,
             rate_limit=RateLimitConfig(calls=5, period=1.0, _burst=10),
             debug=True,
@@ -31,7 +30,6 @@ class TestErrorHandling:
     def strict_rate_limit_connector(self) -> BCRAConnector:
         """Create a connector with strict rate limiting for testing."""
         return BCRAConnector(
-            verify_ssl=False,
             rate_limit=RateLimitConfig(calls=1, period=2.0, _burst=1),
             debug=True,
         )
@@ -45,7 +43,6 @@ class TestErrorHandling:
     def test_connection_error(self) -> None:
         """Test handling of connection errors when calling a v3.0 endpoint."""
         connector = BCRAConnector(
-            verify_ssl=False,
             timeout=TimeoutConfig(connect=0.1, read=0.1),
             rate_limit=RateLimitConfig(calls=5, period=1.0),
         )
@@ -159,7 +156,7 @@ class TestErrorHandling:
             return response
 
         connector_for_retry = BCRAConnector(
-            verify_ssl=False, rate_limit=RateLimitConfig(calls=10, period=1.0)
+            rate_limit=RateLimitConfig(calls=10, period=1.0)
         )
         monkeypatch.setattr(
             connector_for_retry.session, "get", mock_request_with_retries

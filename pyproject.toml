@@ -21,6 +21,8 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Pytest",
     "Topic :: Office/Business :: Financial",
@@ -64,7 +66,7 @@ analytics = [
 ]
 dev = [
     "twine>=5.1.1",
-    "matplotlib>=3.7.3,<3.8.0",
+    "matplotlib>=3.7.3",
     "setuptools>=78.1.1",
     "pytest>=6.0.0,<8.0.0",
     "pytest-cov>=4.1.0",
@@ -141,7 +143,8 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
-addopts = "--cov-report=term --cov-report=xml"
+# Integration tests hit the live BCRA API; run them with `pytest -m integration`.
+addopts = "--cov-report=term --cov-report=xml -m 'not integration'"
 testpaths = ["tests"]
 python_files = ["*_tests.py", "test_*.py"]
 markers = [
