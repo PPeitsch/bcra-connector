@@ -33,7 +33,7 @@ body:
     attributes:
       label: Python Version
       description: Which Python version(s) have you tested with?
-      placeholder: "Python 3.9, 3.10, 3.11"
+      placeholder: "Python 3.10, 3.11"
     validations:
       required: true
 

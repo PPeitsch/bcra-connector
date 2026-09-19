@@ -6,7 +6,7 @@ This guide provides detailed instructions for installing the BCRA API Connector 
 Prerequisites
 -------------
 
-- Python 3.9 or higher
+- Python 3.10 or higher
 - pip (Python package installer)
 
 Quick Installation
