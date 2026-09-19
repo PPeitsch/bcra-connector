@@ -51,23 +51,24 @@ Get up and running in seconds:
 ```python
 from bcra_connector import BCRAConnector
 
-# Initialize the connector
 connector = BCRAConnector()
 
-# 1. List principal variables published by BCRA
+# 1. Catalog of monetary series, with each one's latest value
 variables = connector.get_principales_variables()
-print(f"Found {len(variables)} variables.")
+print(f"Found {len(variables)} series")
 
-# 2. Get the latest value for a specific variable (e.g., using the ID of the first one)
-if variables:
-    target_var = variables[0]
-    print(f"Fetching data for: {target_var.descripcion} (ID: {target_var.idVariable})")
+# 2. Latest value of a series, by ID (1 = Reservas internacionales)
+latest = connector.get_latest_value(1)
+print(f"Reserves: {latest.valor} on {latest.fecha}")
 
-    latest = connector.get_latest_value(target_var.idVariable)
-    print(f"Latest Value: {latest.valor} on {latest.fecha}")
+# 3. Last 30 days of a series, by name (newest first, as the API returns it)
+history = connector.get_variable_history("Reservas internacionales", days=30)
+for point in history[:5]:
+    print(point.fecha, point.valor)
 
-# 3. Get historical data (last 30 days)
-#    (Note: Date range filtering is handled by the API or post-processing)
+# 4. Official exchange rate: pesos per dollar
+usd_ars = connector.get_currency_pair_evolution("USD", "ARS", days=7)
+print(f"USD/ARS on {usd_ars[-1]['fecha']}: {usd_ars[-1]['tasa']}")
 ```
 
 ## Contributing
