@@ -583,68 +583,42 @@ class TestBCRAConnectorExtended:
                 connector.get_currency_pair_evolution("USD", "EUR")
 
         # Success logic with division by zero avoidance and alignment
-        # Mock responses
         d1 = date(2024, 1, 1)
         d2 = date(2024, 1, 2)
 
         def mock_get_ev(code, *args, **kwargs):
-            if code == "USD":
-                return [
-                    CotizacionFecha(
-                        fecha=d1,
-                        detalle=[
-                            CotizacionDetalle(
-                                codigo_moneda="USD",
-                                descripcion="D",
-                                tipo_pase=0.0,
-                                tipo_cotizacion=100.0,
-                            )
-                        ],
-                    ),
-                    CotizacionFecha(
-                        fecha=d2,
-                        detalle=[
-                            CotizacionDetalle(
-                                codigo_moneda="USD",
-                                descripcion="D",
-                                tipo_pase=0.0,
-                                tipo_cotizacion=0.0,
-                            )
-                        ],
-                    ),  # Zero val
-                ]
-            else:  # EUR
-                return [
-                    CotizacionFecha(
-                        fecha=d1,
-                        detalle=[
-                            CotizacionDetalle(
-                                codigo_moneda="EUR",
-                                descripcion="E",
-                                tipo_pase=0.0,
-                                tipo_cotizacion=200.0,
-                            )
-                        ],
-                    ),
-                    CotizacionFecha(
-                        fecha=d2,
-                        detalle=[
-                            CotizacionDetalle(
-                                codigo_moneda="EUR",
-                                descripcion="E",
-                                tipo_pase=0.0,
-                                tipo_cotizacion=200.0,
-                            )
-                        ],
-                    ),
-                ]
+            assert code == "EUR"  # USD/EUR only needs the EUR series
+            return [
+                CotizacionFecha(
+                    fecha=d1,
+                    detalle=[
+                        CotizacionDetalle(
+                            codigo_moneda="EUR",
+                            descripcion="E",
+                            tipo_pase=2.0,
+                            tipo_cotizacion=200.0,
+                        )
+                    ],
+                ),
+                CotizacionFecha(
+                    fecha=d2,
+                    detalle=[
+                        CotizacionDetalle(
+                            codigo_moneda="EUR",
+                            descripcion="E",
+                            tipo_pase=0.0,
+                            tipo_cotizacion=0.0,
+                        )
+                    ],
+                ),  # Zero val
+            ]
 
         with patch.object(connector, "get_currency_evolution", side_effect=mock_get_ev):
             res = connector.get_currency_pair_evolution("USD", "EUR")
-            # d1: 200/100 = 2.0
-            # d2: USD 0 -> skipped
+            # d1: 1 USD = 1 / 2.0 EUR
+            # d2: EUR 0 -> skipped
             assert len(res) == 1
-            assert res[0]["tasa"] == 2.0
+            assert res[0]["tasa"] == 0.5
 
         # Helper _get_cotizacion_detalle errors
         # Let's force a ValueError by returning CotizacionFecha without the expected currency

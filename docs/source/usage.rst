@@ -113,6 +113,23 @@ To fetch the evolution of a specific currency:
    for quotation in evolution[:5]:  # Print first 5 for brevity
        print(f"{quotation.fecha}: {quotation.detalle[0].tipo_cotizacion}")
 
+Each quotation has two rates: ``tipo_cotizacion`` (pesos per unit) and ``tipo_pase``
+(US dollars per unit). The API reports ``tipo_cotizacion`` as ``0`` for ARS, gold (XAU)
+and silver (XAG), and ``tipo_pase`` as ``0`` for USD itself and for ``REF`` (the
+Com. 3500 reference rate).
+
+To get the evolution of a currency pair:
+
+.. code-block:: python
+
+   for point in connector.get_currency_pair_evolution("USD", "ARS", days=7):
+       print(f"{point['fecha']}: {point['tasa']:.2f}")  # pesos per dollar
+
+``tasa`` follows the ``BASE/QUOTE`` convention: the amount of the quote currency for one
+unit of the base currency (``EUR/USD`` ~ 1.15 dollars per euro). The rate is computed
+through the dollar, so any currency with ``tipo_pase`` works (including ARS and XAU), and
+a pair against USD needs a single request. ``REF`` has no dollar rate and yields no points.
+
 Using the Central de Deudores Module
 ------------------------------------
 
