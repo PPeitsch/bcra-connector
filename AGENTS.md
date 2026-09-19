@@ -74,6 +74,10 @@ pre-commit run --all-files && pytest
 `pre-commit` runs trailing-whitespace, end-of-file, YAML/TOML checks, merge-conflict
 and debug-statement checks, then `black`, `isort`, `flake8` and `mypy`.
 
+`pytest` skips the tests marked `integration` (they call the live BCRA API). Run them
+with `pytest -m integration` when touching request/response handling; in CI they run
+in `.github/workflows/integration.yaml` (manual and weekly), not on PRs.
+
 > **Local and CI must agree.** If `pre-commit` passes locally but CI's Code Quality
 > job fails, the hook's `additional_dependencies` have drifted from the pinned dev
 > dependencies — fix the pin rather than working around the error.
