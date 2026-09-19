@@ -162,21 +162,37 @@ Most data models include a `to_dataframe()` method for easy integration with dat
 Error Handling
 --------------
 
-The connector uses custom exceptions to handle errors. Always wrap your code in try-except blocks to handle potential `BCRAApiError` exceptions:
+Every API failure raises ``BCRAApiError`` or one of its subclasses, so catching
+``BCRAApiError`` handles all of them. The subclasses and the ``status_code`` attribute
+(``None`` when there was no HTTP response, e.g. a timeout) let you react to specific
+outcomes without parsing messages:
+
+- ``BCRANotFoundError``: HTTP 404 (unknown variable, CUIT without data, unknown entity).
+- ``BCRARateLimitError``: HTTP 429 that persisted after the retries.
+- ``BCRAServerError``: HTTP 5xx that persisted after the retries.
+
+Invalid arguments raise ``ValueError`` instead: a negative ``days``, a CUIT that isn't
+11 digits, or an entity name in ``check_denunciado()`` that matches no entity or
+several.
 
 .. code-block:: python
 
-   import os
-   import sys
-   import logging
-   from typing import Callable, Type, Any
-   from datetime import datetime, timedelta
-   from bcra_connector import BCRAApiError, BCRAConnector
+   from bcra_connector import (
+       BCRAApiError,
+       BCRAConnector,
+       BCRANotFoundError,
+       BCRAServerError,
+   )
 
+   connector = BCRAConnector()
    try:
-       variables = connector.get_principales_variables()
+       deudor = connector.get_deudas("20123456789")
+   except BCRANotFoundError:
+       deudor = None  # No data for this CUIT
+   except BCRAServerError as e:
+       print(f"BCRA unavailable (HTTP {e.status_code}), try again later")
    except BCRAApiError as e:
-       print(f"An error occurred: {str(e)}")
+       print(f"Request failed: {e}")
 
 Advanced Usage
 --------------

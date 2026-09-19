@@ -10,6 +10,7 @@ import math
 import re
 import statistics
 import time
+import unicodedata
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
@@ -19,6 +20,12 @@ import urllib3  # For urllib3.disable_warnings
 from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
+from .exceptions import (  # noqa: F401  (re-exported for backwards compatibility)
+    BCRAApiError,
+    BCRANotFoundError,
+    BCRARateLimitError,
+    BCRAServerError,
+)
 from .principales_variables import (
     DatosVariableResponse,
     DetalleMonetaria,
@@ -38,6 +45,13 @@ def _redact(text: str) -> str:
     return _IDENTIFICACION_RE.sub(r"\1********\2", text)
 
 
+def _normalize_name(name: str) -> str:
+    """Casefold, strip accents and collapse whitespace for name matching."""
+    decomposed = unicodedata.normalize("NFKD", name)
+    stripped = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return " ".join(stripped.casefold().split())
+
+
 def _has_active_handler(logger: logging.Logger) -> bool:
     """Whether a record from ``logger`` would reach a handler other than NullHandler."""
     current: Optional[logging.Logger] = logger
@@ -48,12 +62,6 @@ def _has_active_handler(logger: logging.Logger) -> bool:
             return False
         current = current.parent
     return False
-
-
-class BCRAApiError(Exception):
-    """Custom exception for BCRA API errors."""
-
-    pass
 
 
 class BCRAConnector:
@@ -172,7 +180,9 @@ class BCRAConnector:
                     error_msg += f": {e.response.reason}"
 
                 if status_code == 404:
-                    raise BCRAApiError(f"Resource not found (404): {error_msg}") from e
+                    raise BCRANotFoundError(
+                        f"Resource not found (404): {error_msg}", status_code
+                    ) from e
                 # Server-side (5xx) and rate-limit (429) errors are transient: retry
                 # with exponential backoff before giving up.
                 if status_code == 429 or 500 <= status_code <= 599:
@@ -182,15 +192,21 @@ class BCRAConnector:
                         f"{_redact(error_msg)}"
                     )
                     if attempt == self.MAX_RETRIES - 1:
-                        raise BCRAApiError(
+                        error_cls = (
+                            BCRARateLimitError
+                            if status_code == 429
+                            else BCRAServerError
+                        )
+                        raise error_cls(
                             f"El servidor del BCRA rechazó la conexión "
                             f"(HTTP {status_code}) tras {self.MAX_RETRIES} intentos. "
                             f"El servidor puede estar caído o sobrecargado. "
-                            f"Detalle: {error_msg}"
+                            f"Detalle: {error_msg}",
+                            status_code,
                         ) from e
                     time.sleep(self.RETRY_DELAY * (2**attempt))
                     continue
-                raise BCRAApiError(error_msg) from e
+                raise BCRAApiError(error_msg, status_code) from e
 
             except requests.Timeout as e:
                 self.logger.error(
@@ -858,11 +874,17 @@ class BCRAConnector:
         """
         Check if a check is reported as stolen or lost.
 
-        :param entity_name: The name of the financial entity (case-insensitive search).
+        The entity is matched by name, ignoring case and accents: an exact match
+        wins; otherwise a single entity containing ``entity_name`` is used.
+
+        :param entity_name: The name of the financial entity, or a unique part of it.
         :param check_number: The check number. Must be positive.
-        :return: True if the check is reported, False otherwise.
-        :raises ValueError: If the entity is not found or check_number is invalid.
-        :raises BCRAApiError: If the API request fails (other than a 404 for the check itself).
+        :return: True if the check is reported, False otherwise (the API answers a
+            check that isn't reported with ``denunciado: false``).
+        :raises ValueError: If no entity or several entities match, or check_number
+            is invalid.
+        :raises BCRANotFoundError: If the API doesn't know the entity (HTTP 404).
+        :raises BCRAApiError: If the API request fails.
         """
         if check_number <= 0:
             raise ValueError("Check number must be positive.")
@@ -873,26 +895,11 @@ class BCRAConnector:
                 f"Could not get entities to check denounced status for '{entity_name}': {e}"
             )
             raise
-        normalized_entity_name = entity_name.lower().strip()
-        entity = next(
-            (
-                e
-                for e in entities
-                if e.denominacion and e.denominacion.lower() == normalized_entity_name
-            ),
-            None,
-        )
-        if not entity:
-            raise ValueError(f"Entity '{entity_name}' not found")
+        entity = self._find_entity(entities, entity_name)
         try:
             cheque = self.get_cheque_denunciado(entity.codigo_entidad, check_number)
             return cheque.denunciado
         except BCRAApiError as e:
-            if "404" in str(e) or "not found" in str(e).lower():
-                self.logger.info(
-                    f"Check {check_number} for entity {entity.codigo_entidad} ({entity_name}) not found, assuming not denounced."
-                )
-                return False
             self.logger.error(
                 f"API error checking denounced status for check {check_number} of entity '{entity_name}': {e}"
             )
@@ -904,6 +911,29 @@ class BCRAConnector:
             raise BCRAApiError(
                 f"Unexpected error during check verification for '{entity_name}', check {check_number}: {e}"
             ) from e
+
+    @staticmethod
+    def _find_entity(entities: List[Entidad], entity_name: str) -> Entidad:
+        """Resolve an entity by name: exact match first, then a unique substring."""
+        query = _normalize_name(entity_name)
+        named = [
+            (e, _normalize_name(e.denominacion)) for e in entities if e.denominacion
+        ]
+        exact = [e for e, name in named if name == query]
+        if exact:
+            return exact[0]
+        partial = [e for e, name in named if query and query in name]
+        if len(partial) == 1:
+            return partial[0]
+        if not partial:
+            raise ValueError(f"Entity '{entity_name}' not found")
+        names = sorted(e.denominacion for e in partial)
+        shown = 10
+        candidates = ", ".join(names[:shown]) + (", ..." if len(names) > shown else "")
+        raise ValueError(
+            f"Entity '{entity_name}' matches {len(partial)} entities: {candidates}. "
+            "Use a more specific name."
+        )
 
     def get_latest_quotations(self) -> Dict[str, float]:
         """

@@ -16,6 +16,13 @@ BCRAConnector
    :undoc-members:
    :show-inheritance:
 
+Exceptions
+----------
+
+.. automodule:: src.bcra_connector.exceptions
+   :members:
+   :show-inheritance:
+
 Principales Variables (Monetarias v4.0)
 ---------------------------------------
 
