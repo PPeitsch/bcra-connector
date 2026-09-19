@@ -55,14 +55,16 @@ repos:
     hooks:
       - id: mypy
         args: ["--explicit-package-bases"]
+        # Exact pins so the hook environment is the same locally and in CI.
+        # They must have wheels for the Code Quality job's Python (3.11).
         additional_dependencies: [
-            "types-requests>=2.31.0",
-            "types-urllib3>=1.26.0",
-            "numpy~=1.26.4",
-            "pytest>=6.0.0",
-            "matplotlib>=3.7.3",  # Añadir matplotlib para los ejemplos
-            "pandas>=1.5.0",
-            "pandas-stubs>=1.5.0",
+            "types-requests==2.33.0.20260906",
+            "types-urllib3==1.26.25.14",
+            "numpy==2.4.6",
+            "pytest==9.1.1",
+            "matplotlib==3.11.2",  # For the examples
+            "pandas==3.0.6",
+            "pandas-stubs==3.0.5.260914",
           ]
         # You might need to exclude specific files/modules if they cause issues
         # exclude: ^(tests/fixtures/problematic_file.py|...)

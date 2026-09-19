@@ -8,7 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Python 3.12 and 3.13 are tested in CI and listed in the package classifiers (#105)
+
 ### Changed
+- A plain `pytest` run no longer includes the integration tests, which call the live
+  BCRA API; run them with `pytest -m integration`. In CI they moved to a separate
+  workflow (manual and weekly) that doesn't gate pull requests, and they now verify SSL.
+  CI actions were bumped to their current majors, and the mypy pre-commit hook pins its
+  dependencies (#105)
 - `numpy` and `scipy` are no longer required dependencies. `scipy` is dropped
   (`get_variable_correlation()` now uses `numpy.corrcoef`), and `numpy` moves to the new
   `[analytics]` extra with no upper pin, so the connector installs on Python 3.13 and

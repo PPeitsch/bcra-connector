@@ -25,7 +25,6 @@ class TestBCRAIntegration:
     def connector(self) -> BCRAConnector:
         """Set up BCRAConnector instance for the test class."""
         return BCRAConnector(
-            verify_ssl=False,
             rate_limit=RateLimitConfig(calls=3, period=1.0, _burst=5),
             debug=True,
         )

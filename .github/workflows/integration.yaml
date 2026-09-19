@@ -1,0 +1,29 @@
+name: Integration Tests
+
+# Runs the tests marked `integration` against the live BCRA API. Kept out of
+# the PR workflow so that CI doesn't depend on the API being available.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 1" # Mondays 12:00 UTC
+
+jobs:
+  integration:
+    name: Integration - Python 3.13
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+
+      - name: Run integration tests
+        run: python -m pytest tests/ -m integration --no-cov
