@@ -9,6 +9,8 @@ It includes modules for retrieving:
 - Central de Deudores (Debtor Registry)
 """
 
+import logging
+
 from .__about__ import __version__
 from .bcra_connector import BCRAApiError, BCRAConnector
 from .central_deudores import (
@@ -43,6 +45,10 @@ from .principales_variables import (
 )
 from .rate_limiter import RateLimitConfig
 from .timeout_config import TimeoutConfig
+
+# Library logging convention: emit records, never configure output. Applications
+# decide handlers and levels (see BCRAConnector's ``debug`` flag for an opt-in).
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
     "__version__",

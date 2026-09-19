@@ -649,20 +649,6 @@ class TestBCRAConnectorExtended:
         assert c.timeout.connect == 1.0
         assert c.timeout.read == 9.0
 
-    def test_logger_setup(self):
-        # Mock logging.getLogger to return a mock logger with no handlers
-        with patch(
-            "bcra_connector.bcra_connector.logging.getLogger"
-        ) as mock_get_logger:
-            mock_logger = Mock()
-            mock_logger.hasHandlers.return_value = False
-            mock_get_logger.return_value = mock_logger
-
-            BCRAConnector()
-
-            # Verify addHandler was called
-            mock_logger.addHandler.assert_called()
-
     def test_make_request_rate_limit_delay(self, connector: BCRAConnector):
         with patch.object(connector.rate_limiter, "acquire", side_effect=[0.1, 0.0]):
             with patch("bcra_connector.bcra_connector.time.sleep") as mock_sleep:

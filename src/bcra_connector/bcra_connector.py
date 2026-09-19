@@ -6,6 +6,7 @@ Handles rate limiting, retries, and error cases.
 
 import json
 import logging
+import re
 import time
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
@@ -25,6 +26,26 @@ from .principales_variables import (
 )
 from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
+
+# CUIT/CUIL/CDI are 11-digit identifiers (personal data under Ley 25.326).
+_IDENTIFICACION_RE = re.compile(r"(?<!\d)(\d{2})\d{8}(\d)(?!\d)")
+
+
+def _redact(text: str) -> str:
+    """Mask 11-digit identifiers (CUIT/CUIL/CDI) so they don't reach the logs."""
+    return _IDENTIFICACION_RE.sub(r"\1********\2", text)
+
+
+def _has_active_handler(logger: logging.Logger) -> bool:
+    """Whether a record from ``logger`` would reach a handler other than NullHandler."""
+    current: Optional[logging.Logger] = logger
+    while current is not None:
+        if any(not isinstance(h, logging.NullHandler) for h in current.handlers):
+            return True
+        if not current.propagate:
+            return False
+        current = current.parent
+    return False
 
 
 class BCRAApiError(Exception):
@@ -59,7 +80,10 @@ class BCRAConnector:
 
         :param language: The language for API responses, defaults to "es-AR"
         :param verify_ssl: Whether to verify SSL certificates, defaults to True
-        :param debug: Whether to enable debug logging, defaults to False
+        :param debug: Opt-in debug logging, defaults to False. Sets the
+                      ``bcra_connector`` loggers to DEBUG and, if no handler is
+                      configured, adds one writing to stderr. Without it the
+                      library leaves logging configuration to the application.
         :param rate_limit: Rate limiting configuration, defaults to DEFAULT_RATE_LIMIT
         :param timeout: Request timeout configuration, can be TimeoutConfig or float,
                       defaults to DEFAULT_TIMEOUT
@@ -79,17 +103,19 @@ class BCRAConnector:
 
         self.rate_limiter = RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT)
 
-        log_level = logging.DEBUG if debug else logging.INFO
-        # Configure logger for this instance; avoid reconfiguring root logger if already set up
+        # A library must not configure logging: handlers and levels belong to the
+        # application. ``debug=True`` is the only, explicit, exception.
         self.logger = logging.getLogger(__name__)
-        if not self.logger.hasHandlers():  # Configure only if no handlers are attached
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-        self.logger.setLevel(log_level)
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
+            if not _has_active_handler(self.logger):
+                handler = logging.StreamHandler()
+                handler.setFormatter(
+                    logging.Formatter(
+                        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                    )
+                )
+                self.logger.addHandler(handler)
 
         if not self.verify_ssl:
             self.logger.warning(
@@ -102,6 +128,7 @@ class BCRAConnector:
     ) -> Dict[str, Any]:
         """Make a request to the BCRA API with retry logic and rate limiting."""
         url = f"{self.BASE_URL}/{endpoint}"
+        log_url = _redact(url)
 
         for attempt in range(self.MAX_RETRIES):
             try:
@@ -112,7 +139,7 @@ class BCRAConnector:
                     )
                     time.sleep(delay)
 
-                self.logger.debug(f"Making request to {url} with params {params}")
+                self.logger.debug(f"Making request to {log_url} with params {params}")
                 response = self.session.get(
                     url,
                     params=params,
@@ -140,8 +167,9 @@ class BCRAConnector:
                 # with exponential backoff before giving up.
                 if status_code == 429 or 500 <= status_code <= 599:
                     self.logger.warning(
-                        f"Transient HTTP {status_code} from {url} "
-                        f"(attempt {attempt + 1}/{self.MAX_RETRIES}): {error_msg}"
+                        f"Transient HTTP {status_code} from {log_url} "
+                        f"(attempt {attempt + 1}/{self.MAX_RETRIES}): "
+                        f"{_redact(error_msg)}"
                     )
                     if attempt == self.MAX_RETRIES - 1:
                         raise BCRAApiError(
@@ -156,7 +184,7 @@ class BCRAConnector:
 
             except requests.Timeout as e:
                 self.logger.error(
-                    f"Request timed out to {url} (attempt {attempt + 1}/{self.MAX_RETRIES})"
+                    f"Request timed out to {log_url} (attempt {attempt + 1}/{self.MAX_RETRIES})"
                 )
                 if attempt == self.MAX_RETRIES - 1:
                     raise BCRAApiError(
@@ -168,7 +196,8 @@ class BCRAConnector:
                 if "SSL" in str(e).upper():
                     raise BCRAApiError(f"SSL issue for {url}: {e}") from e
                 self.logger.warning(
-                    f"Connection error to {url} (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}"
+                    f"Connection error to {log_url} "
+                    f"(attempt {attempt + 1}/{self.MAX_RETRIES}): {_redact(str(e))}"
                 )
                 if attempt == self.MAX_RETRIES - 1:
                     raise BCRAApiError(
@@ -178,7 +207,8 @@ class BCRAConnector:
 
             except requests.RequestException as e:
                 self.logger.error(
-                    f"API request exception for {url}: {e} (attempt {attempt+1}/{self.MAX_RETRIES})"
+                    f"API request exception for {log_url}: {_redact(str(e))} "
+                    f"(attempt {attempt+1}/{self.MAX_RETRIES})"
                 )
                 if attempt == self.MAX_RETRIES - 1:
                     raise BCRAApiError(
@@ -1007,7 +1037,7 @@ class BCRAConnector:
         if len(identificacion) != 11 or not identificacion.isdigit():
             raise ValueError("Identificacion must be exactly 11 digits")
 
-        self.logger.info(f"Fetching current debts for identificacion: {identificacion}")
+        self.logger.info("Fetching current debts from Central de Deudores")
         try:
             data = self._make_request(f"CentralDeDeudores/v1.0/Deudas/{identificacion}")
             if "results" not in data or not isinstance(data["results"], dict):
@@ -1016,8 +1046,7 @@ class BCRAConnector:
                 )
             deudor = Deudor.from_dict(data["results"])
             self.logger.info(
-                f"Successfully fetched debts for {deudor.denominacion} "
-                f"({len(deudor.periodos)} periods)"
+                f"Successfully fetched debts ({len(deudor.periodos)} periods)"
             )
             return deudor
         except (KeyError, ValueError) as e:
@@ -1043,9 +1072,7 @@ class BCRAConnector:
         if len(identificacion) != 11 or not identificacion.isdigit():
             raise ValueError("Identificacion must be exactly 11 digits")
 
-        self.logger.info(
-            f"Fetching historical debts for identificacion: {identificacion}"
-        )
+        self.logger.info("Fetching historical debts from Central de Deudores")
         try:
             data = self._make_request(
                 f"CentralDeDeudores/v1.0/Deudas/Historicas/{identificacion}"
@@ -1056,8 +1083,7 @@ class BCRAConnector:
                 )
             deudor = Deudor.from_dict(data["results"])
             self.logger.info(
-                f"Successfully fetched historical debts for {deudor.denominacion} "
-                f"({len(deudor.periodos)} periods)"
+                f"Successfully fetched historical debts ({len(deudor.periodos)} periods)"
             )
             return deudor
         except (KeyError, ValueError) as e:
@@ -1083,9 +1109,7 @@ class BCRAConnector:
         if len(identificacion) != 11 or not identificacion.isdigit():
             raise ValueError("Identificacion must be exactly 11 digits")
 
-        self.logger.info(
-            f"Fetching rejected checks for identificacion: {identificacion}"
-        )
+        self.logger.info("Fetching rejected checks from Central de Deudores")
         try:
             data = self._make_request(
                 f"CentralDeDeudores/v1.0/Deudas/ChequesRechazados/{identificacion}"
@@ -1098,10 +1122,7 @@ class BCRAConnector:
             total_cheques = sum(
                 len(e.detalle) for c in cheques.causales for e in c.entidades
             )
-            self.logger.info(
-                f"Successfully fetched {total_cheques} rejected checks "
-                f"for {cheques.denominacion}"
-            )
+            self.logger.info(f"Successfully fetched {total_cheques} rejected checks")
             return cheques
         except (KeyError, ValueError) as e:
             raise BCRAApiError(
