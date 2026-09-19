@@ -9,7 +9,7 @@ import logging
 import re
 import time
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import requests
@@ -26,6 +26,8 @@ from .principales_variables import (
 )
 from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
+
+T = TypeVar("T")
 
 # CUIT/CUIL/CDI are 11-digit identifiers (personal data under Ley 25.326).
 _IDENTIFICACION_RE = re.compile(r"(?<!\d)(\d{2})\d{8}(\d)(?!\d)")
@@ -67,6 +69,10 @@ class BCRAConnector:
     RETRY_DELAY = 1  # seconds
     DEFAULT_RATE_LIMIT = RateLimitConfig(calls=10, period=1.0, _burst=20)
     DEFAULT_TIMEOUT = TimeoutConfig.default()
+    # Largest page each API accepts; without an explicit limit they return 1000.
+    MAX_PAGE_SIZE = 3000  # Monetarias v4.0 (catalog and series)
+    FX_MAX_PAGE_SIZE = 1000  # Estadísticas Cambiarias v1.0
+    MAX_PAGES = 100  # safety cap for automatic pagination
 
     def __init__(
         self,
@@ -223,6 +229,33 @@ class BCRAConnector:
             f"Maximum retry attempts ({self.MAX_RETRIES}) reached for {url}"
         )
 
+    def _collect_pages(
+        self,
+        fetch_page: Callable[[int, int], Tuple[List[T], Optional[int]]],
+        page_size: int,
+        what: str,
+        start: int = 0,
+    ) -> List[T]:
+        """Fetch consecutive pages until the results are exhausted.
+
+        ``fetch_page(limit, offset)`` returns the page items and the total number of
+        results when the endpoint reports it reliably (``None`` otherwise). Paging
+        stops on a short page or once the total is reached.
+        """
+        items: List[T] = []
+        for page_number in range(self.MAX_PAGES):
+            page, total = fetch_page(page_size, start + page_number * page_size)
+            items.extend(page)
+            if len(page) < page_size or (
+                total is not None and start + len(items) >= total
+            ):
+                return items
+        self.logger.warning(
+            f"Stopped paging {what} after {self.MAX_PAGES} pages "
+            f"({len(items)} results); the result may be incomplete."
+        )
+        return items
+
     # Principales Variables / Monetarias methods (v4.0)
     def get_principales_variables(self) -> List[PrincipalesVariables]:
         """
@@ -233,14 +266,25 @@ class BCRAConnector:
         """
         self.logger.info("Fetching monetary series and principal variables (v4.0)")
         try:
-            data = self._make_request("estadisticas/v4.0/Monetarias")
-            if not isinstance(data.get("results"), list):
-                raise BCRAApiError(
-                    "Unexpected response format: 'results' is not a list or missing"
+
+            def fetch_page(limit: int, offset: int) -> Tuple[List[Any], Optional[int]]:
+                data = self._make_request(
+                    "estadisticas/v4.0/Monetarias", {"Limit": limit, "Offset": offset}
                 )
+                if not isinstance(data.get("results"), list):
+                    raise BCRAApiError(
+                        "Unexpected response format: 'results' is not a list or missing"
+                    )
+                # In this endpoint resultset.count is the number of results from the
+                # offset on, not the total: only a short page ends the listing.
+                return data["results"], None
+
+            raw_results = self._collect_pages(
+                fetch_page, self.MAX_PAGE_SIZE, "the variables catalog"
+            )
 
             variables = []
-            for item in data["results"]:
+            for item in raw_results:
                 try:
                     variables.append(PrincipalesVariables.from_dict(item))
                 except (ValueError, KeyError) as e:
@@ -248,9 +292,7 @@ class BCRAConnector:
                         f"Skipping invalid variable data: {e} - Data: {item}"
                     )
 
-            if not variables and data.get(
-                "results"
-            ):  # Check if results existed but parsing failed
+            if not variables and raw_results:  # results existed but parsing failed
                 self.logger.error(
                     "Failed to parse any variable data despite receiving results."
                 )
@@ -559,6 +601,26 @@ class BCRAConnector:
         if offset < 0:
             raise ValueError("Offset must be non-negative for 'evolucion_moneda'")
 
+        evolucion, total = self._fetch_evolucion_moneda_page(
+            moneda, fecha_desde, fecha_hasta, limit, offset
+        )
+        if total is not None and offset + len(evolucion) < total:
+            self.logger.warning(
+                f"Returned {len(evolucion)} of {total} quotations for {moneda} "
+                f"(offset {offset}). Page with limit/offset, or use "
+                f"get_currency_evolution() to fetch the whole range."
+            )
+        return evolucion
+
+    def _fetch_evolucion_moneda_page(
+        self,
+        moneda: str,
+        fecha_desde: Optional[str],
+        fecha_hasta: Optional[str],
+        limit: int,
+        offset: int,
+    ) -> Tuple[List[CotizacionFecha], Optional[int]]:
+        """Fetch one page of a currency's evolution and the total result count."""
         params = {
             k: v
             for k, v in {
@@ -581,7 +643,13 @@ class BCRAConnector:
             self.logger.info(
                 f"Successfully fetched {len(evolucion)} data points for {moneda}"
             )
-            return evolucion
+            metadata = data.get("metadata")
+            count = (
+                metadata.get("resultset", {}).get("count")
+                if isinstance(metadata, dict)
+                else None
+            )
+            return evolucion, count if isinstance(count, int) else None
         except (KeyError, ValueError) as e:
             raise BCRAApiError(
                 f"Unexpected response format or data for {moneda} evolution: {str(e)}"
@@ -660,7 +728,8 @@ class BCRAConnector:
         :param days: The number of days to look back, defaults to 30. Must be positive.
         :param limit: Maximum number of results (10-3000). Optional.
         :param offset: Number of results to skip for pagination. Optional.
-        :return: A list of DetalleMonetaria objects.
+        :return: A list of DetalleMonetaria objects. Without ``limit`` and ``offset``
+                 it covers the whole range, fetching as many pages as needed.
         :raises ValueError: If the variable is not found or days/limit/offset are invalid.
         :raises BCRAApiError: If the API request fails.
         """
@@ -674,6 +743,25 @@ class BCRAConnector:
 
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
+
+        if limit is None and offset is None:
+
+            def fetch_page(
+                page_limit: int, page_offset: int
+            ) -> Tuple[List[DetalleMonetaria], Optional[int]]:
+                page = self.get_datos_variable(
+                    variable.idVariable,
+                    desde=start_date,
+                    hasta=end_date,
+                    limit=page_limit,
+                    offset=page_offset,
+                )
+                points = [d for r in page.results for d in r.detalle]
+                return points, page.metadata.resultset.count
+
+            return self._collect_pages(
+                fetch_page, self.MAX_PAGE_SIZE, f"variable {variable.idVariable}"
+            )
 
         response_obj = self.get_datos_variable(
             variable.idVariable,
@@ -689,14 +777,19 @@ class BCRAConnector:
         return all_detalles
 
     def get_currency_evolution(
-        self, currency_code: str, days: int = 30, limit: int = 1000, offset: int = 0
+        self,
+        currency_code: str,
+        days: int = 30,
+        limit: Optional[int] = None,
+        offset: int = 0,
     ) -> List[CotizacionFecha]:
         """
         Get the evolution of a currency's quotation for the last n days.
 
         :param currency_code: The currency code (e.g., 'USD', 'EUR'). Case-sensitive for URL.
         :param days: The number of days to look back, defaults to 30. Must be positive.
-        :param limit: Maximum number of results (10-1000), defaults to 1000 for this specific API.
+        :param limit: Maximum number of results (10-1000). By default (None) the whole
+                      range is returned, fetching as many pages as needed.
         :param offset: Number of results to skip, defaults to 0.
         :return: A list of CotizacionFecha objects.
         :raises ValueError: If days/limit/offset are invalid.
@@ -706,10 +799,31 @@ class BCRAConnector:
             raise ValueError("Number of days must be positive.")
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
+        fecha_desde = start_date.strftime("%Y-%m-%d")
+        fecha_hasta = end_date.strftime("%Y-%m-%d")
+
+        if limit is None:
+            if offset < 0:
+                raise ValueError("Offset must be non-negative.")
+
+            def fetch_page(
+                page_limit: int, page_offset: int
+            ) -> Tuple[List[CotizacionFecha], Optional[int]]:
+                return self._fetch_evolucion_moneda_page(
+                    currency_code, fecha_desde, fecha_hasta, page_limit, page_offset
+                )
+
+            return self._collect_pages(
+                fetch_page,
+                self.FX_MAX_PAGE_SIZE,
+                f"{currency_code} quotations",
+                start=offset,
+            )
+
         return self.get_evolucion_moneda(
             currency_code,
-            fecha_desde=start_date.strftime("%Y-%m-%d"),
-            fecha_hasta=end_date.strftime("%Y-%m-%d"),
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
             limit=limit,
             offset=offset,
         )
@@ -807,15 +921,8 @@ class BCRAConnector:
         if days <= 0:
             raise ValueError("Number of days must be positive.")
         try:
-            limit = (
-                days + 15
-            )  # Fetch a bit more data to ensure good overlap for daily data
-            base_evolution = self.get_currency_evolution(
-                base_currency, days, limit=limit
-            )
-            quote_evolution = self.get_currency_evolution(
-                quote_currency, days, limit=limit
-            )
+            base_evolution = self.get_currency_evolution(base_currency, days)
+            quote_evolution = self.get_currency_evolution(quote_currency, days)
         except BCRAApiError as e:
             self.logger.error(
                 f"Failed to get evolution for currency pair {base_currency}/{quote_currency} due to API error: {e}"
