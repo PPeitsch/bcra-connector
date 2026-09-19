@@ -387,12 +387,56 @@ class TestBCRAConnectorExtended:
             res = connector.get_variable_by_name("reserva")
             assert res is None
 
-    def test_get_variable_by_name_error(self, connector: BCRAConnector):
+    def test_get_variable_by_name_error_propagates(self, connector: BCRAConnector):
+        """An API failure must not be reported as 'variable not found'."""
         with patch.object(
             connector, "get_principales_variables", side_effect=BCRAApiError("Fail")
         ):
-            res = connector.get_variable_by_name("any")
-            assert res is None
+            with pytest.raises(BCRAApiError, match="Fail"):
+                connector.get_variable_by_name("any")
+            with pytest.raises(BCRAApiError, match="Fail"):
+                connector.get_variable_history("any")
+
+    def test_get_variable_by_name_prefers_exact_match(self, connector: BCRAConnector):
+        vars_list = [
+            PrincipalesVariables(idVariable=1, descripcion="Reservas en oro"),
+            PrincipalesVariables(idVariable=2, descripcion="Reservas"),
+        ]
+        with patch.object(
+            connector, "get_principales_variables", return_value=vars_list
+        ):
+            assert connector.get_variable_by_name(" reservas ").idVariable == 2
+
+    def test_get_variable_by_name_warns_on_ambiguous_match(
+        self, connector: BCRAConnector, caplog: pytest.LogCaptureFixture
+    ):
+        vars_list = [
+            PrincipalesVariables(idVariable=7, descripcion="Tasa BADLAR"),
+            PrincipalesVariables(idVariable=8, descripcion="Tasa TAMAR"),
+            PrincipalesVariables(idVariable=9, descripcion="Base monetaria"),
+        ]
+        with patch.object(
+            connector, "get_principales_variables", return_value=vars_list
+        ):
+            with caplog.at_level("WARNING", logger="bcra_connector"):
+                res = connector.get_variable_by_name("tasa")
+
+        assert res.idVariable == 7  # first match, as before
+        warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1
+        assert "2 variables match 'tasa'" in warnings[0]
+        assert "8" in warnings[0] and "Tasa TAMAR" in warnings[0]
+
+    def test_get_variable_by_name_single_match_no_warning(
+        self, connector: BCRAConnector, caplog: pytest.LogCaptureFixture
+    ):
+        vars_list = [PrincipalesVariables(idVariable=1, descripcion="Base monetaria")]
+        with patch.object(
+            connector, "get_principales_variables", return_value=vars_list
+        ):
+            with caplog.at_level("WARNING", logger="bcra_connector"):
+                connector.get_variable_by_name("base")
+        assert not [r for r in caplog.records if r.levelname == "WARNING"]
 
     def test_get_variable_history_methods(self, connector: BCRAConnector):
         # We must mock get_variable_by_name first because get_variable_history calls it.
