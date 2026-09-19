@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `generate_variable_report()` returned `start_date`/`end_date`, `latest_value` and
+  `percent_change` reversed: the Monetarias v4.0 API returns series newest-first and the
+  report assumed ascending order. The data is now sorted by date before computing (#93)
+
 ## [0.10.0] - 2026-09-18
 
 ### Removed
