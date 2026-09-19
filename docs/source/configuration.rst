@@ -50,15 +50,28 @@ To disable SSL verification (not recommended for production):
 Debug Mode
 ~~~~~~~~~~
 
-The `debug` parameter enables detailed logging when set to `True`. This is useful for troubleshooting.
+The connector logs through the standard ``logging`` module under the ``bcra_connector``
+logger, and doesn't configure any output: nothing is printed unless your application
+configures logging. To see its records, configure logging as usual:
 
-Example:
+.. code-block:: python
+
+   import logging
+
+   logging.basicConfig(level=logging.INFO)
+   logging.getLogger("bcra_connector").setLevel(logging.DEBUG)  # only this library
+
+``debug=True`` is a shortcut for troubleshooting: it sets the ``bcra_connector`` logger
+to ``DEBUG`` and, only if no handler would receive the records, adds one that writes to
+stderr.
 
 .. code-block:: python
 
    from bcra_connector import BCRAConnector
 
    connector = BCRAConnector(debug=True)
+
+CUIT/CUIL numbers are masked in log messages.
 
 Retry Behavior
 --------------

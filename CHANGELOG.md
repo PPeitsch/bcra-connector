@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   module and works without numpy. `get_variable_correlation()` raises `ImportError`
   asking for `pip install "bcra-connector[analytics]"` when numpy is missing (#103)
 
+### Fixed
+- Documentation (#111): the docs index listed "Estadísticas v2.0" instead of Monetarias
+  v4.0 and omitted Central de Deudores; two docstrings said "Monetarias v3.0"; the
+  logging section predated the library-friendly logging of 0.11.0; the README Quick
+  Start had an empty step; and the usage guide called `to_dataframe()` on a list
+  (`AttributeError`) and labelled the 5 oldest points of a series as the latest
+
 ## [0.11.0] - 2026-09-19
 
 ### Added

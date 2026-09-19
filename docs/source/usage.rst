@@ -47,7 +47,7 @@ To fetch historical data for a specific variable:
    start_date = end_date - timedelta(days=30)
    response = connector.get_datos_variable(id_variable, desde=start_date, hasta=end_date)
    for result in response.results:
-       for detalle in result.detalle[-5:]:  # Print last 5 for brevity
+       for detalle in result.detalle[:5]:  # The API returns newest first
            print(f"{detalle.fecha}: {detalle.valor}")
 
 This returns a `DatosVariableResponse` object containing metadata and a list of `DatosVariable` results, each with a `detalle` list of `DetalleMonetaria` data points.
@@ -137,7 +137,9 @@ To query debtor information, historical debts, and rejected checks by CUIT/CUIL:
 
 .. code-block:: python
 
-   identificacion = "20123456789"  # Example CUIT
+   # Replace with a real CUIT/CUIL. One without records in the registry raises
+   # BCRANotFoundError (see Error Handling below).
+   identificacion = "20123456789"
 
    # Get current debts
    deudor = connector.get_deudas(identificacion)
@@ -160,13 +162,20 @@ To query debtor information, historical debts, and rejected checks by CUIT/CUIL:
 DataFrame Conversion
 --------------------
 
-Most data models include a `to_dataframe()` method for easy integration with data analysis workflows. This requires `pandas` to be installed (``pip install bcra-connector[pandas]``).
+Most data models include a ``to_dataframe()`` method for easy integration with data
+analysis workflows. This requires ``pandas`` to be installed
+(``pip install "bcra-connector[pandas]"``).
+
+``to_dataframe()`` is defined on single objects; for a list, build the DataFrame from
+``to_dict()``:
 
 .. code-block:: python
 
-   # Convert Principal Variables to DataFrame
+   import pandas as pd
+
+   # Convert the list of principal variables to a DataFrame
    variables = connector.get_principales_variables()
-   df_vars = variables.to_dataframe()
+   df_vars = pd.DataFrame([v.to_dict() for v in variables])
 
    # Convert Central de Deudores info to DataFrame
    deudor = connector.get_deudas(identificacion)

@@ -1065,7 +1065,7 @@ class BCRAConnector:
         self, variable_name1: str, variable_name2: str, days: int = 30
     ) -> float:
         """
-        Calculate Pearson correlation between two variables/series over last n days (Monetarias v3.0).
+        Calculate Pearson correlation between two variables/series over last n days (Monetarias v4.0).
 
         Handles missing data by linear interpolation. Requires numpy
         (``pip install "bcra-connector[analytics]"``).
@@ -1156,7 +1156,7 @@ class BCRAConnector:
         self, variable_name: str, days: int = 30
     ) -> Dict[str, Any]:
         """
-        Generate a comprehensive report for a given variable/series (Uses Monetarias v3.0 API).
+        Generate a comprehensive report for a given variable/series (Monetarias v4.0).
 
         :param variable_name: The name of the variable/series.
         :param days: The number of days to look back, defaults to 30. Must be positive.
