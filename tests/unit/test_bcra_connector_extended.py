@@ -515,11 +515,10 @@ class TestBCRAConnectorExtended:
             ):
                 assert connector.check_denunciado("BankOfTest", 123) is True
 
-            # Found entity, check NOT reported via 404
+            # Found entity, check NOT reported: the API answers 200 + False
+            check_clean = Cheque(20, False, date.today(), "BankOfTest", [])
             with patch.object(
-                connector,
-                "get_cheque_denunciado",
-                side_effect=BCRAApiError("Resource not found (404)"),
+                connector, "get_cheque_denunciado", return_value=check_clean
             ):
                 assert connector.check_denunciado("BankOfTest", 123) is False
 

@@ -12,7 +12,7 @@ It includes modules for retrieving:
 import logging
 
 from .__about__ import __version__
-from .bcra_connector import BCRAApiError, BCRAConnector
+from .bcra_connector import BCRAConnector
 from .central_deudores import (
     CausalCheques,
     ChequeRechazado,
@@ -35,6 +35,12 @@ from .estadisticas_cambiarias import (
 from .estadisticas_cambiarias import ErrorResponse as CambiariasErrorResponse
 from .estadisticas_cambiarias import Metadata as EstadisticasCambiariasMetadata
 from .estadisticas_cambiarias import Resultset as EstadisticasCambiariasResultset
+from .exceptions import (
+    BCRAApiError,
+    BCRANotFoundError,
+    BCRARateLimitError,
+    BCRAServerError,
+)
 
 # Import from principales_variables
 from .principales_variables import (
@@ -55,6 +61,9 @@ __all__ = [
     # Core
     "BCRAConnector",
     "BCRAApiError",
+    "BCRANotFoundError",
+    "BCRARateLimitError",
+    "BCRAServerError",
     "RateLimitConfig",
     "TimeoutConfig",
     # Principales Variables / Monetarias v4.0

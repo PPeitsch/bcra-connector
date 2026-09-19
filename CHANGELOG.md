@@ -10,8 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Python 3.12 and 3.13 are tested in CI and listed in the package classifiers (#105)
+- Typed exceptions, all subclasses of `BCRAApiError` so existing handlers keep working:
+  `BCRANotFoundError` (HTTP 404), `BCRARateLimitError` (429 after retries) and
+  `BCRAServerError` (5xx after retries). Every `BCRAApiError` has a `status_code`
+  attribute (`None` when there was no HTTP response) (#107)
+- `check_denunciado()` resolves the entity ignoring case and accents, and accepts a
+  unique part of the name (`"Santander"`, `"Banco de la Nación Argentina"`). If several
+  entities match, it raises `ValueError` listing them (#107)
 
 ### Changed
+- `check_denunciado()` no longer returns `False` on an HTTP 404. The Cheques API answers
+  a check that isn't reported with `200` and `denunciado: false`; its only 404 is
+  "Entidad informada inexistente", which now propagates as `BCRANotFoundError`. It also
+  stopped matching `"404"`/`"not found"` in error messages (#107)
 - A plain `pytest` run no longer includes the integration tests, which call the live
   BCRA API; run them with `pytest -m integration`. In CI they moved to a separate
   workflow (manual and weekly) that doesn't gate pull requests, and they now verify SSL.
