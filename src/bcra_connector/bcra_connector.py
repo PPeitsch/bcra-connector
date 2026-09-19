@@ -601,26 +601,48 @@ class BCRAConnector:
         self, variable_name: str
     ) -> Optional[PrincipalesVariables]:
         """
-        Find a principal variable or monetary series by its name (Uses Monetarias v3.0 API).
+        Find a principal variable or monetary series by its name (Uses Monetarias v4.0 API).
 
-        :param variable_name: The name of the variable/series to find (case-insensitive search).
+        The search is case-insensitive. A description equal to ``variable_name`` wins;
+        otherwise the first description containing it is returned, and a warning lists
+        the other candidates when there is more than one.
+
+        :param variable_name: The name of the variable/series to find.
         :return: A PrincipalesVariables object if found, None otherwise.
+        :raises BCRAApiError: If the variables catalog cannot be fetched.
         """
-        try:
-            variables = self.get_principales_variables()
-        except BCRAApiError as e:
-            self.logger.error(
-                f"Failed to get variables to search by name ('{variable_name}'): {e}"
+        variables = self.get_principales_variables()
+        normalized_name = variable_name.lower().strip()
+
+        matches = [
+            v
+            for v in variables
+            if v.descripcion and normalized_name in v.descripcion.lower()
+        ]
+        if not matches:
+            self.logger.info(
+                f"Variable/series with name containing '{variable_name}' not found."
             )
             return None
-        normalized_name = variable_name.lower().strip()
-        for variable in variables:
-            if variable.descripcion and normalized_name in variable.descripcion.lower():
+
+        for variable in matches:
+            if variable.descripcion and variable.descripcion.lower().strip() == (
+                normalized_name
+            ):
                 return variable
-        self.logger.info(
-            f"Variable/series with name containing '{variable_name}' not found."
-        )
-        return None
+
+        if len(matches) > 1:
+            shown = 10
+            candidates = "; ".join(
+                f"{v.idVariable}: {v.descripcion}" for v in matches[:shown]
+            )
+            more = f" (and {len(matches) - shown} more)" if len(matches) > shown else ""
+            self.logger.warning(
+                f"{len(matches)} variables match '{variable_name}'; returning "
+                f"{matches[0].idVariable}. Use a more specific name or the id. "
+                f"Candidates: {candidates}{more}"
+            )
+        return matches[0]
 
     def get_variable_history(
         self,

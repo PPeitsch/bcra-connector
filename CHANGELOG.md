@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `generate_variable_report()` returned `start_date`/`end_date`, `latest_value` and
   `percent_change` reversed: the Monetarias v4.0 API returns series newest-first and the
   report assumed ascending order. The data is now sorted by date before computing (#93)
+- `get_variable_by_name()` swallowed `BCRAApiError` and returned `None`, so
+  `get_variable_history()`, `generate_variable_report()` and
+  `get_variable_correlation()` reported an API failure as "Variable not found". The
+  error now propagates, as those methods already documented (#97)
+- `get_variable_by_name()` now prefers an exact (case-insensitive) description match,
+  and logs a warning listing the candidates when several series match only by
+  substring. It still returns the first match, so the return value is unchanged in
+  the ambiguous case (#97)
 
 ### Security
 - Central de Deudores methods no longer log the queried CUIT/CUIL/CDI or the person's
