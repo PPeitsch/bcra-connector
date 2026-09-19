@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entities match, it raises `ValueError` listing them (#107)
 
 ### Changed
+- `get_currency_pair_evolution(base, quote)` now returns the amount of **quote** for
+  one unit of **base**, the usual `BASE/QUOTE` convention. It used to return the
+  inverse: `("USD", "EUR")` gave ~1.16 (dollars per euro) and now gives ~0.87 (euros per
+  dollar). Rates are computed through the dollar with `tipoPase`, so ARS, gold (XAU)
+  and silver (XAG), which have no `tipoCotizacion`, now work instead of returning
+  `0.0` (`("USD", "ARS")` is the official peso quotation). Pairs against USD make one
+  request instead of two, and currency codes are case-insensitive (#109)
 - `check_denunciado()` no longer returns `False` on an HTTP 404. The Cheques API answers
   a check that isn't reported with `200` and `denunciado: false`; its only 404 is
   "Entidad informada inexistente", which now propagates as `BCRANotFoundError`. It also

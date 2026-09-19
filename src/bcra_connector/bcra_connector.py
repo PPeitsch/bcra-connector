@@ -964,64 +964,84 @@ class BCRAConnector:
         """
         Get the evolution of a currency pair exchange rate for the last n days.
 
-        Calculates rate as (quote_currency_value / base_currency_value) using ARS as intermediary.
-        Assumes both currencies are quoted against ARS by the API.
+        ``tasa`` follows the usual ``BASE/QUOTE`` convention: the amount of
+        ``quote_currency`` for one unit of ``base_currency`` (``USD/ARS`` ~ 1500
+        pesos per dollar, ``EUR/USD`` ~ 1.15 dollars per euro).
 
-        :param base_currency: The base currency code (e.g., 'USD'). Case-sensitive for URL.
-        :param quote_currency: The quote currency code (e.g., 'EUR'). Case-sensitive for URL.
+        Both currencies are expressed in US dollars on each date: ``USD`` is 1,
+        ``ARS`` is ``1 / tipoCotizacion`` of USD, and any other currency is its
+        ``tipoPase`` (dollars per unit). Only the series needed are requested, so a
+        pair against USD makes one request. Dates where a currency has no usable
+        rate (e.g. ``REF``, which has no ``tipoPase``) are skipped with a warning.
+
+        :param base_currency: The base currency code (e.g., 'USD'). Case-insensitive.
+        :param quote_currency: The quote currency code (e.g., 'ARS'). Case-insensitive.
         :param days: The number of days to look back, defaults to 30. Must be positive.
-        :return: List of dictionaries with 'fecha' (ISO format) and 'tasa' (exchange rate).
+        :return: List of dictionaries with 'fecha' (ISO format) and 'tasa' (exchange
+            rate), oldest first.
         :raises ValueError: If days is invalid.
         :raises BCRAApiError: If underlying API calls fail.
         """
         if days <= 0:
             raise ValueError("Number of days must be positive.")
+        base_currency = base_currency.upper()
+        quote_currency = quote_currency.upper()
+        pair = f"{base_currency}/{quote_currency}"
+
+        # Series each currency needs: USD needs none, ARS needs USD's quotation.
+        sources = {"USD": None, "ARS": "USD"}
+        needed: List[str] = []
+        for code in (base_currency, quote_currency):
+            source = sources.get(code, code)
+            if source and source not in needed:
+                needed.append(source)
+        if not needed:  # USD/USD: fetch USD just for its dates
+            needed.append("USD")
+
+        series: Dict[str, Dict[date, CotizacionDetalle]] = {}
         try:
-            base_evolution = self.get_currency_evolution(base_currency, days)
-            quote_evolution = self.get_currency_evolution(quote_currency, days)
+            for code in needed:
+                by_date: Dict[date, CotizacionDetalle] = {}
+                for cf in self.get_currency_evolution(code, days):
+                    if not cf.fecha:
+                        continue
+                    try:
+                        by_date[cf.fecha] = self._get_cotizacion_detalle(cf, code)
+                    except ValueError:
+                        self.logger.debug(
+                            f"{code} not in cotizacion for {cf.fecha.isoformat()}"
+                        )
+                series[code] = by_date
         except BCRAApiError as e:
             self.logger.error(
-                f"Failed to get evolution for currency pair {base_currency}/{quote_currency} due to API error: {e}"
+                f"Failed to get evolution for currency pair {pair} due to API error: {e}"
             )
             raise
 
-        base_dict: Dict[date, float] = {}
-        for cf in base_evolution:
-            if cf.fecha:
-                try:
-                    base_dict[cf.fecha] = self._get_cotizacion_detalle(
-                        cf, base_currency
-                    ).tipo_cotizacion
-                except ValueError:
-                    self.logger.debug(
-                        f"Base currency {base_currency} not in cotizacion for {cf.fecha.isoformat()}"
-                    )
-        quote_dict: Dict[date, float] = {}
-        for cf in quote_evolution:
-            if cf.fecha:
-                try:
-                    quote_dict[cf.fecha] = self._get_cotizacion_detalle(
-                        cf, quote_currency
-                    ).tipo_cotizacion
-                except ValueError:
-                    self.logger.debug(
-                        f"Quote currency {quote_currency} not in cotizacion for {cf.fecha.isoformat()}"
-                    )
+        def usd_per_unit(code: str, day: date) -> float:
+            if code == "USD":
+                return 1.0
+            if code == "ARS":
+                ars_per_usd = series["USD"][day].tipo_cotizacion
+                return 1.0 / ars_per_usd if ars_per_usd else 0.0
+            return series[code][day].tipo_pase
 
+        common_dates = sorted(set.intersection(*(set(s) for s in series.values())))
         pair_evolution = []
-        common_dates = sorted(list(set(base_dict.keys()) & set(quote_dict.keys())))
-        for d_obj in common_dates:
-            base_val = base_dict[d_obj]
-            quote_val = quote_dict[d_obj]
-            if base_val != 0:  # Avoid division by zero
-                rate = quote_val / base_val
-                pair_evolution.append({"fecha": d_obj.isoformat(), "tasa": rate})
+        for day in common_dates:
+            base_usd = usd_per_unit(base_currency, day)
+            quote_usd = usd_per_unit(quote_currency, day)
+            if base_usd > 0 and quote_usd > 0:
+                pair_evolution.append(
+                    {"fecha": day.isoformat(), "tasa": base_usd / quote_usd}
+                )
             else:
                 self.logger.warning(
-                    f"Base currency {base_currency} had zero value on {d_obj.isoformat()}, cannot calculate pair rate."
+                    f"No USD rate for {base_currency if base_usd <= 0 else quote_currency} "
+                    f"on {day.isoformat()}, skipping {pair}."
                 )
         self.logger.info(
-            f"Calculated {len(pair_evolution)} data points for {base_currency}/{quote_currency} pair evolution."
+            f"Calculated {len(pair_evolution)} data points for {pair} pair evolution."
         )
         return pair_evolution
 
