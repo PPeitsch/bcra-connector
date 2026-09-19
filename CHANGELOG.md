@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Python 3.9 support.** `requires-python` is now `>=3.10`. Python 3.9 reached
+  end-of-life in October 2025, and the patched `requests` release below does not
+  install on it (#91)
+- `requirements.txt`, which duplicated `pyproject.toml` and had already diverged from
+  it (it listed `matplotlib` and `setuptools` as runtime dependencies).
+  `pyproject.toml` is the single source of truth; use `pip install -e ".[dev]"` (#91)
+
+### Security
+- Require `requests>=2.33.0` to fix
+  [GHSA-gc5v-m9x4-r6x2](https://github.com/advisories/GHSA-gc5v-m9x4-r6x2), insecure
+  temp file reuse in `extract_zipped_paths()`. The previous `<2.33.0` cap made the
+  patched release uninstallable (#91)
+
 ## [0.9.4] - 2026-09-17
 
 ### Changed

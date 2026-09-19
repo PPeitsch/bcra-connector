@@ -19,7 +19,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3 :: Only",
@@ -51,12 +50,12 @@ keywords = [
     "inflation",
 ]
 dependencies = [
-    "requests>=2.32.0,<2.33.0",
+    "requests>=2.33.0,<3.0.0",
     "urllib3>=2.2.1,<3.0.0",
     "numpy~=1.26.4,<1.27.0",
     "scipy>=1.13.1,<1.15.0",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 pandas = [
@@ -98,7 +97,7 @@ packages = ["src/bcra_connector"]
 
 [tool.black]
 line-length = 88
-target-version = ["py39"]
+target-version = ["py310"]
 
 [tool.isort]
 profile = "black"
