@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `check_denunciado()` resolves the entity ignoring case and accents, and accepts a
   unique part of the name (`"Santander"`, `"Banco de la Nación Argentina"`). If several
   entities match, it raises `ValueError` listing them (#107)
+- `verify_ssl` also accepts the path to a CA bundle (`str` or `os.PathLike`), as
+  `requests` does, for proxies that inspect TLS; a missing file raises `ValueError` at
+  construction. `close()` releases the HTTP session, and `BCRAConnector` works as a
+  context manager (#113)
 
 ### Changed
 - `get_currency_pair_evolution(base, quote)` now returns the amount of **quote** for
@@ -41,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   alongside numpy 2. `generate_variable_report()` uses the standard library `statistics`
   module and works without numpy. `get_variable_correlation()` raises `ImportError`
   asking for `pip install "bcra-connector[analytics]"` when numpy is missing (#103)
+- The `User-Agent` header is now `bcra-connector/<version>` instead of the fixed
+  `BCRAConnector/1.0` (#113)
 
 ### Fixed
 - Documentation (#111): the docs index listed "Estadísticas v2.0" instead of Monetarias

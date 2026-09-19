@@ -47,6 +47,28 @@ To disable SSL verification (not recommended for production):
 
    connector = BCRAConnector(verify_ssl=False)
 
+Behind a proxy that inspects TLS, pass the path to its CA bundle instead of disabling
+verification. A path that doesn't exist raises ``ValueError`` right away:
+
+.. code-block:: python
+
+   connector = BCRAConnector(verify_ssl="/etc/ssl/certs/corporate-ca.pem")
+
+Closing the Connection
+~~~~~~~~~~~~~~~~~~~~~~
+
+Each connector keeps a ``requests`` session with pooled connections. Call ``close()``
+when you're done, or use it as a context manager:
+
+.. code-block:: python
+
+   from bcra_connector import BCRAConnector
+
+   with BCRAConnector() as connector:
+       latest = connector.get_latest_value(1)
+
+Requests are sent with ``User-Agent: bcra-connector/<version>``.
+
 Debug Mode
 ~~~~~~~~~~
 

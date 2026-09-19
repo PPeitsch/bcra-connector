@@ -7,6 +7,7 @@ Handles rate limiting, retries, and error cases.
 import json
 import logging
 import math
+import os
 import re
 import statistics
 import time
@@ -17,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, c
 import requests
 import urllib3  # For urllib3.disable_warnings
 
+from .__about__ import __version__
 from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
@@ -88,7 +90,7 @@ class BCRAConnector:
     def __init__(
         self,
         language: str = "es-AR",
-        verify_ssl: bool = True,
+        verify_ssl: Union[bool, str, "os.PathLike[str]"] = True,
         debug: bool = False,
         rate_limit: Optional[RateLimitConfig] = None,
         timeout: Optional[Union[TimeoutConfig, float]] = None,
@@ -96,7 +98,9 @@ class BCRAConnector:
         """Initialize the BCRAConnector.
 
         :param language: The language for API responses, defaults to "es-AR"
-        :param verify_ssl: Whether to verify SSL certificates, defaults to True
+        :param verify_ssl: Whether to verify SSL certificates, defaults to True.
+                           A path to a CA bundle (e.g. a corporate proxy's CA)
+                           verifies against that bundle instead, as in requests.
         :param debug: Opt-in debug logging, defaults to False. Sets the
                       ``bcra_connector`` loggers to DEBUG and, if no handler is
                       configured, adds one writing to stderr. Without it the
@@ -107,9 +111,15 @@ class BCRAConnector:
         """
         self.session = requests.Session()
         self.session.headers.update(
-            {"Accept-Language": language, "User-Agent": "BCRAConnector/1.0"}
+            {"Accept-Language": language, "User-Agent": f"bcra-connector/{__version__}"}
         )
-        self.verify_ssl = verify_ssl
+        self.verify_ssl: Union[bool, str]
+        if isinstance(verify_ssl, bool):
+            self.verify_ssl = verify_ssl
+        else:
+            self.verify_ssl = os.fspath(verify_ssl)
+            if not os.path.exists(self.verify_ssl):
+                raise ValueError(f"CA bundle not found: {self.verify_ssl}")
 
         if isinstance(timeout, (int, float)):
             self.timeout = TimeoutConfig.from_total(float(timeout))
@@ -140,6 +150,16 @@ class BCRAConnector:
                 "SSL verification is disabled. This is not recommended for production use."
             )
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    def close(self) -> None:
+        """Close the underlying HTTP session and its pooled connections."""
+        self.session.close()
+
+    def __enter__(self) -> "BCRAConnector":
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
 
     def _make_request(
         self, endpoint: str, params: Optional[Dict[str, Any]] = None
