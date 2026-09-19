@@ -748,3 +748,25 @@ class TestBCRAConnectorExtended:
                 assert rep["min_value"] == 100.0
                 assert rep["max_value"] == 200.0
                 assert rep["percent_change"] == 100.0
+
+    def test_generate_variable_report_descending_history(
+        self, connector: BCRAConnector
+    ):
+        """The API returns series newest-first; the report must not depend on it."""
+        mock_var = PrincipalesVariables(idVariable=1, descripcion="Desc")
+        newest_first = [
+            DetalleMonetaria(fecha=date(2024, 1, 3), valor=300.0),
+            DetalleMonetaria(fecha=date(2024, 1, 2), valor=200.0),
+            DetalleMonetaria(fecha=date(2024, 1, 1), valor=100.0),
+        ]
+        with patch.object(connector, "get_variable_by_name", return_value=mock_var):
+            with patch.object(
+                connector, "get_variable_history", return_value=newest_first
+            ):
+                rep = connector.generate_variable_report("A")
+
+        assert rep["start_date"] == "2024-01-01"
+        assert rep["end_date"] == "2024-01-03"
+        assert rep["latest_date"] == "2024-01-03"
+        assert rep["latest_value"] == 300.0
+        assert rep["percent_change"] == 200.0

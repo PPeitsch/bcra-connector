@@ -959,6 +959,9 @@ class BCRAConnector:
                 "error": "No data available for the specified period",
             }
 
+        # The API returns series newest-first; the statistics below assume the
+        # data runs from oldest to newest.
+        data = sorted(data, key=lambda d: d.fecha)
         values = np.array([d.valor for d in data], dtype=float)
         dates = [d.fecha for d in data]
 
