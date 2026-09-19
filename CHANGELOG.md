@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-18
+
 ### Removed
 - **Python 3.9 support.** `requires-python` is now `>=3.10`. Python 3.9 reached
   end-of-life in October 2025, and the patched `requests` release below does not
@@ -469,6 +471,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[0.10.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.9.4...v0.10.0
 [0.9.4]: https://github.com/PPeitsch/bcra-connector/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/PPeitsch/bcra-connector/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/PPeitsch/bcra-connector/compare/v0.9.0...v0.9.2
