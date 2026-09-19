@@ -99,6 +99,11 @@ class TestHasActiveHandler:
         logger.addHandler(logging.NullHandler())
         assert not _has_active_handler(logger)
 
+    def test_no_handler_up_to_root(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # pytest attaches capture handlers to the root logger; hide them.
+        monkeypatch.setattr(logging.getLogger(), "handlers", [])
+        assert not _has_active_handler(logging.getLogger("bcra_test.orphan"))
+
     def test_handler_on_ancestor_counts(self) -> None:
         parent = logging.getLogger("bcra_test.parent")
         parent.propagate = False
