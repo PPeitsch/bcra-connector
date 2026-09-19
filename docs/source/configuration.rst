@@ -80,4 +80,23 @@ To change these values, subclass `BCRAConnector`:
 
    connector = CustomBCRAConnector()
 
+Catalog Cache
+-------------
+
+Name-based helpers (``get_variable_by_name``, ``get_variable_history``,
+``generate_variable_report``, ``get_variable_correlation``) and ``check_denunciado`` look
+names up in reference catalogs: the variables catalog and the list of financial
+entities. Each connector instance reuses those catalogs for ``CATALOG_CACHE_TTL`` seconds
+(default: 300) instead of downloading them on every lookup.
+
+- ``connector.clear_cache()`` drops the cached catalogs so the next lookup refetches them.
+- ``CATALOG_CACHE_TTL = 0`` disables the cache.
+- ``get_principales_variables()`` and ``get_entidades()`` are never cached: call them
+  when you need fresh data (the catalog includes each series' latest value).
+
+.. code-block:: python
+
+   class NoCacheConnector(BCRAConnector):
+       CATALOG_CACHE_TTL = 0
+
 This configuration provides more flexibility and control over the connector's behavior.

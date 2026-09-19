@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Name lookups reuse the variables catalog and the cheque entities list for
+  `CATALOG_CACHE_TTL` seconds (default 300, `0` disables it); `clear_cache()` forces a
+  refetch. `generate_variable_report()` no longer downloads the 1610-series catalog
+  twice, and repeated name-based calls or `check_denunciado()` calls don't download it
+  again. `get_principales_variables()` and `get_entidades()` remain uncached (#101)
+
 ### Changed
 - The library no longer configures logging. The `bcra_connector` package logger gets a
   `NullHandler`, and `BCRAConnector` no longer attaches a `StreamHandler` or forces the

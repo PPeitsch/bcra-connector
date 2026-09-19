@@ -9,7 +9,7 @@ import logging
 import re
 import time
 from datetime import date, datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import requests
@@ -73,6 +73,9 @@ class BCRAConnector:
     MAX_PAGE_SIZE = 3000  # Monetarias v4.0 (catalog and series)
     FX_MAX_PAGE_SIZE = 1000  # Estadísticas Cambiarias v1.0
     MAX_PAGES = 100  # safety cap for automatic pagination
+    # How long name lookups reuse the variables catalog and the cheque entities list
+    # (seconds). 0 disables the cache. Public fetch methods are never cached.
+    CATALOG_CACHE_TTL = 300.0
 
     def __init__(
         self,
@@ -108,6 +111,7 @@ class BCRAConnector:
             self.timeout = self.DEFAULT_TIMEOUT
 
         self.rate_limiter = RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT)
+        self._cache: Dict[str, Tuple[float, Any]] = {}
 
         # A library must not configure logging: handlers and levels belong to the
         # application. ``debug=True`` is the only, explicit, exception.
@@ -228,6 +232,25 @@ class BCRAConnector:
         raise BCRAApiError(
             f"Maximum retry attempts ({self.MAX_RETRIES}) reached for {url}"
         )
+
+    def clear_cache(self) -> None:
+        """Drop the cached catalogs so the next name lookup fetches them again."""
+        self._cache.clear()
+
+    def _cached(self, key: str, loader: Callable[[], T]) -> T:
+        """Return ``loader()``, reusing its last result for ``CATALOG_CACHE_TTL``.
+
+        Only successful results are stored: an exception propagates and the next
+        call tries again.
+        """
+        now = time.monotonic()
+        entry = self._cache.get(key)
+        if entry is not None and now - entry[0] < self.CATALOG_CACHE_TTL:
+            return cast(T, entry[1])
+        value = loader()
+        if self.CATALOG_CACHE_TTL > 0:
+            self._cache[key] = (now, value)
+        return value
 
     def _collect_pages(
         self,
@@ -678,8 +701,11 @@ class BCRAConnector:
         :param variable_name: The name of the variable/series to find.
         :return: A PrincipalesVariables object if found, None otherwise.
         :raises BCRAApiError: If the variables catalog cannot be fetched.
+
+        The catalog is reused across lookups for ``CATALOG_CACHE_TTL`` seconds; call
+        ``clear_cache()`` to force a refetch.
         """
-        variables = self.get_principales_variables()
+        variables = self._cached("variables", self.get_principales_variables)
         normalized_name = variable_name.lower().strip()
 
         matches = [
@@ -841,7 +867,7 @@ class BCRAConnector:
         if check_number <= 0:
             raise ValueError("Check number must be positive.")
         try:
-            entities = self.get_entidades()
+            entities = self._cached("entidades", self.get_entidades)
         except BCRAApiError as e:
             self.logger.error(
                 f"Could not get entities to check denounced status for '{entity_name}': {e}"
