@@ -8,10 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The library no longer configures logging. The `bcra_connector` package logger gets a
+  `NullHandler`, and `BCRAConnector` no longer attaches a `StreamHandler` or forces the
+  level to `INFO`, so nothing is printed unless the application configures logging.
+  `debug=True` remains an explicit opt-in: it sets `DEBUG` and adds a stderr handler
+  only if no other handler would receive the records (#95)
+
 ### Fixed
 - `generate_variable_report()` returned `start_date`/`end_date`, `latest_value` and
   `percent_change` reversed: the Monetarias v4.0 API returns series newest-first and the
   report assumed ascending order. The data is now sorted by date before computing (#93)
+
+### Security
+- Central de Deudores methods no longer log the queried CUIT/CUIL/CDI or the person's
+  name, and 11-digit identifiers are masked in the URLs logged by retries and debug
+  output (#95)
 
 ## [0.10.0] - 2026-09-18
 
