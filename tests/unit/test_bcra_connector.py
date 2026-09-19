@@ -101,7 +101,7 @@ class TestBCRAConnector:
 
         mock_get.assert_called_once_with(
             f"{BCRAConnector.BASE_URL}/estadisticas/v4.0/Monetarias",
-            params=None,
+            params={"Limit": BCRAConnector.MAX_PAGE_SIZE, "Offset": 0},
             verify=False,
             timeout=ANY,
         )

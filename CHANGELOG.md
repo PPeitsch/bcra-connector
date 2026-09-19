@@ -27,6 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and logs a warning listing the candidates when several series match only by
   substring. It still returns the first match, so the return value is unchanged in
   the ambiguous case (#97)
+- Results were silently truncated at the APIs' default of 1000 (#99):
+  - `get_principales_variables()` returned 1000 of the 1610 series in the catalog, so
+    `get_variable_by_name()` could not find the rest. It now pages through the catalog.
+  - `get_variable_history()` without `limit`/`offset` now returns the whole date range,
+    fetching as many pages as needed. An explicit `limit`/`offset` still means a single
+    page.
+  - `get_currency_evolution()` returned at most 1000 dates. Its `limit` now defaults to
+    `None`, meaning the whole range; passing `limit` keeps single-page behaviour.
+  - `get_currency_pair_evolution()` raised `ValueError` for `days > 985` (it requested
+    `limit=days+15`, above the API maximum). It now uses the full range.
+  - `get_evolucion_moneda()` logs a warning when its page does not cover all results.
 
 ### Security
 - Central de Deudores methods no longer log the queried CUIT/CUIL/CDI or the person's

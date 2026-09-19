@@ -476,11 +476,22 @@ class TestBCRAConnectorExtended:
         with pytest.raises(ValueError, match="positive"):
             connector.get_currency_evolution("USD", days=-1)
 
+        # Explicit limit: a single page through get_evolucion_moneda.
         with patch.object(
             connector, "get_evolucion_moneda", return_value=[]
         ) as mock_get:
-            connector.get_currency_evolution("USD", days=10)
+            connector.get_currency_evolution("USD", days=10, limit=100)
             mock_get.assert_called_once()
+
+        # Default: the whole range, page by page.
+        with patch.object(
+            connector, "_fetch_evolucion_moneda_page", return_value=([], 0)
+        ) as mock_page:
+            connector.get_currency_evolution("USD", days=10)
+            mock_page.assert_called_once()
+
+        with pytest.raises(ValueError, match="non-negative"):
+            connector.get_currency_evolution("USD", days=10, offset=-1)
 
     def test_check_denunciado_flow(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="positive"):
