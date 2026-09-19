@@ -3,7 +3,7 @@
 repos:
   # Standard hooks - Generally useful checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace    # Removes trailing whitespace
       - id: end-of-file-fixer      # Ensures files end with one newline
@@ -15,7 +15,7 @@ repos:
 
   # Black - The uncompromising Python code formatter
   - repo: https://github.com/psf/black
-    rev: 24.4.2 # Keep consistent with common versions
+    rev: 26.5.1 # Keep consistent with common versions
     hooks:
       - id: black
         # Black reads configuration from pyproject.toml automatically
@@ -24,7 +24,7 @@ repos:
 
   # isort - Sorts Python imports automatically
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 9.0.1
     hooks:
       - id: isort
         name: isort (python)
@@ -32,7 +32,7 @@ repos:
 
   # Flake8 - Linter for style and logic errors
   - repo: https://github.com/pycqa/flake8
-    rev: 7.1.0
+    rev: 7.3.0
     hooks:
       - id: flake8
         # Flake8 doesn't read pyproject.toml by default. Pass config via args:
@@ -51,20 +51,22 @@ repos:
 
   # MyPy - Static type checker
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.0
+    rev: v2.3.1
     hooks:
       - id: mypy
         args: ["--explicit-package-bases"]
         # Exact pins so the hook environment is the same locally and in CI.
-        # They must have wheels for the Code Quality job's Python (3.11).
+        # mypy checks against python_version 3.10 (the minimum supported), so the
+        # pandas/numpy pins are the newest ones that still support 3.10: pandas 3 and
+        # pandas-stubs 3 require 3.11+, and mypy silently degrades their types to Any.
         additional_dependencies: [
             "types-requests==2.33.0.20260906",
             "types-urllib3==1.26.25.14",
-            "numpy==2.4.6",
+            "numpy==2.2.6",
             "pytest==9.1.1",
-            "matplotlib==3.11.2",  # For the examples
-            "pandas==3.0.6",
-            "pandas-stubs==3.0.5.260914",
+            "matplotlib==3.10.8",  # For the examples
+            "pandas==2.3.3",
+            "pandas-stubs==2.3.3.260113",
           ]
         # You might need to exclude specific files/modules if they cause issues
         # exclude: ^(tests/fixtures/problematic_file.py|...)

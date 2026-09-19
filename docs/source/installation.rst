@@ -97,19 +97,19 @@ This should print the version number of the installed BCRA API Connector.
 Dependencies
 ------------
 
-The BCRA API Connector has the following dependencies:
+The BCRA API Connector requires only:
 
-- requests>=2.32.0,<2.33
-- matplotlib>=3.7.3,<3.8
-- setuptools>=70.0.0,<71
-- urllib3>=2.2.1,<3.0
+- ``requests>=2.33.0,<3.0.0``
+- ``urllib3>=2.2.1,<3.0.0``
 
-These will be automatically installed when using pip. If you're installing manually, ensure these dependencies are installed.
+Both are installed automatically by pip. The optional extras add ``pandas``
+(``[pandas]``, for ``to_dataframe()``) and ``numpy`` (``[analytics]``, for
+``get_variable_correlation()``).
 
 Troubleshooting
 ---------------
 
-If you encounter any issues during installation, please check our :doc:`troubleshooting` guide or open an issue on our `BCRA API Connector issues page <https://github.com/PPeitsch/bcra-connector/issues>`_.
+If you encounter any issues during installation, please open an issue on our `BCRA API Connector issues page <https://github.com/PPeitsch/bcra-connector/issues>`_.
 
 Next Steps
 ----------

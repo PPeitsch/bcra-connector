@@ -15,7 +15,8 @@ python:
    install:
    - method: pip
      path: .
-   - requirements: docs/requirements.txt
+     extra_requirements:
+       - docs
 
 formats:
   - pdf
