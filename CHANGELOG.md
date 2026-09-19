@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `numpy` and `scipy` are no longer required dependencies. `scipy` is dropped
+  (`get_variable_correlation()` now uses `numpy.corrcoef`), and `numpy` moves to the new
+  `[analytics]` extra with no upper pin, so the connector installs on Python 3.13 and
+  alongside numpy 2. `generate_variable_report()` uses the standard library `statistics`
+  module and works without numpy. `get_variable_correlation()` raises `ImportError`
+  asking for `pip install "bcra-connector[analytics]"` when numpy is missing (#103)
+
 ## [0.11.0] - 2026-09-19
 
 ### Added

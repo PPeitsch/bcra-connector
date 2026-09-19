@@ -6,15 +6,15 @@ Handles rate limiting, retries, and error cases.
 
 import json
 import logging
+import math
 import re
+import statistics
 import time
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
-import numpy as np
 import requests
 import urllib3  # For urllib3.disable_warnings
-from scipy.stats import pearsonr
 
 from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
@@ -1017,7 +1017,8 @@ class BCRAConnector:
         """
         Calculate Pearson correlation between two variables/series over last n days (Monetarias v3.0).
 
-        Handles missing data by linear interpolation.
+        Handles missing data by linear interpolation. Requires numpy
+        (``pip install "bcra-connector[analytics]"``).
 
         :param variable_name1: Name of the first variable/series.
         :param variable_name2: Name of the second variable/series.
@@ -1025,9 +1026,17 @@ class BCRAConnector:
         :return: Correlation coefficient (-1 to 1), or NaN if not calculable.
         :raises ValueError: If variables not found or days invalid.
         :raises BCRAApiError: If underlying API calls fail.
+        :raises ImportError: If numpy is not installed.
         """
         if days <= 1:
             raise ValueError("Number of days must be greater than 1 for correlation.")
+        try:
+            import numpy as np
+        except ImportError as e:
+            raise ImportError(
+                "get_variable_correlation() requires numpy. Install it with: "
+                'pip install "bcra-connector[analytics]"'
+            ) from e
         try:
             data1 = self.get_variable_history(variable_name1, days)
             data2 = self.get_variable_history(variable_name2, days)
@@ -1041,7 +1050,7 @@ class BCRAConnector:
             self.logger.warning(
                 f"Insufficient data for correlation: '{variable_name1}' ({len(data1)} pts), '{variable_name2}' ({len(data2)} pts)"
             )
-            return np.nan
+            return math.nan
 
         dates1 = [d.fecha for d in data1]
         dates2 = [d.fecha for d in data2]
@@ -1054,7 +1063,7 @@ class BCRAConnector:
             self.logger.warning(
                 f"Insufficient unique dates for meaningful correlation between '{variable_name1}' and '{variable_name2}'"
             )
-            return np.nan
+            return math.nan
 
         all_dates_ord = np.array(
             sorted(list(set(d.toordinal() for d in dates1 + dates2))), dtype=float
@@ -1079,27 +1088,19 @@ class BCRAConnector:
             self.logger.warning(
                 f"One or both series ('{variable_name1}', '{variable_name2}') are constant after interpolation. Correlation is undefined."
             )
-            return np.nan
-        try:
-            correlation, p_value = pearsonr(interp_values1, interp_values2)
-        except (
-            ValueError
-        ) as e:  # Should be caught by constant check, but as a safeguard
-            self.logger.error(
-                f"Pearsonr calculation failed for '{variable_name1}' and '{variable_name2}': {e}"
-            )
-            return np.nan
+            return math.nan
+        correlation = float(np.corrcoef(interp_values1, interp_values2)[0, 1])
 
-        if np.isnan(correlation):
+        if math.isnan(correlation):
             self.logger.warning(
                 f"Correlation calculation resulted in NaN for '{variable_name1}' and '{variable_name2}'. Check data variability."
             )
             # This can happen if variance is zero for one of the series after interpolation
         else:
             self.logger.info(
-                f"Correlation between '{variable_name1}' and '{variable_name2}' ({days} days): {correlation:.4f} (p-value: {p_value:.4f})"
+                f"Correlation between '{variable_name1}' and '{variable_name2}' ({days} days): {correlation:.4f}"
             )
-        return float(correlation)
+        return correlation
 
     def generate_variable_report(
         self, variable_name: str, days: int = 30
@@ -1147,17 +1148,18 @@ class BCRAConnector:
         # The API returns series newest-first; the statistics below assume the
         # data runs from oldest to newest.
         data = sorted(data, key=lambda d: d.fecha)
-        values = np.array([d.valor for d in data], dtype=float)
+        values = [float(d.valor) for d in data]
         dates = [d.fecha for d in data]
 
-        # Calculate statistics, handling cases where values might be empty
-        mean_val = float(np.mean(values)) if values.size > 0 else None
-        median_val = float(np.median(values)) if values.size > 0 else None
-        min_val = float(np.min(values)) if values.size > 0 else None
-        max_val = float(np.max(values)) if values.size > 0 else None
-        std_dev_val = float(np.std(values)) if values.size > 0 else None
-        latest_val = float(values[-1]) if values.size > 0 else None
-        start_val = float(values[0]) if values.size > 0 else None
+        # Calculate statistics, handling cases where values might be empty.
+        # std_dev is the population standard deviation.
+        mean_val = statistics.fmean(values) if values else None
+        median_val = float(statistics.median(values)) if values else None
+        min_val = min(values) if values else None
+        max_val = max(values) if values else None
+        std_dev_val = statistics.pstdev(values) if values else None
+        latest_val = values[-1] if values else None
+        start_val = values[0] if values else None
 
         percent_change_val = None
         if latest_val is not None and start_val is not None and start_val != 0:

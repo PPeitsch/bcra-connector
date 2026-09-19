@@ -726,8 +726,7 @@ class TestBCRAConnectorExtended:
         with pytest.raises(ValueError, match="Invalid or empty"):
             connector._get_cotizacion_detalle(None, "USD")
 
-    def test_get_variable_correlation_pearson_error(self, connector: BCRAConnector):
-        # Setup valid data
+    def test_get_variable_correlation_nan(self, connector: BCRAConnector):
         d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
         d2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=20.0)
         d3 = DetalleMonetaria(fecha=date(2024, 1, 3), valor=30.0)
@@ -736,22 +735,8 @@ class TestBCRAConnectorExtended:
             connector, "get_variable_history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
         ):
             with patch(
-                "bcra_connector.bcra_connector.pearsonr",
-                side_effect=ValueError("Math error"),
-            ):
-                res = connector.get_variable_correlation("A", "B")
-                assert np.isnan(res)
-
-    def test_get_variable_correlation_pearson_nan(self, connector: BCRAConnector):
-        d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
-        d2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=20.0)
-        d3 = DetalleMonetaria(fecha=date(2024, 1, 3), valor=30.0)
-
-        with patch.object(
-            connector, "get_variable_history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
-        ):
-            with patch(
-                "bcra_connector.bcra_connector.pearsonr", return_value=(np.nan, 0.5)
+                "numpy.corrcoef",
+                return_value=np.array([[1.0, np.nan], [np.nan, 1.0]]),
             ):
                 res = connector.get_variable_correlation("A", "B")
                 assert np.isnan(res)

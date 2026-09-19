@@ -18,7 +18,16 @@ For most users, installing via pip is the simplest method:
 
    pip install bcra-connector
 
-This command will install the BCRA API Connector and all its dependencies.
+This command will install the BCRA API Connector and its required dependencies
+(``requests`` and ``urllib3``). Optional features have their own extras:
+
+.. code-block:: bash
+
+   # DataFrame conversion (to_dataframe)
+   pip install "bcra-connector[pandas]"
+
+   # get_variable_correlation(), which needs numpy
+   pip install "bcra-connector[analytics]"
 
 Installation for Development
 ----------------------------

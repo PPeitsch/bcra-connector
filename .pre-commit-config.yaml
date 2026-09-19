@@ -59,7 +59,6 @@ repos:
             "types-requests>=2.31.0",
             "types-urllib3>=1.26.0",
             "numpy~=1.26.4",
-            "scipy~=1.13.1",
             "pytest>=6.0.0",
             "matplotlib>=3.7.3",  # Añadir matplotlib para los ejemplos
             "pandas>=1.5.0",
