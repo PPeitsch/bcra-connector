@@ -679,8 +679,8 @@ class TestBCRAConnectorExtended:
 
     def test_make_request_rate_limit_delay(self, connector: BCRAConnector):
         with patch.object(connector.rate_limiter, "acquire", side_effect=[0.1, 0.0]):
-            with patch("bcra_connector.bcra_connector.time.sleep") as mock_sleep:
-                with patch.object(connector, "session") as mock_session:
+            with patch("bcra_connector._http.time.sleep") as mock_sleep:
+                with patch.object(connector._http, "session") as mock_session:
                     mock_session.get.return_value = Mock(
                         status_code=200, raise_for_status=lambda: None, json=lambda: {}
                     )

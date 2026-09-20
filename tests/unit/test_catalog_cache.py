@@ -76,7 +76,7 @@ class TestVariableCatalogCache:
     def test_expires_after_ttl(
         self, connector: BCRAConnector, catalog: MagicMock
     ) -> None:
-        clock = "bcra_connector.bcra_connector.time.monotonic"
+        clock = "bcra_connector._http.time.monotonic"
         ttl = connector.CATALOG_CACHE_TTL
         with patch(clock, return_value=1000.0):
             connector.get_variable_by_name("Base monetaria")

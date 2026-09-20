@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `BCRAConnector(session=...)` accepts a `requests.Session`, for custom adapters,
+  proxies or tests. The caller keeps ownership: `close()` leaves an injected session
+  open and still closes one the connector created (#119)
+
+### Changed
+- Internal: the HTTP transport (session, retries, rate limiting, timeouts, pagination
+  and the catalog cache) moved to an internal `HttpClient`; `BCRAConnector` delegates to
+  it. No public behavior changes — `BASE_URL`, `MAX_RETRIES`, `RETRY_DELAY`,
+  `MAX_PAGE_SIZE`, `FX_MAX_PAGE_SIZE`, `MAX_PAGES` and `CATALOG_CACHE_TTL` remain class
+  attributes and are read on every call, so subclassing or assigning them keeps
+  working (#119)
+
+### Added
 - `docs` extra with the documentation dependencies (`sphinx`, `sphinx-rtd-theme`,
   `myst-parser`), so `pip install -e ".[docs]"` is enough to build the docs locally.
   `docs/requirements.txt` and `.readthedocs.yaml` now point at it instead of keeping a

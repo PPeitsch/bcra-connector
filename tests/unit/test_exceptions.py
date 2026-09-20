@@ -49,7 +49,7 @@ def _request_error(connector: BCRAConnector, status: int) -> BCRAApiError:
     response = _http_error_response(status, {"errorMessages": ["detalle"]})
     with (
         patch.object(connector.session, "get", return_value=response),
-        patch("bcra_connector.bcra_connector.time.sleep"),
+        patch("bcra_connector._http.time.sleep"),
         pytest.raises(BCRAApiError) as exc_info,
     ):
         connector._make_request("test")
@@ -114,7 +114,7 @@ class TestMakeRequestErrors:
     def test_timeout_has_no_status(self, connector: BCRAConnector) -> None:
         with (
             patch.object(connector.session, "get", side_effect=requests.Timeout()),
-            patch("bcra_connector.bcra_connector.time.sleep"),
+            patch("bcra_connector._http.time.sleep"),
             pytest.raises(BCRAApiError) as exc_info,
         ):
             connector._make_request("test")

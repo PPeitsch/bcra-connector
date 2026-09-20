@@ -54,6 +54,24 @@ verification. A path that doesn't exist raises ``ValueError`` right away:
 
    connector = BCRAConnector(verify_ssl="/etc/ssl/certs/corporate-ca.pem")
 
+Custom Session
+~~~~~~~~~~~~~~
+
+Pass your own ``requests.Session`` to control adapters, proxies or connection pooling.
+The connector sets its headers on it and uses it for every request; since the session is
+yours, ``close()`` leaves it open:
+
+.. code-block:: python
+
+   import requests
+   from requests.adapters import HTTPAdapter
+
+   session = requests.Session()
+   session.mount("https://", HTTPAdapter(pool_maxsize=50))
+   session.proxies = {"https": "http://proxy.corp:8080"}
+
+   connector = BCRAConnector(session=session)
+
 Closing the Connection
 ~~~~~~~~~~~~~~~~~~~~~~
 
