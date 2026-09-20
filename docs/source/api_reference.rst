@@ -27,6 +27,14 @@ Domain Clients
    :members:
    :show-inheritance:
 
+Shared Models
+-------------
+
+.. automodule:: src.bcra_connector.models
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Exceptions
 ----------
 

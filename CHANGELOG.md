@@ -64,6 +64,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   delegate and emit a `DeprecationWarning` naming the replacement (#121)
 
 ### Changed
+- `Resultset` and `Metadata` are defined once, in `bcra_connector.models`, instead of
+  once per API package. Every previous import path — including
+  `EstadisticasCambiariasResultset` and `EstadisticasCambiariasMetadata` — now resolves
+  to the same class, so instances from the two APIs compare and `isinstance` as one
+  would expect. The surviving behaviour is the validating one: a `resultset` block with
+  a non-integer `count`/`offset`/`limit` raises `ValueError` instead of reaching the
+  models as-is, and `to_dict()` is available on both (#138)
 - `DatosVariable` instances now compare every field. `__eq__` looked only at
   `idVariable`, so two series with the same id but different `detalle` — or an empty
   one — compared equal (#135)

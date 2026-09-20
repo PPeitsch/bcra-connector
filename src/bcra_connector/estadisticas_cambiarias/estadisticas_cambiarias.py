@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from ..models import Metadata
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -128,42 +130,6 @@ class CotizacionFecha:
             for d in self.detalle
         ]
         return pd.DataFrame(rows)
-
-
-@dataclass
-class Resultset:
-    """
-    Represents metadata about the result set.
-
-    :param count: The number of results
-    :param offset: The offset of the results
-    :param limit: The limit of the results
-    """
-
-    count: int
-    offset: int
-    limit: int
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Resultset":
-        """Create a Resultset instance from a dictionary."""
-        return cls(count=data["count"], offset=data["offset"], limit=data["limit"])
-
-
-@dataclass
-class Metadata:
-    """
-    Represents metadata about the response.
-
-    :param resultset: The resultset metadata
-    """
-
-    resultset: Resultset
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Metadata":
-        """Create a Metadata instance from a dictionary."""
-        return cls(resultset=Resultset.from_dict(data["resultset"]))
 
 
 @dataclass

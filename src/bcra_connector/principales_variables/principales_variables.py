@@ -7,57 +7,10 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import install_legacy_names
+from ..models import Metadata, install_legacy_names
 
 if TYPE_CHECKING:
     import pandas as pd
-
-
-# src/bcra_connector/principales_variables/principales_variables.py
-@dataclass
-class Resultset:
-    """
-    Represents metadata about the result set for Monetarias API v4.0 data.
-    """
-
-    count: int
-    offset: int
-    limit: int
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Resultset":
-        """Create a Resultset instance from a dictionary."""
-        if (
-            not isinstance(data.get("count"), int)
-            or not isinstance(data.get("offset"), int)
-            or not isinstance(data.get("limit"), int)
-        ):
-            raise ValueError("Invalid types for Resultset fields")
-        return cls(count=data["count"], offset=data["offset"], limit=data["limit"])
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the Resultset instance to a dictionary."""
-        return {
-            "count": self.count,
-            "offset": self.offset,
-            "limit": self.limit,
-        }
-
-
-@dataclass
-class Metadata:
-    """
-    Represents metadata about the response for Monetarias API v4.0 data.
-    """
-
-    resultset: Resultset
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Metadata":
-        """Create a Metadata instance from a dictionary."""
-        if "resultset" not in data or not isinstance(data["resultset"], dict):
-            raise ValueError("Missing or invalid 'resultset' in Metadata")
-        return cls(resultset=Resultset.from_dict(data["resultset"]))
 
 
 @dataclass
