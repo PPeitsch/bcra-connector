@@ -21,7 +21,11 @@ class TestDeprecatedAliases:
         [
             ("get_divisas", "currencies", ()),
             ("get_cotizaciones", "quotations", ("2024-01-02",)),
-            ("get_evolucion_moneda", "series", ("USD", "2024-01-01", "2024-01-31", 50, 0)),
+            (
+                "get_evolucion_moneda",
+                "series",
+                ("USD", "2024-01-01", "2024-01-31", 50, 0),
+            ),
             ("get_currency_evolution", "evolution", ("USD", 10, 100, 0)),
             ("get_latest_quotations", "latest", ()),
             ("get_currency_pair_evolution", "pair", ("USD", "ARS", 7)),
