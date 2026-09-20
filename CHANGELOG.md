@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   their `DataFrame` as `Any` (#115)
 
 ### Fixed
+- Documentation: the examples page embedded three images that returned 404 in the
+  published docs. They are produced by running the examples, which write them to the
+  gitignored `docs/build/`, so Read the Docs never had them (#117)
 - Documentation: the installation guide listed `matplotlib` and `setuptools` as runtime
   dependencies and an outdated `requests` range, and linked to a `troubleshooting` page
   that doesn't exist (#115)
