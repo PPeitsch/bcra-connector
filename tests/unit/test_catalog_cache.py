@@ -46,9 +46,9 @@ def connector() -> BCRAConnector:
 def catalog(connector: BCRAConnector) -> Iterator[MagicMock]:
     with (
         patch.object(
-            connector, "get_principales_variables", return_value=CATALOG
+            connector.monetarias, "list", return_value=CATALOG
         ) as mock_catalog,
-        patch.object(connector, "get_datos_variable", side_effect=_series),
+        patch.object(connector.monetarias, "series", side_effect=_series),
     ):
         yield mock_catalog
 
@@ -70,7 +70,7 @@ class TestVariableCatalogCache:
         self, connector: BCRAConnector, catalog: MagicMock
     ) -> None:
         for _ in range(3):
-            connector.get_variable_history("Base monetaria", days=10)
+            connector.monetarias.history("Base monetaria", days=10)
         assert catalog.call_count == 1
 
     def test_expires_after_ttl(
@@ -79,20 +79,20 @@ class TestVariableCatalogCache:
         clock = "bcra_connector._http.time.monotonic"
         ttl = connector.CATALOG_CACHE_TTL
         with patch(clock, return_value=1000.0):
-            connector.get_variable_by_name("Base monetaria")
+            connector.monetarias.find("Base monetaria")
         with patch(clock, return_value=1000.0 + ttl - 1):
-            connector.get_variable_by_name("Base monetaria")
+            connector.monetarias.find("Base monetaria")
         assert catalog.call_count == 1
         with patch(clock, return_value=1000.0 + ttl):
-            connector.get_variable_by_name("Base monetaria")
+            connector.monetarias.find("Base monetaria")
         assert catalog.call_count == 2
 
     def test_clear_cache_forces_refetch(
         self, connector: BCRAConnector, catalog: MagicMock
     ) -> None:
-        connector.get_variable_by_name("Base monetaria")
+        connector.monetarias.find("Base monetaria")
         connector.clear_cache()
-        connector.get_variable_by_name("Base monetaria")
+        connector.monetarias.find("Base monetaria")
         assert catalog.call_count == 2
 
     def test_ttl_zero_disables_cache(
@@ -102,30 +102,30 @@ class TestVariableCatalogCache:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         monkeypatch.setattr(connector, "CATALOG_CACHE_TTL", 0)
-        connector.get_variable_by_name("Base monetaria")
-        connector.get_variable_by_name("Base monetaria")
+        connector.monetarias.find("Base monetaria")
+        connector.monetarias.find("Base monetaria")
         assert catalog.call_count == 2
 
     def test_errors_are_not_cached(self, connector: BCRAConnector) -> None:
         with patch.object(
-            connector,
-            "get_principales_variables",
+            connector.monetarias,
+            "list",
             side_effect=[BCRAApiError("down"), CATALOG],
         ) as mock_catalog:
             with pytest.raises(BCRAApiError):
-                connector.get_variable_by_name("Base monetaria")
-            variable = connector.get_variable_by_name("Base monetaria")
+                connector.monetarias.find("Base monetaria")
+            variable = connector.monetarias.find("Base monetaria")
         assert variable is not None and variable.idVariable == 15
         assert mock_catalog.call_count == 2
 
     def test_public_catalog_call_is_not_cached(self, connector: BCRAConnector) -> None:
-        """get_principales_variables() is the explicit "fresh data" call."""
+        """monetarias.list() is the explicit "fresh data" call."""
         response = {"results": [{"idVariable": 1, "descripcion": "Reservas"}]}
         with patch.object(
-            connector, "_make_request", return_value=response
+            connector._http, "request", return_value=response
         ) as mock_req:
-            connector.get_principales_variables()
-            connector.get_principales_variables()
+            connector.monetarias.list()
+            connector.monetarias.list()
         assert mock_req.call_count == 2
 
 

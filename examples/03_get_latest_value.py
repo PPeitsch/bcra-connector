@@ -37,7 +37,7 @@ def main() -> None:
     ]
 
     try:
-        all_variables = connector.get_principales_variables()
+        all_variables = connector.monetarias.list()
         if not all_variables:
             logger.error("No variables returned from API. Cannot get latest values.")
             return
@@ -80,7 +80,7 @@ def main() -> None:
     for name_or_desc in current_variable_names:
         try:
             logger.info(f"Fetching latest value for '{name_or_desc}'...")
-            variable_obj = connector.get_variable_by_name(name_or_desc)
+            variable_obj = connector.monetarias.find(name_or_desc)
 
             if not variable_obj:
                 logger.warning(
@@ -88,8 +88,8 @@ def main() -> None:
                 )
                 continue
 
-            # v4.0: get_latest_value() returns DetalleMonetaria (not DatosVariable)
-            latest_data_point = connector.get_latest_value(variable_obj.idVariable)
+            # v4.0: monetarias.latest() returns DetalleMonetaria (not DatosVariable)
+            latest_data_point = connector.monetarias.latest(variable_obj.idVariable)
             logger.info(
                 f"  ID: {variable_obj.idVariable}, Value: {latest_data_point.valor}, "
                 f"Date: {latest_data_point.fecha.isoformat()}, Category: {getattr(variable_obj, 'categoria', 'N/A')}"

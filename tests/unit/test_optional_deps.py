@@ -48,8 +48,8 @@ def test_report_without_numpy(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "numpy", None)
     connector = BCRAConnector(rate_limit=None)
     variable = PrincipalesVariables(idVariable=1, descripcion="Reservas")
-    with patch.object(connector, "get_variable_by_name", return_value=variable):
-        with patch.object(connector, "get_variable_history", return_value=_series()):
+    with patch.object(connector.monetarias, "find", return_value=variable):
+        with patch.object(connector.monetarias, "history", return_value=_series()):
             report = connector.generate_variable_report("Reservas", days=4)
 
     assert report["start_date"] == "2024-01-01"
@@ -69,7 +69,7 @@ def test_correlation_without_numpy_asks_for_extra(
 ) -> None:
     monkeypatch.setitem(sys.modules, "numpy", None)
     connector = BCRAConnector(rate_limit=None)
-    with patch.object(connector, "get_variable_history", return_value=_series()):
+    with patch.object(connector.monetarias, "history", return_value=_series()):
         with pytest.raises(ImportError, match=r"bcra-connector\[analytics\]"):
             connector.get_variable_correlation("A", "B")
 
@@ -81,9 +81,7 @@ def test_correlation_matches_pearson() -> None:
         DetalleMonetaria(fecha=d.fecha, valor=v)
         for d, v in zip(_series(), [1.0, 2.0, 4.0, 3.0])
     ]
-    with patch.object(
-        connector, "get_variable_history", side_effect=[_series(), other]
-    ):
+    with patch.object(connector.monetarias, "history", side_effect=[_series(), other]):
         corr = connector.get_variable_correlation("A", "B", days=4)
 
     # Pearson r of (20, 30, 10, 40) vs (3, 4, 2, 1), oldest first.

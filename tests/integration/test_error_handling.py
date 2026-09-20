@@ -37,7 +37,7 @@ class TestErrorHandling:
     def test_timeout_handling(self, short_timeout_connector: BCRAConnector) -> None:
         """Test handling of request timeouts when calling a v3.0 endpoint."""
         with pytest.raises(BCRAApiError) as exc_info:
-            short_timeout_connector.get_principales_variables()
+            short_timeout_connector.monetarias.list()
         assert "request timed out" in str(exc_info.value).lower()
 
     def test_connection_error(self) -> None:
@@ -49,7 +49,7 @@ class TestErrorHandling:
         connector.BASE_URL = "https://nonexistent.invalid.domain.for.test"
 
         with pytest.raises(BCRAApiError) as exc_info:
-            connector.get_principales_variables()
+            connector.monetarias.list()
         assert "connection error" in str(exc_info.value).lower()
 
     def test_invalid_date_range_client_validation(
@@ -63,7 +63,7 @@ class TestErrorHandling:
             ValueError,
             match="'desde' date must be earlier than or equal to 'hasta' date",
         ):
-            strict_rate_limit_connector.get_datos_variable(
+            strict_rate_limit_connector.monetarias.series(
                 id_variable=1, desde=later_date, hasta=earlier_date
             )
 
@@ -73,7 +73,7 @@ class TestErrorHandling:
         """Test API error for invalid variable ID with get_datos_variable (v3.0)."""
         non_existent_id = 9999999
         with pytest.raises(BCRAApiError) as exc_info:
-            strict_rate_limit_connector.get_datos_variable(
+            strict_rate_limit_connector.monetarias.series(
                 id_variable=non_existent_id,
                 desde=datetime.now() - timedelta(days=1),
                 hasta=datetime.now(),
@@ -105,7 +105,7 @@ class TestErrorHandling:
         )
 
         with pytest.raises(BCRAApiError) as exc_info:
-            strict_rate_limit_connector.get_principales_variables()
+            strict_rate_limit_connector.monetarias.list()
         assert (
             "invalid json response" in str(exc_info.value).lower()
             or "expecting value" in str(exc_info.value).lower()
@@ -125,7 +125,7 @@ class TestErrorHandling:
         monkeypatch.setattr(ssl_connector.session, "get", mock_get_ssl_error)
 
         with pytest.raises(BCRAApiError) as exc_info:
-            ssl_connector.get_principales_variables()
+            ssl_connector.monetarias.list()
         assert (
             "ssl issue" in str(exc_info.value).lower()
             or "ssl verification failed" in str(exc_info.value).lower()
@@ -162,7 +162,7 @@ class TestErrorHandling:
             connector_for_retry.session, "get", mock_request_with_retries
         )
 
-        result: List[Any] = connector_for_retry.get_principales_variables()
+        result: List[Any] = connector_for_retry.monetarias.list()
         assert result == []
         assert failure_count == connector_for_retry.MAX_RETRIES
 
@@ -195,7 +195,7 @@ class TestErrorHandling:
                 f"Simulating error: {type(error_to_simulate).__name__}"
             )
             with pytest.raises(BCRAApiError) as exc_info:
-                strict_rate_limit_connector.get_principales_variables()
+                strict_rate_limit_connector.monetarias.list()
 
             final_error_message = str(exc_info.value).lower()
             strict_rate_limit_connector.logger.info(
@@ -250,7 +250,7 @@ class TestErrorHandling:
         )
 
         with pytest.raises(BCRAApiError) as exc_info:
-            strict_rate_limit_connector.get_principales_variables()
+            strict_rate_limit_connector.monetarias.list()
 
         assert expected_match_in_exception.lower() in str(exc_info.value).lower()
         if "errorMessages" in response_content and response_content["errorMessages"]:

@@ -29,7 +29,7 @@ To retrieve all principal variables published by BCRA:
 
 .. code-block:: python
 
-   variables = connector.get_principales_variables()
+   variables = connector.monetarias.list()
    for var in variables[:5]:  # Print first 5 for brevity
        print(f"{var.descripcion}: {var.ultValorInformado} ({var.ultFechaInformada})")
 
@@ -45,7 +45,7 @@ To fetch historical data for a specific variable:
    id_variable = 1  # e.g., Reservas Internacionales del BCRA
    end_date = datetime.now()
    start_date = end_date - timedelta(days=30)
-   response = connector.get_datos_variable(id_variable, desde=start_date, hasta=end_date)
+   response = connector.monetarias.series(id_variable, desde=start_date, hasta=end_date)
    for result in response.results:
        for detalle in result.detalle[:5]:  # The API returns newest first
            print(f"{detalle.fecha}: {detalle.valor}")
@@ -59,7 +59,7 @@ To retrieve the most recent value for a variable:
 
 .. code-block:: python
 
-   latest = connector.get_latest_value(id_variable)
+   latest = connector.monetarias.latest(id_variable)
    print(f"Latest value for Variable {id_variable}: {latest.valor} ({latest.fecha})")
 
 Using the Cheques Module
@@ -175,7 +175,7 @@ analysis workflows. This requires ``pandas`` to be installed
    import pandas as pd
 
    # Convert the list of principal variables to a DataFrame
-   variables = connector.get_principales_variables()
+   variables = connector.monetarias.list()
    df_vars = pd.DataFrame([v.to_dict() for v in variables])
 
    # Convert Central de Deudores info to DataFrame

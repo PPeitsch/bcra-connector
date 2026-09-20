@@ -18,7 +18,7 @@ from ._http import _redact  # noqa: F401  (re-exported: used by the tests)
 from ._http import HttpClient, TransportConfig
 from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
-from .clients import ChequesClient, DeudoresClient
+from .clients import ChequesClient, DeudoresClient, MonetariasClient
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .exceptions import (  # noqa: F401  (re-exported for backwards compatibility)
     BCRAApiError,
@@ -137,6 +137,7 @@ class BCRAConnector:
             session=session,
         )
         self.cheques = ChequesClient(self._http)
+        self.monetarias = MonetariasClient(self._http)
         self.deudores = DeudoresClient(self._http)
 
     def _transport_config(self) -> TransportConfig:
@@ -152,6 +153,7 @@ class BCRAConnector:
             retry_delay=self.RETRY_DELAY,
             max_pages=self.MAX_PAGES,
             cache_ttl=self.CATALOG_CACHE_TTL,
+            max_page_size=self.MAX_PAGE_SIZE,
         )
 
     # The transport owns these; the attributes stay for backwards compatibility.
@@ -218,57 +220,13 @@ class BCRAConnector:
 
     # Principales Variables / Monetarias methods (v4.0)
     def get_principales_variables(self) -> List[PrincipalesVariables]:
+        """Deprecated alias of :meth:`MonetariasClient.list`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.monetarias.list()``; removed in 1.0.
         """
-        Fetch the list of all monetary series and principal variables published by BCRA (API v4.0).
-
-        :return: A list of PrincipalesVariables objects with extended metadata
-        :raises BCRAApiError: If the API request fails or returns unexpected data
-        """
-        self.logger.info("Fetching monetary series and principal variables (v4.0)")
-        try:
-
-            def fetch_page(limit: int, offset: int) -> Tuple[List[Any], Optional[int]]:
-                data = self._make_request(
-                    "estadisticas/v4.0/Monetarias", {"Limit": limit, "Offset": offset}
-                )
-                if not isinstance(data.get("results"), list):
-                    raise BCRAApiError(
-                        "Unexpected response format: 'results' is not a list or missing"
-                    )
-                # In this endpoint resultset.count is the number of results from the
-                # offset on, not the total: only a short page ends the listing.
-                return data["results"], None
-
-            raw_results = self._collect_pages(
-                fetch_page, self.MAX_PAGE_SIZE, "the variables catalog"
-            )
-
-            variables = []
-            for item in raw_results:
-                try:
-                    variables.append(PrincipalesVariables.from_dict(item))
-                except (ValueError, KeyError) as e:
-                    self.logger.warning(
-                        f"Skipping invalid variable data: {e} - Data: {item}"
-                    )
-
-            if not variables and raw_results:  # results existed but parsing failed
-                self.logger.error(
-                    "Failed to parse any variable data despite receiving results."
-                )
-            elif not variables:
-                self.logger.warning("No valid variables found in the response")
-            else:
-                self.logger.info(
-                    f"Successfully fetched and parsed {len(variables)} variables (v4.0)"
-                )
-            return variables
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            error_msg = f"Error fetching principal variables (v4.0): {str(e)}"
-            self.logger.exception(error_msg)
-            raise BCRAApiError(error_msg) from e
+        _deprecated("get_principales_variables", "monetarias.list")
+        return self.monetarias.list()
 
     def get_datos_variable(
         self,
@@ -278,131 +236,22 @@ class BCRAConnector:
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> DatosVariableResponse:
+        """Deprecated alias of :meth:`MonetariasClient.series`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.monetarias.series()``; removed in 1.0.
         """
-        Fetch the list of values for a variable/series (API v4.0).
-
-        Uses pagination via limit and offset. If desde/hasta are omitted, API defaults apply.
-
-        :param id_variable: The ID of the desired variable. Case-sensitive `{IdVariable}` in URL path.
-        :param desde: The start date of the range to query (inclusive). Optional. YYYY-MM-DD format.
-        :param hasta: The end date of the range to query (inclusive). Optional. YYYY-MM-DD format.
-        :param limit: Maximum number of results (10-3000). Optional, API defaults to 1000.
-        :param offset: Number of results to skip for pagination. Optional, defaults to 0.
-        :return: A DatosVariableResponse object containing metadata and results.
-        :raises ValueError: If date range is invalid or limit/offset are out of bounds.
-        :raises BCRAApiError: If the API request fails.
-        """
-        log_msg_parts = [f"Fetching data for variable {id_variable}"]
-        if desde:
-            log_msg_parts.append(f"from {desde.date()}")
-        if hasta:
-            log_msg_parts.append(f"to {hasta.date()}")
-        if limit is not None:
-            log_msg_parts.append(f"limit {limit}")
-        if offset is not None:
-            log_msg_parts.append(f"offset {offset}")
-        self.logger.info(" ".join(log_msg_parts) + " (v4.0)")
-
-        if desde and hasta and desde > hasta:
-            raise ValueError(
-                "'desde' date must be earlier than or equal to 'hasta' date"
-            )
-        if limit is not None and not (10 <= limit <= 3000):
-            raise ValueError("Limit must be between 10 and 3000")
-        if offset is not None and offset < 0:
-            raise ValueError("Offset must be non-negative")
-
-        params: Dict[str, Any] = {}
-        if desde:
-            params["Desde"] = desde.strftime("%Y-%m-%d")
-        if hasta:
-            params["Hasta"] = hasta.strftime("%Y-%m-%d")
-        if limit is not None:
-            params["Limit"] = limit
-        if offset is not None:
-            params["Offset"] = offset
-
-        endpoint = f"estadisticas/v4.0/Monetarias/{id_variable}"
-
-        try:
-            raw_api_data = self._make_request(
-                endpoint, params=params if params else None
-            )
-            response_obj = DatosVariableResponse.from_dict(raw_api_data)
-            # Count total data points across all results
-            total_points = sum(len(r.detalle) for r in response_obj.results)
-            self.logger.info(
-                f"Successfully fetched and parsed {total_points} data points "
-                f"(total available: {response_obj.metadata.resultset.count}) for variable {id_variable} (v4.0)"
-            )
-            return response_obj
-        except (ValueError, KeyError) as e:
-            error_msg = f"Error parsing response for variable {id_variable} (v4.0): {e}"
-            self.logger.exception(error_msg)
-            raise BCRAApiError(error_msg) from e
-        except BCRAApiError:
-            self.logger.error(
-                f"API Error fetching data for variable {id_variable} (v4.0)"
-            )
-            raise
-        except Exception as e:
-            error_msg = (
-                f"Unexpected error fetching data for variable {id_variable} (v4.0): {e}"
-            )
-            self.logger.exception(error_msg)
-            raise BCRAApiError(error_msg) from e
+        _deprecated("get_datos_variable", "monetarias.series")
+        return self.monetarias.series(id_variable, desde, hasta, limit, offset)
 
     def get_latest_value(self, id_variable: int) -> "DetalleMonetaria":
+        """Deprecated alias of :meth:`MonetariasClient.latest`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.monetarias.latest()``; removed in 1.0.
         """
-        Fetch the latest value for a specific variable using API v4.0.
-
-        :param id_variable: The ID of the desired variable.
-        :return: The latest data point (DetalleMonetaria object) for the specified variable.
-        :raises BCRAApiError: If the API request fails or if no data is available.
-        """
-        from .principales_variables import DetalleMonetaria
-
-        self.logger.info(
-            f"Fetching latest value for variable {id_variable} (using v4.0 logic)"
-        )
-        response_data = self.get_datos_variable(
-            id_variable, limit=10
-        )  # Small limit for efficiency
-
-        # Collect all data points from all results
-        all_detalles: List[DetalleMonetaria] = []
-        for result in response_data.results:
-            all_detalles.extend(result.detalle)
-
-        if not all_detalles:
-            # Fallback: If no data with small limit, query last 30 days.
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
-            self.logger.info(
-                f"No recent data found for {id_variable} with limit=10, checking last 30 days."
-            )
-            # Use a limit that comfortably covers a month of daily data. Note we must
-            # NOT reuse metadata.resultset.limit here: it reflects the previous limit=10
-            # call and would cap the fallback query at 10 results.
-            effective_limit = 100
-            response_data = self.get_datos_variable(
-                id_variable, desde=start_date, hasta=end_date, limit=effective_limit
-            )
-            # Collect all data points again
-            all_detalles = []
-            for result in response_data.results:
-                all_detalles.extend(result.detalle)
-
-            if not all_detalles:
-                raise BCRAApiError(
-                    f"No data available for variable {id_variable} in the last 30 days."
-                )
-
-        latest = max(all_detalles, key=lambda x: x.fecha)
-        self.logger.info(
-            f"Latest value for variable {id_variable}: {latest.valor} ({latest.fecha.isoformat()})"
-        )
-        return latest
+        _deprecated("get_latest_value", "monetarias.latest")
+        return self.monetarias.latest(id_variable)
 
     # Cheques methods
     def get_entidades(self) -> List[Entidad]:
@@ -584,52 +433,13 @@ class BCRAConnector:
     def get_variable_by_name(
         self, variable_name: str
     ) -> Optional[PrincipalesVariables]:
+        """Deprecated alias of :meth:`MonetariasClient.find`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.monetarias.find()``; removed in 1.0.
         """
-        Find a principal variable or monetary series by its name (Uses Monetarias v4.0 API).
-
-        The search is case-insensitive. A description equal to ``variable_name`` wins;
-        otherwise the first description containing it is returned, and a warning lists
-        the other candidates when there is more than one.
-
-        :param variable_name: The name of the variable/series to find.
-        :return: A PrincipalesVariables object if found, None otherwise.
-        :raises BCRAApiError: If the variables catalog cannot be fetched.
-
-        The catalog is reused across lookups for ``CATALOG_CACHE_TTL`` seconds; call
-        ``clear_cache()`` to force a refetch.
-        """
-        variables = self._cached("variables", self.get_principales_variables)
-        normalized_name = variable_name.lower().strip()
-
-        matches = [
-            v
-            for v in variables
-            if v.descripcion and normalized_name in v.descripcion.lower()
-        ]
-        if not matches:
-            self.logger.info(
-                f"Variable/series with name containing '{variable_name}' not found."
-            )
-            return None
-
-        for variable in matches:
-            if variable.descripcion and variable.descripcion.lower().strip() == (
-                normalized_name
-            ):
-                return variable
-
-        if len(matches) > 1:
-            shown = 10
-            candidates = "; ".join(
-                f"{v.idVariable}: {v.descripcion}" for v in matches[:shown]
-            )
-            more = f" (and {len(matches) - shown} more)" if len(matches) > shown else ""
-            self.logger.warning(
-                f"{len(matches)} variables match '{variable_name}'; returning "
-                f"{matches[0].idVariable}. Use a more specific name or the id. "
-                f"Candidates: {candidates}{more}"
-            )
-        return matches[0]
+        _deprecated("get_variable_by_name", "monetarias.find")
+        return self.monetarias.find(variable_name)
 
     def get_variable_history(
         self,
@@ -638,62 +448,13 @@ class BCRAConnector:
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> List["DetalleMonetaria"]:
+        """Deprecated alias of :meth:`MonetariasClient.history`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.monetarias.history()``; removed in 1.0.
         """
-        Get the historical data for a variable/series by name for the last n days (Uses Monetarias v4.0 API).
-
-        This method returns a flat list of data points for convenience.
-
-        :param variable_name: The name of the variable/series.
-        :param days: The number of days to look back, defaults to 30. Must be positive.
-        :param limit: Maximum number of results (10-3000). Optional.
-        :param offset: Number of results to skip for pagination. Optional.
-        :return: A list of DetalleMonetaria objects. Without ``limit`` and ``offset``
-                 it covers the whole range, fetching as many pages as needed.
-        :raises ValueError: If the variable is not found or days/limit/offset are invalid.
-        :raises BCRAApiError: If the API request fails.
-        """
-        from .principales_variables import DetalleMonetaria
-
-        variable = self.get_variable_by_name(variable_name)
-        if not variable:
-            raise ValueError(f"Variable '{variable_name}' not found")
-        if days <= 0:
-            raise ValueError("Number of days must be positive.")
-
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
-
-        if limit is None and offset is None:
-
-            def fetch_page(
-                page_limit: int, page_offset: int
-            ) -> Tuple[List[DetalleMonetaria], Optional[int]]:
-                page = self.get_datos_variable(
-                    variable.idVariable,
-                    desde=start_date,
-                    hasta=end_date,
-                    limit=page_limit,
-                    offset=page_offset,
-                )
-                points = [d for r in page.results for d in r.detalle]
-                return points, page.metadata.resultset.count
-
-            return self._collect_pages(
-                fetch_page, self.MAX_PAGE_SIZE, f"variable {variable.idVariable}"
-            )
-
-        response_obj = self.get_datos_variable(
-            variable.idVariable,
-            desde=start_date,
-            hasta=end_date,
-            limit=limit,
-            offset=offset,
-        )
-        # Flatten the results - extract all DetalleMonetaria from all DatosVariable
-        all_detalles: List[DetalleMonetaria] = []
-        for result in response_obj.results:
-            all_detalles.extend(result.detalle)
-        return all_detalles
+        _deprecated("get_variable_history", "monetarias.history")
+        return self.monetarias.history(variable_name, days, limit, offset)
 
     def get_currency_evolution(
         self,
@@ -909,8 +670,8 @@ class BCRAConnector:
                 'pip install "bcra-connector[analytics]"'
             ) from e
         try:
-            data1 = self.get_variable_history(variable_name1, days)
-            data2 = self.get_variable_history(variable_name2, days)
+            data1 = self.monetarias.history(variable_name1, days)
+            data2 = self.monetarias.history(variable_name2, days)
         except BCRAApiError as e:
             self.logger.error(
                 f"Failed to get history for correlation between '{variable_name1}' and '{variable_name2}': {e}"
@@ -987,11 +748,11 @@ class BCRAConnector:
         """
         if days <= 0:
             raise ValueError("Number of days must be positive.")
-        variable = self.get_variable_by_name(variable_name)
+        variable = self.monetarias.find(variable_name)
         if not variable:
             raise ValueError(f"Variable '{variable_name}' not found")
         try:
-            data = self.get_variable_history(variable_name, days)
+            data = self.monetarias.history(variable_name, days)
         except BCRAApiError as e:
             self.logger.error(
                 f"Failed to get history for report on '{variable_name}': {e}"

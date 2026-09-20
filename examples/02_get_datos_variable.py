@@ -35,13 +35,13 @@ def main() -> None:
 
     try:
         variable_name_to_fetch = "Reservas Internacionales del BCRA"
-        target_variable = connector.get_variable_by_name(variable_name_to_fetch)
+        target_variable = connector.monetarias.find(variable_name_to_fetch)
 
         if not target_variable:
             logger.warning(
                 f"Variable '{variable_name_to_fetch}' not found by name. Trying first available variable."
             )
-            all_variables = connector.get_principales_variables()
+            all_variables = connector.monetarias.list()
             if not all_variables:
                 logger.error("No variables found at all. Cannot proceed.")
                 return
@@ -63,7 +63,7 @@ def main() -> None:
             f"from {start_date.date().isoformat()} to {end_date.date().isoformat()} with limit={limit_param}, offset={offset_param}..."
         )
 
-        response_data = connector.get_datos_variable(
+        response_data = connector.monetarias.series(
             variable_id_to_use,
             desde=start_date,
             hasta=end_date,

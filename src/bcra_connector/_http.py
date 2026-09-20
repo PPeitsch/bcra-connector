@@ -49,6 +49,7 @@ class TransportConfig:
     retry_delay: float = 1
     max_pages: int = 100
     cache_ttl: float = 300.0
+    max_page_size: int = 3000
 
 
 class HttpClient:
@@ -88,6 +89,10 @@ class HttpClient:
                 "SSL verification is disabled. This is not recommended for production use."
             )
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    def config(self) -> TransportConfig:
+        """Current snapshot of the transport knobs, re-read on every call."""
+        return self._config()
 
     def close(self) -> None:
         """Close the session, unless it was injected by the caller."""

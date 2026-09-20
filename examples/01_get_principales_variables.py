@@ -34,7 +34,7 @@ def main() -> None:
 
     try:
         logger.info("Fetching principal variables/monetary series (v4.0)...")
-        variables = connector.get_principales_variables()
+        variables = connector.monetarias.list()
         logger.info(f"Found {len(variables)} variables/series.")
 
         if not variables:
@@ -110,7 +110,7 @@ def main() -> None:
         if variable_name_to_search:
             try:
                 logger.info(f"Fetching history for: '{variable_name_to_search}'")
-                history = connector.get_variable_history(
+                history = connector.monetarias.history(
                     variable_name_to_search, days=30, limit=15
                 )
                 logger.info(
