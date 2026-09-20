@@ -17,6 +17,7 @@ from bcra_connector import (
     BCRAServerError,
 )
 from bcra_connector.cheques import Cheque, Entidad
+from bcra_connector.models import Page
 
 ENTITIES = [
     Entidad(codigo_entidad=7, denominacion="BANCO DE GALICIA Y BUENOS AIRES S.A."),
@@ -220,22 +221,23 @@ class TestDeprecatedChequesAliases:
     """The old cheques methods delegate and warn until 1.0."""
 
     @pytest.mark.parametrize(
-        "old,new,args",
+        "old,new,args,paged",
         [
-            ("get_entidades", "entities", ()),
-            ("get_cheque_denunciado", "reported", (11, 123)),
-            ("check_denunciado", "is_reported", ("Galicia", 123)),
+            ("get_entidades", "entities", (), True),
+            ("get_cheque_denunciado", "reported", (11, 123), False),
+            ("check_denunciado", "is_reported", ("Galicia", 123), False),
         ],
     )
     def test_alias_warns_and_delegates(
-        self, connector: BCRAConnector, old: str, new: str, args: Any
+        self, connector: BCRAConnector, old: str, new: str, args: Any, paged: bool
     ) -> None:
-        sentinel = object()
-        with patch.object(connector.cheques, new, return_value=sentinel) as mock_method:
+        rows = [object()]
+        returned: Any = Page(rows, count=1) if paged else rows[0]
+        with patch.object(connector.cheques, new, return_value=returned) as mock_method:
             with pytest.warns(DeprecationWarning, match=f"cheques.{new}"):
                 result = getattr(connector, old)(*args)
         mock_method.assert_called_once_with(*args)
-        assert result is sentinel
+        assert result == (rows if paged else rows[0])
 
 
 class TestFindEntity:

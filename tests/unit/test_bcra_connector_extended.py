@@ -14,9 +14,9 @@ from requests.exceptions import ConnectionError, HTTPError, RequestException
 from bcra_connector import BCRAApiError, BCRAConnector
 from bcra_connector.cheques import Cheque, Entidad
 from bcra_connector.estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha
+from bcra_connector.models import Page
 from bcra_connector.principales_variables import (
     DatosVariable,
-    DatosVariableResponse,
     DetalleMonetaria,
     PrincipalesVariables,
 )
@@ -442,9 +442,8 @@ class TestBCRAConnectorExtended:
         # Scenario 3: Success
         with patch.object(connector.monetarias, "find", return_value=mock_var):
             with patch.object(connector.monetarias, "series") as mock_get_datos:
-                mock_get_datos.return_value = DatosVariableResponse(
-                    status=200,
-                    metadata=Mock(),
+                mock_get_datos.return_value = Page(
+                    count=1,
                     results=[
                         DatosVariable(
                             idVariable=1,

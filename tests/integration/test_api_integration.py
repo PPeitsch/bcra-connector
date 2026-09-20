@@ -8,9 +8,9 @@ import pytest
 from bcra_connector import BCRAApiError, BCRAConnector
 from bcra_connector.cheques import Entidad
 from bcra_connector.estadisticas_cambiarias import CotizacionFecha, Divisa
+from bcra_connector.models import Page
 from bcra_connector.principales_variables import (
     DatosVariable,
-    DatosVariableResponse,
     DetalleMonetaria,
     PrincipalesVariables,
 )
@@ -62,23 +62,20 @@ class TestBCRAIntegration:
         end_date: datetime = datetime.now()
         start_date: datetime = end_date - timedelta(days=7)
 
-        response_data: DatosVariableResponse = connector.monetarias.series(
+        response_data: Page[DatosVariable] = connector.monetarias.series(
             id_variable=variable_id, desde=start_date, hasta=end_date, limit=10
         )
 
-        assert isinstance(response_data, DatosVariableResponse)
-        assert response_data.status == 200
-        assert response_data.metadata is not None
-        assert response_data.metadata.resultset is not None
-        assert response_data.metadata.resultset.limit == 10
-        assert len(response_data.results) <= 10
+        assert isinstance(response_data, Page)
+        assert response_data.limit == 10
+        assert len(response_data) <= 10
 
-        if not response_data.results:
+        if not response_data:
             connector.logger.warning(
                 f"No historical data found for {variable_id} in the last 7 days with limit 10."
             )
         else:
-            first_data_point = response_data.results[0]
+            first_data_point = response_data[0]
             assert isinstance(first_data_point, DatosVariable)
             assert first_data_point.idVariable == variable_id
             # v4.0 has detalle array instead of direct fecha/valor
@@ -87,11 +84,11 @@ class TestBCRAIntegration:
                 isinstance(d, DetalleMonetaria) for d in first_data_point.detalle
             )
 
-        response_offset: DatosVariableResponse = connector.monetarias.series(
+        response_offset: Page[DatosVariable] = connector.monetarias.series(
             id_variable=variable_id, limit=15, offset=5
         )
-        assert response_offset.metadata.resultset.offset == 5
-        assert response_offset.metadata.resultset.limit == 15
+        assert response_offset.offset == 5
+        assert response_offset.limit == 15
 
     def test_get_currencies(self, connector: BCRAConnector) -> None:
         """Test retrieval of available currencies (Estadisticas Cambiarias)."""
@@ -144,10 +141,10 @@ class TestBCRAIntegration:
         end_date: datetime = datetime.now()
         start_date: datetime = end_date - timedelta(days=5)
 
-        historical_response: DatosVariableResponse = connector.monetarias.series(
+        historical_response: Page[DatosVariable] = connector.monetarias.series(
             variable_id, start_date, end_date, limit=20
         )
-        assert isinstance(historical_response, DatosVariableResponse)
+        assert isinstance(historical_response, Page)
 
         # v4.0 returns DetalleMonetaria instead of DatosVariable
         latest_value: DetalleMonetaria = connector.monetarias.latest(variable_id)

@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..exceptions import BCRAApiError
+from ..models import Page, resultset
 from ..principales_variables import (
-    DatosVariableResponse,
+    DatosVariable,
     DetalleMonetaria,
     PrincipalesVariables,
 )
@@ -15,11 +16,13 @@ from .base import DomainClient
 class MonetariasClient(DomainClient):
     """Monetary series and principal variables (``connector.monetarias``)."""
 
-    def list(self) -> List[PrincipalesVariables]:
+    def list(self) -> Page[PrincipalesVariables]:
         """
         Fetch the list of all monetary series and principal variables (API v4.0).
 
-        :return: A list of PrincipalesVariables objects with extended metadata
+        Pages through the whole catalog, so the page holds every series.
+
+        :return: A Page of PrincipalesVariables objects with extended metadata
         :raises BCRAApiError: If the API request fails or returns unexpected data
         """
         self.logger.info("Fetching monetary series and principal variables (v4.0)")
@@ -60,7 +63,7 @@ class MonetariasClient(DomainClient):
                 self.logger.info(
                     f"Successfully fetched and parsed {len(variables)} variables (v4.0)"
                 )
-            return variables
+            return Page(variables, count=len(variables))
         except BCRAApiError:
             raise
         except Exception as e:
@@ -75,7 +78,7 @@ class MonetariasClient(DomainClient):
         hasta: Optional[datetime] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> DatosVariableResponse:
+    ) -> Page[DatosVariable]:
         """
         Fetch the list of values for a variable/series (API v4.0).
 
@@ -86,7 +89,11 @@ class MonetariasClient(DomainClient):
         :param hasta: The end date of the range to query (inclusive). Optional. YYYY-MM-DD format.
         :param limit: Maximum number of results (10-3000). Optional, API defaults to 1000.
         :param offset: Number of results to skip for pagination. Optional, defaults to 0.
-        :return: A DatosVariableResponse object containing metadata and results.
+        :return: A Page of DatosVariable objects, each with its ``detalle`` data points.
+            Careful with the page's metadata on this endpoint: ``count`` is the number
+            of *data points* the API reports, while the page holds *groups* of them, so
+            ``len(page)`` and ``count`` are not in the same unit. ``has_more`` still
+            answers what it should — whether data is left past this page.
         :raises ValueError: If date range is invalid or limit/offset are out of bounds.
         :raises BCRAApiError: If the API request fails.
         """
@@ -126,14 +133,19 @@ class MonetariasClient(DomainClient):
             raw_api_data = self._http.request(
                 endpoint, params=params if params else None
             )
-            response_obj = DatosVariableResponse.from_dict(raw_api_data)
+            if not isinstance(raw_api_data.get("results"), list):
+                raise ValueError("Missing or invalid 'results' in the response")
+            page: Page[DatosVariable] = Page(
+                [DatosVariable.from_dict(item) for item in raw_api_data["results"]],
+                **resultset(raw_api_data),
+            )
             # Count total data points across all results
-            total_points = sum(len(r.detalle) for r in response_obj.results)
+            total_points = sum(len(r.detalle) for r in page)
             self.logger.info(
                 f"Successfully fetched and parsed {total_points} data points "
-                f"(total available: {response_obj.metadata.resultset.count}) for variable {id_variable} (v4.0)"
+                f"(total available: {page.count}) for variable {id_variable} (v4.0)"
             )
-            return response_obj
+            return page
         except (ValueError, KeyError) as e:
             error_msg = f"Error parsing response for variable {id_variable} (v4.0): {e}"
             self.logger.exception(error_msg)
@@ -165,7 +177,7 @@ class MonetariasClient(DomainClient):
 
         # Collect all data points from all results
         all_detalles: List[DetalleMonetaria] = []
-        for result in response_data.results:
+        for result in response_data:
             all_detalles.extend(result.detalle)
 
         if not all_detalles:
@@ -184,7 +196,7 @@ class MonetariasClient(DomainClient):
             )
             # Collect all data points again
             all_detalles = []
-            for result in response_data.results:
+            for result in response_data:
                 all_detalles.extend(result.detalle)
 
             if not all_detalles:
@@ -252,7 +264,7 @@ class MonetariasClient(DomainClient):
         days: int = 30,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[DetalleMonetaria]:
+    ) -> Page[DetalleMonetaria]:
         """
         Get the historical data for a variable/series by name for the last n days (Monetarias v4.0).
 
@@ -262,7 +274,7 @@ class MonetariasClient(DomainClient):
         :param days: The number of days to look back, defaults to 30. Must be positive.
         :param limit: Maximum number of results (10-3000). Optional.
         :param offset: Number of results to skip for pagination. Optional.
-        :return: A list of DetalleMonetaria objects. Without ``limit`` and ``offset``
+        :return: A Page of DetalleMonetaria objects. Without ``limit`` and ``offset``
                  it covers the whole range, fetching as many pages as needed.
         :raises ValueError: If the variable is not found or days/limit/offset are invalid.
         :raises BCRAApiError: If the API request fails.
@@ -288,12 +300,13 @@ class MonetariasClient(DomainClient):
                     limit=page_limit,
                     offset=page_offset,
                 )
-                points = [d for r in page.results for d in r.detalle]
-                return points, page.metadata.resultset.count
+                points = [d for r in page for d in r.detalle]
+                return points, page.count
 
-            return self._http.collect_pages(
+            rows = self._http.collect_pages(
                 fetch_page, self._page_size(), f"variable {variable.idVariable}"
             )
+            return Page(rows, count=len(rows))
 
         response_obj = self.series(
             variable.idVariable,
@@ -304,9 +317,14 @@ class MonetariasClient(DomainClient):
         )
         # Flatten the results - extract all DetalleMonetaria from all DatosVariable
         all_detalles: List[DetalleMonetaria] = []
-        for result in response_obj.results:
+        for result in response_obj:
             all_detalles.extend(result.detalle)
-        return all_detalles
+        return Page(
+            all_detalles,
+            count=response_obj.count,
+            offset=response_obj.offset,
+            limit=response_obj.limit,
+        )
 
     def _page_size(self) -> int:
         """The largest page the Monetarias endpoints accept."""

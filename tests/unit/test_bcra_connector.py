@@ -11,9 +11,9 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from bcra_connector import BCRAApiError, BCRAConnector
 from bcra_connector.cheques import Cheque, Entidad
+from bcra_connector.models import Page
 from bcra_connector.principales_variables import (
     DatosVariable,
-    DatosVariableResponse,
     DetalleMonetaria,
     PrincipalesVariables,
 )
@@ -122,9 +122,9 @@ class TestBCRAConnector:
     ) -> None:
         """Test handling of empty response for principal variables (v4.0)."""
         mock_get.return_value = mock_api_response({"results": []}, 200)
-        result: List[PrincipalesVariables] = connector.monetarias.list()
+        result = connector.monetarias.list()
 
-        assert isinstance(result, list)
+        assert isinstance(result, Page)
         assert len(result) == 0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
@@ -153,7 +153,7 @@ class TestBCRAConnector:
         start_date = datetime(2024, 3, 1)
         end_date = datetime(2024, 3, 5)
 
-        response: DatosVariableResponse = connector.monetarias.series(
+        response: Page[DatosVariable] = connector.monetarias.series(
             1, desde=start_date, hasta=end_date, limit=10, offset=0
         )
 
@@ -168,13 +168,12 @@ class TestBCRAConnector:
             expected_url, params=expected_params, verify=False, timeout=ANY
         )
 
-        assert isinstance(response, DatosVariableResponse)
-        assert response.status == 200
-        assert response.metadata.resultset.count == 2
-        assert response.metadata.resultset.offset == 0
-        assert response.metadata.resultset.limit == 10
-        assert len(response.results) == 1
-        dv = response.results[0]
+        assert isinstance(response, Page)
+        assert response.count == 2
+        assert response.offset == 0
+        assert response.limit == 10
+        assert len(response) == 1
+        dv = response[0]
         assert isinstance(dv, DatosVariable)
         assert dv.idVariable == 1
         assert len(dv.detalle) == 2
@@ -212,9 +211,10 @@ class TestBCRAConnector:
         self, mock_series: Mock, connector: BCRAConnector
     ) -> None:
         """Test successful retrieval of latest value (using v4.0)."""
-        mock_response_data = DatosVariableResponse(
-            status=200,
-            metadata=Mock(resultset=Mock(count=3, offset=0, limit=10)),
+        mock_response_data = Page(
+            count=3,
+            offset=0,
+            limit=10,
             results=[
                 DatosVariable(
                     idVariable=1,
@@ -241,10 +241,8 @@ class TestBCRAConnector:
         self, mock_series: Mock, connector: BCRAConnector
     ) -> None:
         """Test handling of no data for latest value (using v4.0)."""
-        mock_empty_response = DatosVariableResponse(
-            status=200,
-            metadata=Mock(resultset=Mock(count=0, offset=0, limit=10)),
-            results=[],
+        mock_empty_response: Page[DatosVariable] = Page(
+            results=[], count=0, offset=0, limit=10
         )
         mock_series.side_effect = [mock_empty_response, mock_empty_response]
 
@@ -261,15 +259,14 @@ class TestBCRAConnector:
     ) -> None:
         """Test fallback scenario where first query is empty but 30-day query succeeds."""
         # First call with limit=10 returns empty results
-        mock_empty_response = DatosVariableResponse(
-            status=200,
-            metadata=Mock(resultset=Mock(count=0, offset=0, limit=10)),
-            results=[],
+        mock_empty_response: Page[DatosVariable] = Page(
+            results=[], count=0, offset=0, limit=10
         )
         # Second call (30-day fallback) returns data
-        mock_fallback_response = DatosVariableResponse(
-            status=200,
-            metadata=Mock(resultset=Mock(count=2, offset=0, limit=30)),
+        mock_fallback_response = Page(
+            count=2,
+            offset=0,
+            limit=30,
             results=[
                 DatosVariable(
                     idVariable=1,

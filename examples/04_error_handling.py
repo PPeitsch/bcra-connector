@@ -79,7 +79,7 @@ def main() -> None:
         future_start = today + timedelta(days=30)
         future_end = today + timedelta(days=60)
         response = connector.monetarias.series(1, future_start, future_end)
-        return f"Results count: {len(response.results)}"
+        return f"Results count: {len(response)}"
 
     test_case(
         "Query with future date range (API behavior test)",

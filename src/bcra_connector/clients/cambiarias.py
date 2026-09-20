@@ -5,17 +5,18 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from ..exceptions import BCRAApiError
+from ..models import Page, resultset
 from .base import DomainClient
 
 
 class CambiariasClient(DomainClient):
     """Currencies, quotations and exchange rates (``connector.cambiarias``)."""
 
-    def currencies(self) -> List[Divisa]:
+    def currencies(self) -> Page[Divisa]:
         """
         Fetch the list of all currencies.
 
-        :return: A list of Divisa objects
+        :return: A Page of Divisa objects
         :raises BCRAApiError: If the API request fails or returns unexpected data
         """
         self.logger.info("Fetching currencies")
@@ -27,7 +28,7 @@ class CambiariasClient(DomainClient):
                 )
             divisas = [Divisa.from_dict(d) for d in data["results"]]
             self.logger.info(f"Successfully fetched {len(divisas)} currencies")
-            return divisas
+            return Page(divisas, **{"count": len(divisas), **resultset(data)})
         except (KeyError, ValueError) as e:
             raise BCRAApiError(
                 f"Unexpected response format or data for divisas: {str(e)}"
@@ -108,7 +109,7 @@ class CambiariasClient(DomainClient):
         fecha_hasta: Optional[str] = None,
         limit: int = 1000,
         offset: int = 0,
-    ) -> List[CotizacionFecha]:
+    ) -> Page[CotizacionFecha]:
         """
         Fetch one page of a currency's quotations, as the endpoint returns them.
 
@@ -119,7 +120,7 @@ class CambiariasClient(DomainClient):
         :param fecha_hasta: End date (format: YYYY-MM-DD), defaults to None.
         :param limit: Maximum number of results to return (10-1000), defaults to 1000.
         :param offset: Number of results to skip, defaults to 0.
-        :return: A list of CotizacionFecha objects with the currency's evolution data.
+        :return: A Page of CotizacionFecha objects with the currency's evolution data.
         :raises BCRAApiError: If the API request fails or returns unexpected data.
         :raises ValueError: If the limit is out of range or offset is negative.
         """
@@ -130,13 +131,14 @@ class CambiariasClient(DomainClient):
             raise ValueError("Offset must be non-negative for 'evolucion_moneda'")
 
         evolucion, total = self._page(moneda, fecha_desde, fecha_hasta, limit, offset)
-        if total is not None and offset + len(evolucion) < total:
+        page = Page(evolucion, count=total, offset=offset, limit=limit)
+        if page.has_more:
             self.logger.warning(
                 f"Returned {len(evolucion)} of {total} quotations for {moneda} "
                 f"(offset {offset}). Page with limit/offset, or use "
                 f"cambiarias.evolution() to fetch the whole range."
             )
-        return evolucion
+        return page
 
     def evolution(
         self,
@@ -144,7 +146,7 @@ class CambiariasClient(DomainClient):
         days: int = 30,
         limit: Optional[int] = None,
         offset: int = 0,
-    ) -> List[CotizacionFecha]:
+    ) -> Page[CotizacionFecha]:
         """
         Get the evolution of a currency's quotation for the last n days.
 
@@ -153,7 +155,7 @@ class CambiariasClient(DomainClient):
         :param limit: Maximum number of results (10-1000). By default (None) the whole
                       range is returned, fetching as many pages as needed.
         :param offset: Number of results to skip, defaults to 0.
-        :return: A list of CotizacionFecha objects.
+        :return: A Page of CotizacionFecha objects.
         :raises ValueError: If days/limit/offset are invalid.
         :raises BCRAApiError: If the API request fails.
         """
@@ -175,12 +177,13 @@ class CambiariasClient(DomainClient):
                     currency_code, fecha_desde, fecha_hasta, page_limit, page_offset
                 )
 
-            return self._http.collect_pages(
+            rows = self._http.collect_pages(
                 fetch_page,
                 self._http.config().fx_max_page_size,
                 f"{currency_code} quotations",
                 start=offset,
             )
+            return Page(rows, count=offset + len(rows), offset=offset)
 
         return self.series(
             currency_code,
