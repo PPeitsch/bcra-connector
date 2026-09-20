@@ -1,10 +1,11 @@
 """Cheques Denunciados v1.0."""
 
 import unicodedata
-from typing import List
+from typing import Iterable
 
 from ..cheques import Cheque, Entidad
 from ..exceptions import BCRAApiError
+from ..models import Page
 from .base import DomainClient
 
 
@@ -18,11 +19,11 @@ def _normalize_name(name: str) -> str:
 class ChequesClient(DomainClient):
     """Financial entities and reported checks (``connector.cheques``)."""
 
-    def entities(self) -> List[Entidad]:
+    def entities(self) -> Page[Entidad]:
         """
         Fetch the list of all financial entities.
 
-        :return: A list of Entidad objects.
+        :return: A Page of Entidad objects.
         :raises BCRAApiError: If the API request fails.
         """
         self.logger.info("Fetching financial entities")
@@ -99,7 +100,7 @@ class ChequesClient(DomainClient):
         return cheque.denunciado
 
     @staticmethod
-    def find_entity(entities: List[Entidad], entity_name: str) -> Entidad:
+    def find_entity(entities: Iterable[Entidad], entity_name: str) -> Entidad:
         """Resolve an entity by name: exact match first, then a unique substring."""
         query = _normalize_name(entity_name)
         named = [

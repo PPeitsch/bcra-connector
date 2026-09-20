@@ -72,7 +72,6 @@ def main() -> None:
         )
 
         datos_list = response_data.results
-        metadata = response_data.metadata
 
         # In v4.0, results is a list of DatosVariable objects, each with a detalle array
         # Flatten all detalle arrays into a single list
@@ -82,8 +81,8 @@ def main() -> None:
 
         logger.info(
             f"Fetched {len(all_data_points)} data points from {len(datos_list)} result groups. "
-            f"Total available according to metadata: {metadata.resultset.count}. "
-            f"Offset: {metadata.resultset.offset}, Limit: {metadata.resultset.limit}."
+            f"Total available according to metadata: {response_data.count}. "
+            f"Offset: {response_data.offset}, Limit: {response_data.limit}."
         )
 
         if not all_data_points:

@@ -34,7 +34,9 @@ from .exceptions import (  # noqa: F401  (re-exported for backwards compatibilit
 from .principales_variables import (
     DatosVariableResponse,
     DetalleMonetaria,
+    Metadata,
     PrincipalesVariables,
+    Resultset,
 )
 from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
@@ -233,7 +235,7 @@ class BCRAConnector:
            Use ``connector.monetarias.list()``; removed in 1.0.
         """
         _deprecated("get_principales_variables", "monetarias.list")
-        return self.monetarias.list()
+        return self.monetarias.list().results
 
     def get_datos_variable(
         self,
@@ -249,7 +251,18 @@ class BCRAConnector:
            Use ``connector.monetarias.series()``; removed in 1.0.
         """
         _deprecated("get_datos_variable", "monetarias.series")
-        return self.monetarias.series(id_variable, desde, hasta, limit, offset)
+        page = self.monetarias.series(id_variable, desde, hasta, limit, offset)
+        return DatosVariableResponse(
+            status=200,
+            metadata=Metadata(
+                resultset=Resultset(
+                    count=page.count if page.count is not None else len(page),
+                    offset=page.offset,
+                    limit=page.limit if page.limit is not None else len(page),
+                )
+            ),
+            results=page.results,
+        )
 
     def get_latest_value(self, id_variable: int) -> "DetalleMonetaria":
         """Deprecated alias of :meth:`MonetariasClient.latest`.
@@ -268,7 +281,7 @@ class BCRAConnector:
            Use ``connector.cheques.entities()``; removed in 1.0.
         """
         _deprecated("get_entidades", "cheques.entities")
-        return self.cheques.entities()
+        return self.cheques.entities().results
 
     def get_cheque_denunciado(self, codigo_entidad: int, numero_cheque: int) -> Cheque:
         """Deprecated alias of :meth:`ChequesClient.reported`.
@@ -287,7 +300,7 @@ class BCRAConnector:
            Use ``connector.cambiarias.currencies()``; removed in 1.0.
         """
         _deprecated("get_divisas", "cambiarias.currencies")
-        return self.cambiarias.currencies()
+        return self.cambiarias.currencies().results
 
     def get_cotizaciones(self, fecha: Optional[str] = None) -> CotizacionFecha:
         """Deprecated alias of :meth:`CambiariasClient.quotations`.
@@ -312,7 +325,9 @@ class BCRAConnector:
            Use ``connector.cambiarias.series()``; removed in 1.0.
         """
         _deprecated("get_evolucion_moneda", "cambiarias.series")
-        return self.cambiarias.series(moneda, fecha_desde, fecha_hasta, limit, offset)
+        return self.cambiarias.series(
+            moneda, fecha_desde, fecha_hasta, limit, offset
+        ).results
 
     # --- Helper Methods ---
     def get_variable_by_name(
@@ -339,7 +354,7 @@ class BCRAConnector:
            Use ``connector.monetarias.history()``; removed in 1.0.
         """
         _deprecated("get_variable_history", "monetarias.history")
-        return self.monetarias.history(variable_name, days, limit, offset)
+        return self.monetarias.history(variable_name, days, limit, offset).results
 
     def get_currency_evolution(
         self,
@@ -354,7 +369,7 @@ class BCRAConnector:
            Use ``connector.cambiarias.evolution()``; removed in 1.0.
         """
         _deprecated("get_currency_evolution", "cambiarias.evolution")
-        return self.cambiarias.evolution(currency_code, days, limit, offset)
+        return self.cambiarias.evolution(currency_code, days, limit, offset).results
 
     def check_denunciado(self, entity_name: str, check_number: int) -> bool:
         """Deprecated alias of :meth:`ChequesClient.is_reported`.
@@ -521,9 +536,9 @@ class BCRAConnector:
 
         # The API returns series newest-first; the statistics below assume the
         # data runs from oldest to newest.
-        data = sorted(data, key=lambda d: d.fecha)
-        values = [float(d.valor) for d in data]
-        dates = [d.fecha for d in data]
+        rows = sorted(data, key=lambda d: d.fecha)
+        values = [float(d.valor) for d in rows]
+        dates = [d.fecha for d in rows]
 
         # Calculate statistics, handling cases where values might be empty.
         # std_dev is the population standard deviation.

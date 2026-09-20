@@ -1,9 +1,10 @@
 """Shared plumbing for the per-domain clients."""
 
-from typing import Any, Callable, Dict, List, TypeVar
+from typing import Any, Callable, Dict, TypeVar
 
 from .._http import HttpClient
 from ..exceptions import BCRAApiError
+from ..models import Page, resultset
 
 T = TypeVar("T")
 
@@ -20,7 +21,7 @@ class DomainClient:
         endpoint: str,
         parser: Callable[[Dict[str, Any]], T],
         what: str,
-    ) -> List[T]:
+    ) -> Page[T]:
         """GET an endpoint whose ``results`` is a list, each item parsed by ``parser``."""
         try:
             data = self._http.request(endpoint)
@@ -30,7 +31,8 @@ class DomainClient:
                     f"Invalid response format for {what}: "
                     "'results' key missing or not a list."
                 )
-            return [parser(item) for item in results]
+            rows = [parser(item) for item in results]
+            return Page(rows, **{"count": len(rows), **resultset(data)})
         except BCRAApiError:
             raise
         except (KeyError, TypeError, ValueError) as e:

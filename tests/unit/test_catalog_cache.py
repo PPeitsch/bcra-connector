@@ -8,15 +8,11 @@ import pytest
 
 from bcra_connector import BCRAApiError, BCRAConnector
 from bcra_connector.cheques import Cheque, Entidad
+from bcra_connector.models import Page
 from bcra_connector.principales_variables import (
     DatosVariable,
-    DatosVariableResponse,
     DetalleMonetaria,
     PrincipalesVariables,
-)
-from bcra_connector.principales_variables.principales_variables import (
-    Metadata,
-    Resultset,
 )
 
 CATALOG = [
@@ -25,15 +21,16 @@ CATALOG = [
 ]
 
 
-def _series(id_variable: int, *args: object, **kwargs: object) -> DatosVariableResponse:
+def _series(id_variable: int, *args: object, **kwargs: object) -> Page[DatosVariable]:
     detalle = [
         DetalleMonetaria(fecha=date(2024, 1, d), valor=float(d * id_variable))
         for d in (3, 2, 1)
     ]
-    return DatosVariableResponse(
-        status=200,
-        metadata=Metadata(resultset=Resultset(count=3, offset=0, limit=3000)),
-        results=[DatosVariable(idVariable=id_variable, detalle=detalle)],
+    return Page(
+        [DatosVariable(idVariable=id_variable, detalle=detalle)],
+        count=3,
+        offset=0,
+        limit=3000,
     )
 
 
@@ -46,7 +43,7 @@ def connector() -> BCRAConnector:
 def catalog(connector: BCRAConnector) -> Iterator[MagicMock]:
     with (
         patch.object(
-            connector.monetarias, "list", return_value=CATALOG
+            connector.monetarias, "list", return_value=Page(CATALOG)
         ) as mock_catalog,
         patch.object(connector.monetarias, "series", side_effect=_series),
     ):
@@ -110,7 +107,7 @@ class TestVariableCatalogCache:
         with patch.object(
             connector.monetarias,
             "list",
-            side_effect=[BCRAApiError("down"), CATALOG],
+            side_effect=[BCRAApiError("down"), Page(CATALOG)],
         ) as mock_catalog:
             with pytest.raises(BCRAApiError):
                 connector.monetarias.find("Base monetaria")

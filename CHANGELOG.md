@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `Page[T]`: every endpoint that returns several rows now answers with a page that
+  carries the API's own `count`, `offset`, `limit` and `has_more` alongside the results.
+  It behaves like the list it replaces — iteration, `len()`, indexing, slicing and `==`
+  against a list all work — and it converts itself with `to_dict()` and
+  `to_dataframe()`, which removes the `pd.DataFrame([x.to_dict() for x in ...])` recipe
+  for lists (#131)
 - Estadísticas Cambiarias now has its own client: `connector.cambiarias.currencies()`,
   `.quotations()`, `.latest()`, `.series()`, `.evolution()` and `.pair()` (#129)
 - Monetarias now has its own client: `connector.monetarias.list()`, `.series()`,
@@ -24,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open and still closes one the connector created (#119)
 
 ### Deprecated
+- The `*Response` models (`DatosVariableResponse`, `DivisaResponse`, `EntidadResponse`,
+  `CotizacionResponse`, `CotizacionesResponse`, `ChequeResponse`) are superseded by
+  `Page` and will be removed in 1.0. The deprecated `get_*` methods still return the old
+  types, so code on 0.12 is unaffected (#131)
 - `get_divisas()`, `get_cotizaciones()`, `get_evolucion_moneda()`,
   `get_currency_evolution()`, `get_latest_quotations()` and
   `get_currency_pair_evolution()` are deprecated in favour of `connector.cambiarias.*`

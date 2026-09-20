@@ -33,7 +33,9 @@ To retrieve all principal variables published by BCRA:
    for var in variables[:5]:  # Print first 5 for brevity
        print(f"{var.descripcion}: {var.ultValorInformado} ({var.ultFechaInformada})")
 
-This will return a list of `PrincipalesVariables` objects, each containing information about a specific variable including metadata like `tipoSerie`, `periodicidad`, and `moneda`.
+This returns a :class:`~bcra_connector.Page` of `PrincipalesVariables` objects, each
+containing information about a specific variable including metadata like `tipoSerie`,
+`periodicidad`, and `moneda`. See `Paged results`_ below.
 
 Retrieving Historical Data
 --------------------------
@@ -46,11 +48,14 @@ To fetch historical data for a specific variable:
    end_date = datetime.now()
    start_date = end_date - timedelta(days=30)
    response = connector.monetarias.series(id_variable, desde=start_date, hasta=end_date)
-   for result in response.results:
+   for result in response:
        for detalle in result.detalle[:5]:  # The API returns newest first
            print(f"{detalle.fecha}: {detalle.valor}")
 
-This returns a `DatosVariableResponse` object containing metadata and a list of `DatosVariable` results, each with a `detalle` list of `DetalleMonetaria` data points.
+   print(f"{len(response)} of {response.count} available")
+
+This returns a :class:`~bcra_connector.Page` of `DatosVariable` results, each with a
+`detalle` list of `DetalleMonetaria` data points.
 
 Getting the Latest Value
 ------------------------
@@ -167,16 +172,12 @@ Most data models include a ``to_dataframe()`` method for easy integration with d
 analysis workflows. This requires ``pandas`` to be installed
 (``pip install "bcra-connector[pandas]"``).
 
-``to_dataframe()`` is defined on single objects; for a list, build the DataFrame from
-``to_dict()``:
+A ``Page`` converts itself, one row per result; single objects convert themselves too:
 
 .. code-block:: python
 
-   import pandas as pd
-
-   # Convert the list of principal variables to a DataFrame
-   variables = connector.monetarias.list()
-   df_vars = pd.DataFrame([v.to_dict() for v in variables])
+   # Convert the catalog of principal variables to a DataFrame
+   df_vars = connector.monetarias.list().to_dataframe()
 
    # Convert Central de Deudores info to DataFrame
    deudor = connector.deudores.debts(identificacion)
@@ -185,6 +186,37 @@ analysis workflows. This requires ``pandas`` to be installed
    # Convert Rejected Checks to DataFrame
    rejected = connector.deudores.rejected_checks(identificacion)
    df_checks = rejected.to_dataframe()
+
+Paged results
+-------------
+
+Every endpoint that returns more than one row answers with a
+:class:`~bcra_connector.Page`. It behaves like the list it replaced — iterate it, take
+its length, index it, slice it, compare it to a list — and it also carries what the API
+reported about the result set:
+
+.. code-block:: python
+
+   page = connector.cambiarias.series("USD", limit=50)
+
+   for quotation in page:          # iterate, as with a list
+       ...
+   first = page[0]                 # index
+   recent = page[:10]              # slice (a plain list)
+
+   page.count                      # total results the endpoint reported
+   page.offset                     # where this page starts
+   page.limit                      # page size that was asked for
+   page.has_more                   # whether there is anything past this page
+
+``count`` is the total the endpoint reported, which is not always the length of the
+page: the helpers that walk the whole range (``monetarias.list()``,
+``monetarias.history()``, ``cambiarias.evolution()``) already return every row, so for
+them ``has_more`` is ``False``. When an endpoint reports nothing usable, ``count`` is
+``None`` and ``has_more`` is ``False``.
+
+The deprecated ``get_*`` methods still return plain lists, so existing code is
+unaffected either way.
 
 Error Handling
 --------------
