@@ -54,15 +54,15 @@ from bcra_connector import BCRAConnector
 connector = BCRAConnector()
 
 # 1. Catalog of monetary series, with each one's latest value
-variables = connector.get_principales_variables()
+variables = connector.monetarias.list()
 print(f"Found {len(variables)} series")
 
 # 2. Latest value of a series, by ID (1 = Reservas internacionales)
-latest = connector.get_latest_value(1)
+latest = connector.monetarias.latest(1)
 print(f"Reserves: {latest.valor} on {latest.fecha}")
 
 # 3. Last 30 days of a series, by name (newest first, as the API returns it)
-history = connector.get_variable_history("Reservas internacionales", days=30)
+history = connector.monetarias.history("Reservas internacionales", days=30)
 for point in history[:5]:
     print(point.fecha, point.valor)
 

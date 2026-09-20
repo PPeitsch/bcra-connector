@@ -97,7 +97,7 @@ class TestBCRAConnector:
             ]
         }
         mock_get.return_value = mock_api_response(mock_data_v4, 200)
-        result: List[PrincipalesVariables] = connector.get_principales_variables()
+        result: List[PrincipalesVariables] = connector.monetarias.list()
 
         mock_get.assert_called_once_with(
             f"{BCRAConnector.BASE_URL}/estadisticas/v4.0/Monetarias",
@@ -122,7 +122,7 @@ class TestBCRAConnector:
     ) -> None:
         """Test handling of empty response for principal variables (v4.0)."""
         mock_get.return_value = mock_api_response({"results": []}, 200)
-        result: List[PrincipalesVariables] = connector.get_principales_variables()
+        result: List[PrincipalesVariables] = connector.monetarias.list()
 
         assert isinstance(result, list)
         assert len(result) == 0
@@ -153,7 +153,7 @@ class TestBCRAConnector:
         start_date = datetime(2024, 3, 1)
         end_date = datetime(2024, 3, 5)
 
-        response: DatosVariableResponse = connector.get_datos_variable(
+        response: DatosVariableResponse = connector.monetarias.series(
             1, desde=start_date, hasta=end_date, limit=10, offset=0
         )
 
@@ -189,7 +189,7 @@ class TestBCRAConnector:
             ValueError,
             match="'desde' date must be earlier than or equal to 'hasta' date",
         ):
-            connector.get_datos_variable(1, datetime(2024, 3, 5), datetime(2024, 3, 1))
+            connector.monetarias.series(1, datetime(2024, 3, 5), datetime(2024, 3, 1))
 
     def test_get_datos_variable_invalid_limit_offset_v3(
         self, connector: BCRAConnector
@@ -197,19 +197,19 @@ class TestBCRAConnector:
         """Test validation for limit and offset in get_datos_variable (v4.0)."""
         valid_date = datetime(2024, 1, 1)
         with pytest.raises(ValueError, match="Limit must be between 10 and 3000"):
-            connector.get_datos_variable(1, desde=valid_date, limit=5)
+            connector.monetarias.series(1, desde=valid_date, limit=5)
         with pytest.raises(ValueError, match="Limit must be between 10 and 3000"):
-            connector.get_datos_variable(1, desde=valid_date, limit=3001)
+            connector.monetarias.series(1, desde=valid_date, limit=3001)
         with pytest.raises(ValueError, match="Offset must be non-negative"):
-            connector.get_datos_variable(1, desde=valid_date, offset=-1)
+            connector.monetarias.series(1, desde=valid_date, offset=-1)
         try:
-            connector.get_datos_variable(1, desde=valid_date, limit=10, offset=0)
+            connector.monetarias.series(1, desde=valid_date, limit=10, offset=0)
         except ValueError:
             pytest.fail("Valid limit/offset raised ValueError unexpectedly.")
 
-    @patch("bcra_connector.bcra_connector.BCRAConnector.get_datos_variable")
+    @patch("bcra_connector.clients.monetarias.MonetariasClient.series")
     def test_get_latest_value_success_v3(
-        self, mock_get_datos_variable: Mock, connector: BCRAConnector
+        self, mock_series: Mock, connector: BCRAConnector
     ) -> None:
         """Test successful retrieval of latest value (using v4.0)."""
         mock_response_data = DatosVariableResponse(
@@ -226,19 +226,19 @@ class TestBCRAConnector:
                 )
             ],
         )
-        mock_get_datos_variable.return_value = mock_response_data
+        mock_series.return_value = mock_response_data
 
-        result = connector.get_latest_value(1)
+        result = connector.monetarias.latest(1)
 
-        mock_get_datos_variable.assert_any_call(1, limit=10)
+        mock_series.assert_any_call(1, limit=10)
 
         assert isinstance(result, DetalleMonetaria)
         assert result.fecha == date(2024, 3, 5)
         assert result.valor == 100.0
 
-    @patch("bcra_connector.bcra_connector.BCRAConnector.get_datos_variable")
+    @patch("bcra_connector.clients.monetarias.MonetariasClient.series")
     def test_get_latest_value_no_data_v3(
-        self, mock_get_datos_variable: Mock, connector: BCRAConnector
+        self, mock_series: Mock, connector: BCRAConnector
     ) -> None:
         """Test handling of no data for latest value (using v4.0)."""
         mock_empty_response = DatosVariableResponse(
@@ -246,18 +246,18 @@ class TestBCRAConnector:
             metadata=Mock(resultset=Mock(count=0, offset=0, limit=10)),
             results=[],
         )
-        mock_get_datos_variable.side_effect = [mock_empty_response, mock_empty_response]
+        mock_series.side_effect = [mock_empty_response, mock_empty_response]
 
         with pytest.raises(BCRAApiError, match="No data available for variable 1"):
-            connector.get_latest_value(1)
+            connector.monetarias.latest(1)
 
-        assert mock_get_datos_variable.call_count == 2
-        mock_get_datos_variable.assert_any_call(1, limit=10)
-        mock_get_datos_variable.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
+        assert mock_series.call_count == 2
+        mock_series.assert_any_call(1, limit=10)
+        mock_series.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
 
-    @patch("bcra_connector.bcra_connector.BCRAConnector.get_datos_variable")
+    @patch("bcra_connector.clients.monetarias.MonetariasClient.series")
     def test_get_latest_value_fallback_success(
-        self, mock_get_datos_variable: Mock, connector: BCRAConnector
+        self, mock_series: Mock, connector: BCRAConnector
     ) -> None:
         """Test fallback scenario where first query is empty but 30-day query succeeds."""
         # First call with limit=10 returns empty results
@@ -280,17 +280,17 @@ class TestBCRAConnector:
                 )
             ],
         )
-        mock_get_datos_variable.side_effect = [
+        mock_series.side_effect = [
             mock_empty_response,
             mock_fallback_response,
         ]
 
-        result = connector.get_latest_value(1)
+        result = connector.monetarias.latest(1)
 
         # Verify both calls were made
-        assert mock_get_datos_variable.call_count == 2
-        mock_get_datos_variable.assert_any_call(1, limit=10)
-        mock_get_datos_variable.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
+        assert mock_series.call_count == 2
+        mock_series.assert_any_call(1, limit=10)
+        mock_series.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
 
         # Verify we got the latest from fallback data
         assert isinstance(result, DetalleMonetaria)
@@ -367,7 +367,7 @@ class TestBCRAConnector:
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             mock_get.side_effect = Timeout("Request timed out")
             with pytest.raises(BCRAApiError, match="Request timed out"):
-                connector.get_principales_variables()
+                connector.monetarias.list()
 
     def test_error_handling_connection_error(self, connector: BCRAConnector) -> None:
         """Test connection error handling."""
@@ -376,7 +376,7 @@ class TestBCRAConnector:
             with pytest.raises(
                 BCRAApiError, match="API request failed: Connection error"
             ):
-                connector.get_principales_variables()
+                connector.monetarias.list()
 
     def test_error_handling_http_error_generic(
         self,
@@ -389,7 +389,7 @@ class TestBCRAConnector:
             mock_get.return_value = mock_resp
 
             with pytest.raises(BCRAApiError, match="HTTP 500"):
-                connector.get_principales_variables()
+                connector.monetarias.list()
 
     def test_error_handling_http_404_error(
         self,
@@ -413,7 +413,7 @@ class TestBCRAConnector:
             expected_match_pattern = r"Resource not found \(404\)"
 
             with pytest.raises(BCRAApiError, match=expected_match_pattern) as exc_info:
-                connector.get_datos_variable(variable_id_for_test)
+                connector.monetarias.series(variable_id_for_test)
 
             assert full_mocked_url in str(exc_info.value)
             assert api_error_content_message in str(exc_info.value)
@@ -479,7 +479,7 @@ class TestBCRAConnector:
             mock_get.return_value = mock_response_obj
 
             with pytest.raises(BCRAApiError) as exc_info:
-                connector.get_principales_variables()
+                connector.monetarias.list()
 
             assert expected_match in str(exc_info.value)
             if error_messages:
@@ -507,7 +507,7 @@ class TestBCRAConnector:
         mock_get.return_value = mock_resp
 
         with pytest.raises(BCRAApiError) as exc_info:
-            connector.get_principales_variables()
+            connector.monetarias.list()
 
         error_text = str(exc_info.value)
         assert "El servidor del BCRA rechazó la conexión (HTTP 500)" in error_text
@@ -537,9 +537,7 @@ class TestBCRAConnector:
                     mock_api_response({"results": []}, 200),
                 ]
 
-                result: List[PrincipalesVariables] = (
-                    connector.get_principales_variables()
-                )
+                result: List[PrincipalesVariables] = connector.monetarias.list()
 
                 assert result == []
                 assert mock_get.call_count == 2
@@ -562,7 +560,7 @@ class TestBCRAConnector:
                 mock_get.return_value = error_response
 
                 with pytest.raises(BCRAApiError) as exc_info:
-                    connector.get_principales_variables()
+                    connector.monetarias.list()
 
                 assert mock_get.call_count == BCRAConnector.MAX_RETRIES
                 assert f"tras {BCRAConnector.MAX_RETRIES} intentos" in str(
@@ -583,6 +581,6 @@ class TestBCRAConnector:
                 final_response,
             ]
 
-            result: List[PrincipalesVariables] = connector.get_principales_variables()
+            result: List[PrincipalesVariables] = connector.monetarias.list()
             assert result == []
             assert mock_get.call_count == 3

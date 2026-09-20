@@ -123,17 +123,15 @@ class TestBCRAConnectorExtended:
             with pytest.raises(BCRAApiError, match="Invalid JSON response"):
                 connector._make_request("test")
 
-    # --- get_principales_variables edge cases ---
-    def test_get_principales_variables_invalid_results_format(
-        self, connector: BCRAConnector
-    ):
+    # --- monetarias.list() edge cases ---
+    def test_monetarias_list_invalid_results_format(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", return_value={"results": "not-a-list"}
+            connector._http, "request", return_value={"results": "not-a-list"}
         ):
             with pytest.raises(BCRAApiError, match="Unexpected response format"):
-                connector.get_principales_variables()
+                connector.monetarias.list()
 
-    def test_get_principales_variables_parsing_error(self, connector: BCRAConnector):
+    def test_monetarias_list_parsing_error(self, connector: BCRAConnector):
         # One valid, one invalid item
         data = {
             "results": [
@@ -147,60 +145,56 @@ class TestBCRAConnectorExtended:
                 },  # Missing fields is OK in v4.0 since most are optional
             ]
         }
-        with patch.object(connector, "_make_request", return_value=data):
+        with patch.object(connector._http, "request", return_value=data):
             # Should parse both successfully in v4.0
-            res = connector.get_principales_variables()
+            res = connector.monetarias.list()
             assert len(res) == 2
 
-    def test_get_principales_variables_all_parsing_failed(
-        self, connector: BCRAConnector
-    ):
+    def test_monetarias_list_all_parsing_failed(self, connector: BCRAConnector):
         data = {
             "results": [{"invalid": "data"}]
         }  # Will raise KeyError/ValueError during from_dict
-        with patch.object(connector, "_make_request", return_value=data):
+        with patch.object(connector._http, "request", return_value=data):
             # Logs error but returns empty list? or raises?
             # Code says log error if results existed but parsing failed. Returns empty list.
-            res = connector.get_principales_variables()
+            res = connector.monetarias.list()
             assert res == []
 
-    def test_get_principales_variables_no_valid_variables(
-        self, connector: BCRAConnector
-    ):
-        with patch.object(connector, "_make_request", return_value={"results": []}):
-            res = connector.get_principales_variables()
+    def test_monetarias_list_no_valid_variables(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", return_value={"results": []}):
+            res = connector.monetarias.list()
             assert res == []
 
-    def test_get_principales_variables_exception(self, connector: BCRAConnector):
+    def test_monetarias_list_exception(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", side_effect=Exception("Unexpected")
+            connector._http, "request", side_effect=Exception("Unexpected")
         ):
             with pytest.raises(
                 BCRAApiError, match="Error fetching principal variables"
             ):
-                connector.get_principales_variables()
+                connector.monetarias.list()
 
-    # --- get_datos_variable edge cases ---
-    def test_get_datos_variable_parsing_error(self, connector: BCRAConnector):
+    # --- monetarias.series() edge cases ---
+    def test_monetarias_series_parsing_error(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", return_value={"results": "bad-structure"}
+            connector._http, "request", return_value={"results": "bad-structure"}
         ):
             with pytest.raises(BCRAApiError, match="Error parsing response"):
-                connector.get_datos_variable(1)
+                connector.monetarias.series(1)
 
-    def test_get_datos_variable_unexpected_exception(self, connector: BCRAConnector):
+    def test_monetarias_series_unexpected_exception(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", side_effect=Exception("Unexpected")
+            connector._http, "request", side_effect=Exception("Unexpected")
         ):
             with pytest.raises(BCRAApiError, match="Unexpected error fetching data"):
-                connector.get_datos_variable(1)
+                connector.monetarias.series(1)
 
-    def test_get_datos_variable_api_error_pass_through(self, connector: BCRAConnector):
+    def test_monetarias_series_api_error_pass_through(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", side_effect=BCRAApiError("API Error")
+            connector._http, "request", side_effect=BCRAApiError("API Error")
         ):
             with pytest.raises(BCRAApiError, match="API Error"):
-                connector.get_datos_variable(1)
+                connector.monetarias.series(1)
 
     # --- get_entidades edge cases ---
     def test_get_entidades_invalid_format(self, connector: BCRAConnector):
@@ -361,53 +355,47 @@ class TestBCRAConnectorExtended:
                 connector.get_evolucion_moneda("USD")
 
     # --- helper methods ---
-    def test_get_variable_by_name_found(self, connector: BCRAConnector):
+    def test_monetarias_find_found(self, connector: BCRAConnector):
         vars_list = [
             PrincipalesVariables(
                 idVariable=1,
                 descripcion="Reserva",
             )
         ]
-        with patch.object(
-            connector, "get_principales_variables", return_value=vars_list
-        ):
-            res = connector.get_variable_by_name("reserva")
+        with patch.object(connector.monetarias, "list", return_value=vars_list):
+            res = connector.monetarias.find("reserva")
             assert res.idVariable == 1
 
-    def test_get_variable_by_name_not_found(self, connector: BCRAConnector):
+    def test_monetarias_find_not_found(self, connector: BCRAConnector):
         vars_list = [
             PrincipalesVariables(
                 idVariable=1,
                 descripcion="Base",
             )
         ]
-        with patch.object(
-            connector, "get_principales_variables", return_value=vars_list
-        ):
-            res = connector.get_variable_by_name("reserva")
+        with patch.object(connector.monetarias, "list", return_value=vars_list):
+            res = connector.monetarias.find("reserva")
             assert res is None
 
-    def test_get_variable_by_name_error_propagates(self, connector: BCRAConnector):
+    def test_monetarias_find_error_propagates(self, connector: BCRAConnector):
         """An API failure must not be reported as 'variable not found'."""
         with patch.object(
-            connector, "get_principales_variables", side_effect=BCRAApiError("Fail")
+            connector.monetarias, "list", side_effect=BCRAApiError("Fail")
         ):
             with pytest.raises(BCRAApiError, match="Fail"):
-                connector.get_variable_by_name("any")
+                connector.monetarias.find("any")
             with pytest.raises(BCRAApiError, match="Fail"):
-                connector.get_variable_history("any")
+                connector.monetarias.history("any")
 
-    def test_get_variable_by_name_prefers_exact_match(self, connector: BCRAConnector):
+    def test_monetarias_find_prefers_exact_match(self, connector: BCRAConnector):
         vars_list = [
             PrincipalesVariables(idVariable=1, descripcion="Reservas en oro"),
             PrincipalesVariables(idVariable=2, descripcion="Reservas"),
         ]
-        with patch.object(
-            connector, "get_principales_variables", return_value=vars_list
-        ):
-            assert connector.get_variable_by_name(" reservas ").idVariable == 2
+        with patch.object(connector.monetarias, "list", return_value=vars_list):
+            assert connector.monetarias.find(" reservas ").idVariable == 2
 
-    def test_get_variable_by_name_warns_on_ambiguous_match(
+    def test_monetarias_find_warns_on_ambiguous_match(
         self, connector: BCRAConnector, caplog: pytest.LogCaptureFixture
     ):
         vars_list = [
@@ -415,11 +403,9 @@ class TestBCRAConnectorExtended:
             PrincipalesVariables(idVariable=8, descripcion="Tasa TAMAR"),
             PrincipalesVariables(idVariable=9, descripcion="Base monetaria"),
         ]
-        with patch.object(
-            connector, "get_principales_variables", return_value=vars_list
-        ):
+        with patch.object(connector.monetarias, "list", return_value=vars_list):
             with caplog.at_level("WARNING", logger="bcra_connector"):
-                res = connector.get_variable_by_name("tasa")
+                res = connector.monetarias.find("tasa")
 
         assert res.idVariable == 7  # first match, as before
         warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
@@ -427,37 +413,35 @@ class TestBCRAConnectorExtended:
         assert "2 variables match 'tasa'" in warnings[0]
         assert "8" in warnings[0] and "Tasa TAMAR" in warnings[0]
 
-    def test_get_variable_by_name_single_match_no_warning(
+    def test_monetarias_find_single_match_no_warning(
         self, connector: BCRAConnector, caplog: pytest.LogCaptureFixture
     ):
         vars_list = [PrincipalesVariables(idVariable=1, descripcion="Base monetaria")]
-        with patch.object(
-            connector, "get_principales_variables", return_value=vars_list
-        ):
+        with patch.object(connector.monetarias, "list", return_value=vars_list):
             with caplog.at_level("WARNING", logger="bcra_connector"):
-                connector.get_variable_by_name("base")
+                connector.monetarias.find("base")
         assert not [r for r in caplog.records if r.levelname == "WARNING"]
 
-    def test_get_variable_history_methods(self, connector: BCRAConnector):
-        # We must mock get_variable_by_name first because get_variable_history calls it.
+    def test_monetarias_history_methods(self, connector: BCRAConnector):
+        # We must mock find() first because history() calls it.
         mock_var = PrincipalesVariables(
             idVariable=1,
             descripcion="Var",
         )
 
         # Scenario 1: Variable found, but days invalid
-        with patch.object(connector, "get_variable_by_name", return_value=mock_var):
+        with patch.object(connector.monetarias, "find", return_value=mock_var):
             with pytest.raises(ValueError, match="positive"):
-                connector.get_variable_history("Var", days=-1)
+                connector.monetarias.history("Var", days=-1)
 
         # Scenario 2: Variable not found
-        with patch.object(connector, "get_variable_by_name", return_value=None):
+        with patch.object(connector.monetarias, "find", return_value=None):
             with pytest.raises(ValueError, match="not found"):
-                connector.get_variable_history("Missing")
+                connector.monetarias.history("Missing")
 
         # Scenario 3: Success
-        with patch.object(connector, "get_variable_by_name", return_value=mock_var):
-            with patch.object(connector, "get_datos_variable") as mock_get_datos:
+        with patch.object(connector.monetarias, "find", return_value=mock_var):
+            with patch.object(connector.monetarias, "series") as mock_get_datos:
                 mock_get_datos.return_value = DatosVariableResponse(
                     status=200,
                     metadata=Mock(),
@@ -468,7 +452,7 @@ class TestBCRAConnectorExtended:
                         )
                     ],
                 )
-                res = connector.get_variable_history("Var", days=10)
+                res = connector.monetarias.history("Var", days=10)
                 assert len(res) == 1
                 mock_get_datos.assert_called_once()
 
@@ -635,18 +619,18 @@ class TestBCRAConnectorExtended:
 
         # API Error
         with patch.object(
-            connector, "get_variable_history", side_effect=BCRAApiError("Fail")
+            connector.monetarias, "history", side_effect=BCRAApiError("Fail")
         ):
             with pytest.raises(BCRAApiError):
                 connector.get_variable_correlation("A", "B")
 
         # Insufficient data (None returned)
-        with patch.object(connector, "get_variable_history", return_value=[]):
+        with patch.object(connector.monetarias, "history", return_value=[]):
             assert np.isnan(connector.get_variable_correlation("A", "B"))
 
         # Insufficient unique dates
         d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
-        with patch.object(connector, "get_variable_history", return_value=[d1, d1]):
+        with patch.object(connector.monetarias, "history", return_value=[d1, d1]):
             # Same date twice (set len < 2)
             assert np.isnan(connector.get_variable_correlation("A", "B"))
 
@@ -656,7 +640,7 @@ class TestBCRAConnectorExtended:
         d3 = DetalleMonetaria(fecha=date(2024, 1, 3), valor=30.0)
 
         with patch.object(
-            connector, "get_variable_history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
+            connector.monetarias, "history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
         ):  # Perfect correlation
             corr = connector.get_variable_correlation("A", "B")
             assert corr == pytest.approx(1.0)  # Check floating point equality
@@ -665,7 +649,7 @@ class TestBCRAConnectorExtended:
         dc1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
         dc2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=10.0)
         with patch.object(
-            connector, "get_variable_history", side_effect=[[dc1, dc2], [d1, d2]]
+            connector.monetarias, "history", side_effect=[[dc1, dc2], [d1, d2]]
         ):
             assert np.isnan(connector.get_variable_correlation("A", "B"))
 
@@ -703,7 +687,7 @@ class TestBCRAConnectorExtended:
         d3 = DetalleMonetaria(fecha=date(2024, 1, 3), valor=30.0)
 
         with patch.object(
-            connector, "get_variable_history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
+            connector.monetarias, "history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
         ):
             with patch(
                 "numpy.corrcoef",
@@ -718,29 +702,29 @@ class TestBCRAConnectorExtended:
         with pytest.raises(ValueError, match="positive"):
             connector.generate_variable_report("A", days=-1)
 
-        with patch.object(connector, "get_variable_by_name", return_value=None):
+        with patch.object(connector.monetarias, "find", return_value=None):
             with pytest.raises(ValueError, match="not found"):
                 connector.generate_variable_report("Missing")
 
         mock_var = PrincipalesVariables(idVariable=1, descripcion="Desc")
-        with patch.object(connector, "get_variable_by_name", return_value=mock_var):
+        with patch.object(connector.monetarias, "find", return_value=mock_var):
 
             # API Error
             with patch.object(
-                connector, "get_variable_history", side_effect=BCRAApiError("Fail")
+                connector.monetarias, "history", side_effect=BCRAApiError("Fail")
             ):
                 with pytest.raises(BCRAApiError):
                     connector.generate_variable_report("A")
 
             # No data
-            with patch.object(connector, "get_variable_history", return_value=[]):
+            with patch.object(connector.monetarias, "history", return_value=[]):
                 rep = connector.generate_variable_report("A")
                 assert "error" in rep
 
             # Success
             d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=100.0)
             d2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=200.0)
-            with patch.object(connector, "get_variable_history", return_value=[d1, d2]):
+            with patch.object(connector.monetarias, "history", return_value=[d1, d2]):
                 rep = connector.generate_variable_report("A")
                 assert rep["min_value"] == 100.0
                 assert rep["max_value"] == 200.0
@@ -756,9 +740,9 @@ class TestBCRAConnectorExtended:
             DetalleMonetaria(fecha=date(2024, 1, 2), valor=200.0),
             DetalleMonetaria(fecha=date(2024, 1, 1), valor=100.0),
         ]
-        with patch.object(connector, "get_variable_by_name", return_value=mock_var):
+        with patch.object(connector.monetarias, "find", return_value=mock_var):
             with patch.object(
-                connector, "get_variable_history", return_value=newest_first
+                connector.monetarias, "history", return_value=newest_first
             ):
                 rep = connector.generate_variable_report("A")
 

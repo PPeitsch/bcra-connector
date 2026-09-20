@@ -76,11 +76,11 @@ class TestCatalog:
     def test_returns_every_page(self, connector: BCRAConnector) -> None:
         total = 2 * PAGE + 3
         with patch.object(
-            connector,
-            "_make_request",
+            connector._http,
+            "request",
             side_effect=lambda endpoint, params: _catalog_page(params, total),
         ) as mock_req:
-            variables = connector.get_principales_variables()
+            variables = connector.monetarias.list()
 
         assert [v.idVariable for v in variables] == list(range(total))
         assert mock_req.call_count == 3
@@ -88,11 +88,11 @@ class TestCatalog:
     def test_exact_multiple_of_page_size(self, connector: BCRAConnector) -> None:
         total = 2 * PAGE
         with patch.object(
-            connector,
-            "_make_request",
+            connector._http,
+            "request",
             side_effect=lambda endpoint, params: _catalog_page(params, total),
         ) as mock_req:
-            variables = connector.get_principales_variables()
+            variables = connector.monetarias.list()
 
         assert len(variables) == total
         assert mock_req.call_count == 3  # the last, empty page ends the listing
@@ -103,13 +103,13 @@ class TestVariableHistory:
         self, connector: BCRAConnector, total: int, **kwargs: Any
     ) -> List[Any]:
         variable = PrincipalesVariables(idVariable=1, descripcion="Var")
-        with patch.object(connector, "get_variable_by_name", return_value=variable):
+        with patch.object(connector.monetarias, "find", return_value=variable):
             with patch.object(
-                connector,
-                "_make_request",
+                connector._http,
+                "request",
                 side_effect=lambda endpoint, params: _series_page(params, total),
             ) as mock_req:
-                points: List[Any] = connector.get_variable_history(
+                points: List[Any] = connector.monetarias.history(
                     "Var", days=3650, **kwargs
                 )
         self.calls = mock_req.call_count
@@ -207,10 +207,10 @@ class TestSafetyCap:
         monkeypatch.setattr(BCRAConnector, "MAX_PAGES", 3)
         full_page = _catalog_page({"Offset": 0, "Limit": PAGE}, 10 * PAGE)
         with patch.object(
-            connector, "_make_request", return_value=full_page
+            connector._http, "request", return_value=full_page
         ) as mock_req:
             with caplog.at_level(logging.WARNING, logger="bcra_connector"):
-                connector.get_principales_variables()
+                connector.monetarias.list()
 
         assert mock_req.call_count == 3
         assert any("Stopped paging" in r.getMessage() for r in caplog.records)

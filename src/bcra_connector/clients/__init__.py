@@ -3,5 +3,6 @@
 from .base import DomainClient
 from .cheques import ChequesClient
 from .deudores import DeudoresClient
+from .monetarias import MonetariasClient
 
-__all__ = ["DomainClient", "ChequesClient", "DeudoresClient"]
+__all__ = ["DomainClient", "ChequesClient", "DeudoresClient", "MonetariasClient"]

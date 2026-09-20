@@ -18,7 +18,7 @@ def test_connection(connector: BCRAConnector, description: str) -> None:
     """Tests basic connectivity and data fetching with the given connector."""
     logger.info(f"\n--- Testing: {description} ---")
     try:
-        variables = connector.get_principales_variables()
+        variables = connector.monetarias.list()
         logger.info(
             f"Successfully fetched {len(variables)} principal variables/series."
         )
@@ -36,7 +36,7 @@ def test_connection(connector: BCRAConnector, description: str) -> None:
         start_date = end_date - timedelta(days=7)
 
         logger.info(f"Fetching data for variable ID {variable_id_to_test}...")
-        response_data = connector.get_datos_variable(
+        response_data = connector.monetarias.series(
             variable_id_to_test, desde=start_date, hasta=end_date, limit=10
         )
 

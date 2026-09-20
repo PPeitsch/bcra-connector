@@ -83,7 +83,7 @@ when you're done, or use it as a context manager:
    from bcra_connector import BCRAConnector
 
    with BCRAConnector() as connector:
-       latest = connector.get_latest_value(1)
+       latest = connector.monetarias.latest(1)
 
 Requests are sent with ``User-Agent: bcra-connector/<version>``.
 
@@ -136,15 +136,15 @@ To change these values, subclass `BCRAConnector`:
 Catalog Cache
 -------------
 
-Name-based helpers (``get_variable_by_name``, ``get_variable_history``,
-``generate_variable_report``, ``get_variable_correlation``) and ``check_denunciado`` look
+Name-based helpers (``monetarias.find``, ``monetarias.history``,
+``generate_variable_report``, ``get_variable_correlation``) and ``cheques.is_reported`` look
 names up in reference catalogs: the variables catalog and the list of financial
 entities. Each connector instance reuses those catalogs for ``CATALOG_CACHE_TTL`` seconds
 (default: 300) instead of downloading them on every lookup.
 
 - ``connector.clear_cache()`` drops the cached catalogs so the next lookup refetches them.
 - ``CATALOG_CACHE_TTL = 0`` disables the cache.
-- ``get_principales_variables()`` and ``cheques.entities()`` are never cached: call them
+- ``monetarias.list()`` and ``cheques.entities()`` are never cached: call them
   when you need fresh data (the catalog includes each series' latest value).
 
 .. code-block:: python

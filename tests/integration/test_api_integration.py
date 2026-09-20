@@ -31,7 +31,7 @@ class TestBCRAIntegration:
 
     def test_get_principales_variables_v3(self, connector: BCRAConnector) -> None:
         """Test retrieval of principal variables/monetary series (Monetarias v4.0)."""
-        variables: List[PrincipalesVariables] = connector.get_principales_variables()
+        variables: List[PrincipalesVariables] = connector.monetarias.list()
 
         assert variables, "Should retrieve a list of variables"
         assert len(variables) > 0, "Expected at least one variable"
@@ -47,7 +47,7 @@ class TestBCRAIntegration:
 
     def test_get_historical_data_v3(self, connector: BCRAConnector) -> None:
         """Test retrieval of historical data for a variable (Monetarias v4.0)."""
-        variables: List[PrincipalesVariables] = connector.get_principales_variables()
+        variables: List[PrincipalesVariables] = connector.monetarias.list()
         if not variables:
             pytest.skip(
                 "No principal variables available to test historical data retrieval."
@@ -62,7 +62,7 @@ class TestBCRAIntegration:
         end_date: datetime = datetime.now()
         start_date: datetime = end_date - timedelta(days=7)
 
-        response_data: DatosVariableResponse = connector.get_datos_variable(
+        response_data: DatosVariableResponse = connector.monetarias.series(
             id_variable=variable_id, desde=start_date, hasta=end_date, limit=10
         )
 
@@ -87,7 +87,7 @@ class TestBCRAIntegration:
                 isinstance(d, DetalleMonetaria) for d in first_data_point.detalle
             )
 
-        response_offset: DatosVariableResponse = connector.get_datos_variable(
+        response_offset: DatosVariableResponse = connector.monetarias.series(
             id_variable=variable_id, limit=15, offset=5
         )
         assert response_offset.metadata.resultset.offset == 5
@@ -130,7 +130,7 @@ class TestBCRAIntegration:
 
     def test_complete_variable_workflow_v3(self, connector: BCRAConnector) -> None:
         """Test complete workflow for Monetarias v4.0 data."""
-        variables: List[PrincipalesVariables] = connector.get_principales_variables()
+        variables: List[PrincipalesVariables] = connector.monetarias.list()
         assert (
             variables and len(variables) > 0
         ), "Failed to get principal variables list"
@@ -144,13 +144,13 @@ class TestBCRAIntegration:
         end_date: datetime = datetime.now()
         start_date: datetime = end_date - timedelta(days=5)
 
-        historical_response: DatosVariableResponse = connector.get_datos_variable(
+        historical_response: DatosVariableResponse = connector.monetarias.series(
             variable_id, start_date, end_date, limit=20
         )
         assert isinstance(historical_response, DatosVariableResponse)
 
         # v4.0 returns DetalleMonetaria instead of DatosVariable
-        latest_value: DetalleMonetaria = connector.get_latest_value(variable_id)
+        latest_value: DetalleMonetaria = connector.monetarias.latest(variable_id)
         assert latest_value is not None
         assert isinstance(latest_value, DetalleMonetaria)
         assert latest_value.fecha <= end_date.date()
@@ -224,7 +224,7 @@ class TestBCRAIntegration:
         start_date: datetime = end_date - timedelta(days=1)
 
         with pytest.raises(BCRAApiError) as exc_info:
-            connector.get_datos_variable(non_existent_id, start_date, end_date)
+            connector.monetarias.series(non_existent_id, start_date, end_date)
 
         error_str = str(exc_info.value).lower()
         assert (
@@ -242,6 +242,6 @@ class TestBCRAIntegration:
                 connector.logger.info(
                     f"Multiple calls test, iteration {i+1}/{call_count}"
                 )
-                connector.get_principales_variables()
+                connector.monetarias.list()
         except BCRAApiError as e:
             pytest.fail(f"BCRAApiError during multiple calls test: {e}")

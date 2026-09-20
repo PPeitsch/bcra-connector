@@ -40,36 +40,36 @@ def main() -> None:
     connector = BCRAConnector(verify_ssl=False, debug=True)
 
     test_case(
-        "Invalid variable ID for get_latest_value",
-        lambda: connector.get_latest_value(9999999),
+        "Invalid variable ID for monetarias.latest",
+        lambda: connector.monetarias.latest(9999999),
         expected_exception=BCRAApiError,
     )
 
     def invalid_date_order():
-        return connector.get_datos_variable(
+        return connector.monetarias.series(
             1, datetime(2023, 1, 10), datetime(2023, 1, 1)
         )
 
     test_case(
-        "Invalid date order (desde > hasta) for get_datos_variable",
+        "Invalid date order (desde > hasta) for monetarias.series",
         invalid_date_order,
         expected_exception=ValueError,
     )
 
     def invalid_limit_low():
-        return connector.get_datos_variable(1, limit=5)
+        return connector.monetarias.series(1, limit=5)
 
     test_case(
-        "Invalid limit (too low) for get_datos_variable",
+        "Invalid limit (too low) for monetarias.series",
         invalid_limit_low,
         expected_exception=ValueError,
     )
 
     def invalid_limit_high():
-        return connector.get_datos_variable(1, limit=3001)
+        return connector.monetarias.series(1, limit=3001)
 
     test_case(
-        "Invalid limit (too high) for get_datos_variable",
+        "Invalid limit (too high) for monetarias.series",
         invalid_limit_high,
         expected_exception=ValueError,
     )
@@ -78,7 +78,7 @@ def main() -> None:
         today = datetime.now()
         future_start = today + timedelta(days=30)
         future_end = today + timedelta(days=60)
-        response = connector.get_datos_variable(1, future_start, future_end)
+        response = connector.monetarias.series(1, future_start, future_end)
         return f"Results count: {len(response.results)}"
 
     test_case(
@@ -88,18 +88,18 @@ def main() -> None:
     )
 
     test_case(
-        "Non-existent variable name for get_variable_history",
-        lambda: connector.get_variable_history("This Variable Does Not Exist For Sure"),
+        "Non-existent variable name for monetarias.history",
+        lambda: connector.monetarias.history("This Variable Does Not Exist For Sure"),
         expected_exception=ValueError,
     )
 
     def simulate_api_error_for_datos():
-        return connector.get_datos_variable(
+        return connector.monetarias.series(
             9999999, datetime.now() - timedelta(days=1), datetime.now()
         )
 
     test_case(
-        "API error for non-existent ID with get_datos_variable",
+        "API error for non-existent ID with monetarias.series",
         simulate_api_error_for_datos,
         expected_exception=BCRAApiError,
     )

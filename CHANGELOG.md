@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Monetarias now has its own client: `connector.monetarias.list()`, `.series()`,
+  `.latest()`, `.find()` and `.history()` (#126)
 - Cheques now has its own client: `connector.cheques.entities()`, `.reported()` and
   `.is_reported()`. `find_entity()` resolves an entity name (accent-insensitive, exact
   match first, then a unique substring) without making a request (#123)
@@ -20,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open and still closes one the connector created (#119)
 
 ### Deprecated
+- `get_principales_variables()`, `get_datos_variable()`, `get_latest_value()`,
+  `get_variable_by_name()` and `get_variable_history()` are deprecated in favour of
+  `connector.monetarias.*` and will be removed in 1.0 (#126)
 - `get_entidades()`, `get_cheque_denunciado()` and `check_denunciado()` are deprecated
   in favour of `connector.cheques.*` and will be removed in 1.0 (#123)
 - `get_deudas()`, `get_deudas_historicas()` and `get_cheques_rechazados()` are
