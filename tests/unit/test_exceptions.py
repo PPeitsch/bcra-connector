@@ -137,50 +137,48 @@ class TestCheckDenunciado:
         """Run check_denunciado and return the entity codes it queried."""
         cheque = cheque if cheque is not None else _cheque(False)
         with (
-            patch.object(connector, "get_entidades", return_value=ENTITIES),
+            patch.object(connector.cheques, "entities", return_value=ENTITIES),
             patch.object(
-                connector, "get_cheque_denunciado", return_value=cheque
+                connector.cheques, "reported", return_value=cheque
             ) as mock_cheque,
         ):
-            connector.check_denunciado(name, 1)
+            connector.cheques.is_reported(name, 1)
         return [c.args[0] for c in mock_cheque.call_args_list]
 
     def test_404_propagates_instead_of_false(self, connector: BCRAConnector) -> None:
         # The live API answers 200 + denunciado=false for a check that isn't
         # reported; its only 404 is "Entidad informada inexistente".
         with (
-            patch.object(connector, "get_entidades", return_value=ENTITIES),
+            patch.object(connector.cheques, "entities", return_value=ENTITIES),
             patch.object(
-                connector,
-                "get_cheque_denunciado",
+                connector.cheques,
+                "reported",
                 side_effect=BCRANotFoundError(
                     "Entidad informada inexistente.", status_code=404
                 ),
             ),
             pytest.raises(BCRANotFoundError),
         ):
-            connector.check_denunciado("BANCO DE LA NACION ARGENTINA", 1)
+            connector.cheques.is_reported("BANCO DE LA NACION ARGENTINA", 1)
 
     def test_not_found_text_is_not_a_signal(self, connector: BCRAConnector) -> None:
         with (
-            patch.object(connector, "get_entidades", return_value=ENTITIES),
+            patch.object(connector.cheques, "entities", return_value=ENTITIES),
             patch.object(
-                connector,
-                "get_cheque_denunciado",
+                connector.cheques,
+                "reported",
                 side_effect=BCRAServerError("upstream not found", status_code=502),
             ),
             pytest.raises(BCRAServerError),
         ):
-            connector.check_denunciado("BANCO DE LA NACION ARGENTINA", 1)
+            connector.cheques.is_reported("BANCO DE LA NACION ARGENTINA", 1)
 
     def test_returns_api_flag(self, connector: BCRAConnector) -> None:
         with (
-            patch.object(connector, "get_entidades", return_value=ENTITIES),
-            patch.object(
-                connector, "get_cheque_denunciado", return_value=_cheque(True)
-            ),
+            patch.object(connector.cheques, "entities", return_value=ENTITIES),
+            patch.object(connector.cheques, "reported", return_value=_cheque(True)),
         ):
-            assert connector.check_denunciado("banco de la nacion argentina", 1)
+            assert connector.cheques.is_reported("banco de la nacion argentina", 1)
 
     def test_accent_insensitive_exact(self, connector: BCRAConnector) -> None:
         assert self._check(connector, "Banco de la Nación Argentina") == [11]
@@ -205,10 +203,10 @@ class TestCheckDenunciado:
             Entidad(codigo_entidad=i, denominacion=f"BANCO {i:02d}") for i in range(15)
         ]
         with (
-            patch.object(connector, "get_entidades", return_value=entities),
+            patch.object(connector.cheques, "entities", return_value=entities),
             pytest.raises(ValueError, match="matches 15 entities") as exc_info,
         ):
-            connector.check_denunciado("banco", 1)
+            connector.cheques.is_reported("banco", 1)
         message = str(exc_info.value)
         assert "BANCO 09" in message and "BANCO 10" not in message
         assert "..." in message
@@ -216,3 +214,33 @@ class TestCheckDenunciado:
     def test_unknown_entity(self, connector: BCRAConnector) -> None:
         with pytest.raises(ValueError, match="not found"):
             self._check(connector, "Banco Inexistente")
+
+
+class TestDeprecatedChequesAliases:
+    """The old cheques methods delegate and warn until 1.0."""
+
+    @pytest.mark.parametrize(
+        "old,new,args",
+        [
+            ("get_entidades", "entities", ()),
+            ("get_cheque_denunciado", "reported", (11, 123)),
+            ("check_denunciado", "is_reported", ("Galicia", 123)),
+        ],
+    )
+    def test_alias_warns_and_delegates(
+        self, connector: BCRAConnector, old: str, new: str, args: Any
+    ) -> None:
+        sentinel = object()
+        with patch.object(connector.cheques, new, return_value=sentinel) as mock_method:
+            with pytest.warns(DeprecationWarning, match=f"cheques.{new}"):
+                result = getattr(connector, old)(*args)
+        mock_method.assert_called_once_with(*args)
+        assert result is sentinel
+
+
+class TestFindEntity:
+    """find_entity() resolves a name without making a request."""
+
+    def test_usable_standalone(self, connector: BCRAConnector) -> None:
+        entity = connector.cheques.find_entity(ENTITIES, "Banco de la Nación Argentina")
+        assert entity.codigo_entidad == 11

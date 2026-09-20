@@ -204,50 +204,50 @@ class TestBCRAConnectorExtended:
 
     # --- get_entidades edge cases ---
     def test_get_entidades_invalid_format(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", return_value={"no-results": []}):
+        with patch.object(connector._http, "request", return_value={"no-results": []}):
             with pytest.raises(BCRAApiError, match="Invalid response format"):
-                connector.get_entidades()
+                connector.cheques.entities()
 
     def test_get_entidades_parsing_error(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", return_value={"results": [{"bad": "data"}]}
+            connector._http, "request", return_value={"results": [{"bad": "data"}]}
         ):
             with pytest.raises(BCRAApiError, match="Unexpected response format"):
-                connector.get_entidades()
+                connector.cheques.entities()
 
     def test_get_entidades_pass_bcra_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=BCRAApiError("Fail")):
+        with patch.object(connector._http, "request", side_effect=BCRAApiError("Fail")):
             with pytest.raises(BCRAApiError, match="Fail"):
-                connector.get_entidades()
+                connector.cheques.entities()
 
     def test_get_entidades_unexpected_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=Exception("Fail")):
+        with patch.object(connector._http, "request", side_effect=Exception("Fail")):
             with pytest.raises(BCRAApiError, match="Error fetching financial entities"):
-                connector.get_entidades()
+                connector.cheques.entities()
 
     # --- get_cheque_denunciado edge cases ---
     def test_get_cheque_denunciado_invalid_format(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", return_value={"results": "not-a-dict"}
+            connector._http, "request", return_value={"results": "not-a-dict"}
         ):
             with pytest.raises(BCRAApiError, match="Invalid response format"):
-                connector.get_cheque_denunciado(1, 123)
+                connector.cheques.reported(1, 123)
 
     def test_get_cheque_denunciado_parsing_error(self, connector: BCRAConnector):
         # Missing keys
-        with patch.object(connector, "_make_request", return_value={"results": {}}):
+        with patch.object(connector._http, "request", return_value={"results": {}}):
             with pytest.raises(BCRAApiError, match="Unexpected response format"):
-                connector.get_cheque_denunciado(1, 123)
+                connector.cheques.reported(1, 123)
 
     def test_get_cheque_denunciado_pass_bcra_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=BCRAApiError("Fail")):
+        with patch.object(connector._http, "request", side_effect=BCRAApiError("Fail")):
             with pytest.raises(BCRAApiError, match="Fail"):
-                connector.get_cheque_denunciado(1, 123)
+                connector.cheques.reported(1, 123)
 
     def test_get_cheque_denunciado_unexpected_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=Exception("Fail")):
+        with patch.object(connector._http, "request", side_effect=Exception("Fail")):
             with pytest.raises(BCRAApiError, match="Error fetching reported check"):
-                connector.get_cheque_denunciado(1, 123)
+                connector.cheques.reported(1, 123)
 
     # --- get_divisas edge cases ---
     def test_get_divisas_success(self, connector: BCRAConnector):
@@ -495,48 +495,46 @@ class TestBCRAConnectorExtended:
 
     def test_check_denunciado_flow(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="positive"):
-            connector.check_denunciado("Bank", -1)
+            connector.cheques.is_reported("Bank", -1)
 
-        with patch.object(connector, "get_entidades", side_effect=BCRAApiError("Fail")):
+        with patch.object(
+            connector.cheques, "entities", side_effect=BCRAApiError("Fail")
+        ):
             with pytest.raises(BCRAApiError, match="Fail"):
-                connector.check_denunciado("Bank", 123)
+                connector.cheques.is_reported("Bank", 123)
 
         entidades = [Entidad(codigo_entidad=1, denominacion="BankOfTest")]
-        with patch.object(connector, "get_entidades", return_value=entidades):
+        with patch.object(connector.cheques, "entities", return_value=entidades):
             # Not found entity
             with pytest.raises(ValueError, match="not found"):
-                connector.check_denunciado("Other", 123)
+                connector.cheques.is_reported("Other", 123)
 
             # Found entity, check reported
             # Mock Cheque correctly without extra args
             check_ok = Cheque(20, True, date.today(), "BankOfTest", [])
-            with patch.object(
-                connector, "get_cheque_denunciado", return_value=check_ok
-            ):
-                assert connector.check_denunciado("BankOfTest", 123) is True
+            with patch.object(connector.cheques, "reported", return_value=check_ok):
+                assert connector.cheques.is_reported("BankOfTest", 123) is True
 
             # Found entity, check NOT reported: the API answers 200 + False
             check_clean = Cheque(20, False, date.today(), "BankOfTest", [])
-            with patch.object(
-                connector, "get_cheque_denunciado", return_value=check_clean
-            ):
-                assert connector.check_denunciado("BankOfTest", 123) is False
+            with patch.object(connector.cheques, "reported", return_value=check_clean):
+                assert connector.cheques.is_reported("BankOfTest", 123) is False
 
             # Found entity, other api error
             with patch.object(
-                connector,
-                "get_cheque_denunciado",
+                connector.cheques,
+                "reported",
                 side_effect=BCRAApiError("500 Error"),
             ):
                 with pytest.raises(BCRAApiError, match="500 Error"):
-                    connector.check_denunciado("BankOfTest", 123)
+                    connector.cheques.is_reported("BankOfTest", 123)
 
             # unexpected error
             with patch.object(
-                connector, "get_cheque_denunciado", side_effect=Exception("Unexp")
+                connector.cheques, "reported", side_effect=Exception("Unexp")
             ):
                 with pytest.raises(BCRAApiError, match="Unexpected error during check"):
-                    connector.check_denunciado("BankOfTest", 123)
+                    connector.cheques.is_reported("BankOfTest", 123)
 
     def test_get_latest_quotations_flow(self, connector: BCRAConnector):
         # API Error

@@ -315,7 +315,7 @@ class TestBCRAConnector:
             ]
         }
         mock_get.return_value = mock_api_response(mock_data, 200)
-        result: List[Entidad] = connector.get_entidades()
+        result: List[Entidad] = connector.cheques.entities()
 
         mock_get.assert_called_once_with(
             f"{BCRAConnector.BASE_URL}/cheques/v1.0/entidades",
@@ -351,7 +351,7 @@ class TestBCRAConnector:
             }
         }
         mock_get.return_value = mock_api_response(mock_data_dict, 200)
-        result: Cheque = connector.get_cheque_denunciado(11, 20377516)
+        result: Cheque = connector.cheques.reported(11, 20377516)
 
         mock_get.assert_called_once_with(
             f"{BCRAConnector.BASE_URL}/cheques/v1.0/denunciados/11/20377516",

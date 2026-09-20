@@ -19,6 +19,10 @@ BCRAConnector
 Domain Clients
 --------------
 
+.. automodule:: src.bcra_connector.clients.cheques
+   :members:
+   :show-inheritance:
+
 .. automodule:: src.bcra_connector.clients.deudores
    :members:
    :show-inheritance:
