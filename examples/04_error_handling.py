@@ -56,6 +56,15 @@ def main() -> None:
         expected_exception=ValueError,
     )
 
+    def malformed_date_string():
+        return connector.cambiarias.quotations("12/06/2024")
+
+    test_case(
+        "Malformed date string for cambiarias.quotations",
+        malformed_date_string,
+        expected_exception=ValueError,
+    )
+
     def invalid_limit_low():
         return connector.monetarias.series(1, limit=5)
 

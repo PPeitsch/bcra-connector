@@ -1,6 +1,7 @@
 """Types shared by every domain client."""
 
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,6 +19,40 @@ if TYPE_CHECKING:
     import pandas as pd
 
 T = TypeVar("T")
+
+#: What every date input of the public API accepts: a ``date``, a ``datetime``
+#: or an ISO 8601 string.
+DateLike = Union[date, datetime, str]
+
+
+def as_date(value: DateLike, param: str) -> date:
+    """Normalize any accepted date input to a plain :class:`datetime.date`.
+
+    Every endpoint of the BCRA API takes dates as ``YYYY-MM-DD`` and returns
+    them with no time attached, so a ``datetime`` is reduced to its date and an
+    ISO string is parsed rather than passed through: an unparseable one fails
+    here, naming the parameter, instead of becoming an opaque API error.
+
+    :param value: A ``date``, a ``datetime`` or an ISO 8601 string.
+    :param param: The parameter name, used in the error message.
+    :raises TypeError: If the value is of any other type.
+    :raises ValueError: If the string is not an ISO 8601 date.
+    """
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.strip()).date()
+        except ValueError:
+            raise ValueError(
+                f"'{param}' must be an ISO 8601 date (YYYY-MM-DD), got {value!r}"
+            ) from None
+    raise TypeError(
+        f"'{param}' must be a date, a datetime or an ISO 8601 string, "
+        f"got {type(value).__name__}"
+    )
 
 
 @dataclass

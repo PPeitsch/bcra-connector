@@ -9,7 +9,6 @@ import math
 import os
 import statistics
 import warnings
-from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import requests
@@ -31,6 +30,7 @@ from .exceptions import (  # noqa: F401  (re-exported for backwards compatibilit
     BCRARateLimitError,
     BCRAServerError,
 )
+from .models import DateLike
 from .principales_variables import (
     DatosVariableResponse,
     DetalleMonetaria,
@@ -240,8 +240,8 @@ class BCRAConnector:
     def get_datos_variable(
         self,
         id_variable: int,
-        desde: Optional[datetime] = None,
-        hasta: Optional[datetime] = None,
+        desde: Optional[DateLike] = None,
+        hasta: Optional[DateLike] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> DatosVariableResponse:
@@ -302,7 +302,7 @@ class BCRAConnector:
         _deprecated("get_divisas", "cambiarias.currencies")
         return self.cambiarias.currencies().results
 
-    def get_cotizaciones(self, fecha: Optional[str] = None) -> CotizacionFecha:
+    def get_cotizaciones(self, fecha: Optional[DateLike] = None) -> CotizacionFecha:
         """Deprecated alias of :meth:`CambiariasClient.quotations`.
 
         .. deprecated:: 0.13.0
@@ -314,8 +314,8 @@ class BCRAConnector:
     def get_evolucion_moneda(
         self,
         moneda: str,
-        fecha_desde: Optional[str] = None,
-        fecha_hasta: Optional[str] = None,
+        fecha_desde: Optional[DateLike] = None,
+        fecha_hasta: Optional[DateLike] = None,
         limit: int = 1000,
         offset: int = 0,
     ) -> List[CotizacionFecha]:

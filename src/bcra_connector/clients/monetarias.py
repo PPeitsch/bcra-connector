@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..exceptions import BCRAApiError
-from ..models import Page, resultset
+from ..models import DateLike, Page, as_date, resultset
 from ..principales_variables import (
     DatosVariable,
     DetalleMonetaria,
@@ -74,8 +74,8 @@ class MonetariasClient(DomainClient):
     def series(
         self,
         id_variable: int,
-        desde: Optional[datetime] = None,
-        hasta: Optional[datetime] = None,
+        desde: Optional[DateLike] = None,
+        hasta: Optional[DateLike] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> Page[DatosVariable]:
@@ -85,8 +85,10 @@ class MonetariasClient(DomainClient):
         Uses pagination via limit and offset. If desde/hasta are omitted, API defaults apply.
 
         :param id_variable: The ID of the desired variable. Case-sensitive `{IdVariable}` in URL path.
-        :param desde: The start date of the range to query (inclusive). Optional. YYYY-MM-DD format.
-        :param hasta: The end date of the range to query (inclusive). Optional. YYYY-MM-DD format.
+        :param desde: The start date of the range to query (inclusive). Optional.
+            A ``date``, a ``datetime`` or an ISO 8601 string.
+        :param hasta: The end date of the range to query (inclusive). Optional.
+            Same types as ``desde``.
         :param limit: Maximum number of results (10-3000). Optional, API defaults to 1000.
         :param offset: Number of results to skip for pagination. Optional, defaults to 0.
         :return: A Page of DatosVariable objects, each with its ``detalle`` data points.
@@ -94,21 +96,26 @@ class MonetariasClient(DomainClient):
             of *data points* the API reports, while the page holds *groups* of them, so
             ``len(page)`` and ``count`` are not in the same unit. ``has_more`` still
             answers what it should — whether data is left past this page.
-        :raises ValueError: If date range is invalid or limit/offset are out of bounds.
+        :raises ValueError: If a date is not ISO 8601, the range is invalid, or
+            limit/offset are out of bounds.
+        :raises TypeError: If a date is of an unsupported type.
         :raises BCRAApiError: If the API request fails.
         """
+        desde_date = as_date(desde, "desde") if desde is not None else None
+        hasta_date = as_date(hasta, "hasta") if hasta is not None else None
+
         log_msg_parts = [f"Fetching data for variable {id_variable}"]
-        if desde:
-            log_msg_parts.append(f"from {desde.date()}")
-        if hasta:
-            log_msg_parts.append(f"to {hasta.date()}")
+        if desde_date:
+            log_msg_parts.append(f"from {desde_date.isoformat()}")
+        if hasta_date:
+            log_msg_parts.append(f"to {hasta_date.isoformat()}")
         if limit is not None:
             log_msg_parts.append(f"limit {limit}")
         if offset is not None:
             log_msg_parts.append(f"offset {offset}")
         self.logger.info(" ".join(log_msg_parts) + " (v4.0)")
 
-        if desde and hasta and desde > hasta:
+        if desde_date and hasta_date and desde_date > hasta_date:
             raise ValueError(
                 "'desde' date must be earlier than or equal to 'hasta' date"
             )
@@ -118,10 +125,10 @@ class MonetariasClient(DomainClient):
             raise ValueError("Offset must be non-negative")
 
         params: Dict[str, Any] = {}
-        if desde:
-            params["Desde"] = desde.strftime("%Y-%m-%d")
-        if hasta:
-            params["Hasta"] = hasta.strftime("%Y-%m-%d")
+        if desde_date:
+            params["Desde"] = desde_date.isoformat()
+        if hasta_date:
+            params["Hasta"] = hasta_date.isoformat()
         if limit is not None:
             params["Limit"] = limit
         if offset is not None:

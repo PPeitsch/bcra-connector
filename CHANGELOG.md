@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Every date parameter accepts a `date`, a `datetime` or an ISO 8601 string, and the
+  three are interchangeable: `monetarias.series(desde=...)` no longer demands a
+  `datetime`, and `cambiarias.quotations()` / `.series()` no longer demand a string. A
+  malformed string now raises a `ValueError` naming the parameter instead of reaching
+  the API as an opaque error. The exported `DateLike` type spells this out (#133)
 - `Page[T]`: every endpoint that returns several rows now answers with a page that
   carries the API's own `count`, `offset`, `limit` and `has_more` alongside the results.
   It behaves like the list it replaces — iteration, `len()`, indexing, slicing and `==`
@@ -48,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   delegate and emit a `DeprecationWarning` naming the replacement (#121)
 
 ### Changed
+- `cambiarias.pair()` reports `fecha` as a `date` instead of an ISO string, so every
+  date the library returns is now a `date` (#133)
 - Internal: the HTTP transport (session, retries, rate limiting, timeouts, pagination
   and the catalog cache) moved to an internal `HttpClient`; `BCRAConnector` delegates to
   it. No public behavior changes — `BASE_URL`, `MAX_RETRIES`, `RETRY_DELAY`,
