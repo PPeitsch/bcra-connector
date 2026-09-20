@@ -1,6 +1,6 @@
 """Shared plumbing for the per-domain clients."""
 
-from typing import Any, Callable, Dict, TypeVar
+from typing import Any, Callable, Dict, List, TypeVar
 
 from .._http import HttpClient
 from ..exceptions import BCRAApiError
@@ -14,6 +14,30 @@ class DomainClient:
     def __init__(self, http: HttpClient) -> None:
         self._http = http
         self.logger = http.logger
+
+    def _list(
+        self,
+        endpoint: str,
+        parser: Callable[[Dict[str, Any]], T],
+        what: str,
+    ) -> List[T]:
+        """GET an endpoint whose ``results`` is a list, each item parsed by ``parser``."""
+        try:
+            data = self._http.request(endpoint)
+            results = data.get("results")
+            if not isinstance(results, list):
+                raise BCRAApiError(
+                    f"Invalid response format for {what}: "
+                    "'results' key missing or not a list."
+                )
+            return [parser(item) for item in results]
+        except BCRAApiError:
+            raise
+        except (KeyError, TypeError, ValueError) as e:
+            raise BCRAApiError(f"Unexpected response format for {what}: {e}") from e
+        except Exception as e:
+            self.logger.exception(f"Unexpected error fetching {what}: {e}")
+            raise BCRAApiError(f"Error fetching {what}: {e}") from e
 
     def _object(
         self,

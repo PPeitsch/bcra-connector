@@ -20,7 +20,7 @@ def main():
     try:
         # 1. List Entities
         logger.info("Fetching financial entities...")
-        entities = connector.get_entidades()
+        entities = connector.cheques.entities()
         logger.info(f"Found {len(entities)} entities.")
 
         if not entities:
@@ -42,7 +42,7 @@ def main():
 
         # Method A: check_denunciado helper (returns boolean)
         try:
-            is_denounced = connector.check_denunciado(
+            is_denounced = connector.cheques.is_reported(
                 target_entity.denominacion, check_number
             )
             logger.info(
@@ -53,7 +53,7 @@ def main():
 
         # Method B: get_cheque_denunciado (returns Cheque object or raises error)
         try:
-            cheque_info = connector.get_cheque_denunciado(
+            cheque_info = connector.cheques.reported(
                 target_entity.codigo_entidad, check_number
             )
             logger.info(f"Cheque info found: {cheque_info}")

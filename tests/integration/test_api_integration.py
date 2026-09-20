@@ -121,7 +121,7 @@ class TestBCRAIntegration:
 
     def test_get_financial_entities(self, connector: BCRAConnector) -> None:
         """Test retrieval of financial entities (Cheques API)."""
-        entities: List[Entidad] = connector.get_entidades()
+        entities: List[Entidad] = connector.cheques.entities()
 
         assert entities, "Should retrieve a list of financial entities"
         assert len(entities) > 0
@@ -188,7 +188,7 @@ class TestBCRAIntegration:
     )
     def test_check_verification(self, connector: BCRAConnector) -> None:
         """Test check verification workflow (Cheques API)."""
-        entities: List[Entidad] = connector.get_entidades()
+        entities: List[Entidad] = connector.cheques.entities()
         if not entities:
             pytest.skip(
                 "No financial entities available for testing check verification."
@@ -198,7 +198,7 @@ class TestBCRAIntegration:
         placeholder_check_number = 123456789
 
         try:
-            is_denunciado: bool = connector.check_denunciado(
+            is_denunciado: bool = connector.cheques.is_reported(
                 entity.denominacion, placeholder_check_number
             )
             assert isinstance(is_denunciado, bool)

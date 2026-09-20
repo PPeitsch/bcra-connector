@@ -144,7 +144,7 @@ entities. Each connector instance reuses those catalogs for ``CATALOG_CACHE_TTL`
 
 - ``connector.clear_cache()`` drops the cached catalogs so the next lookup refetches them.
 - ``CATALOG_CACHE_TTL = 0`` disables the cache.
-- ``get_principales_variables()`` and ``get_entidades()`` are never cached: call them
+- ``get_principales_variables()`` and ``cheques.entities()`` are never cached: call them
   when you need fresh data (the catalog includes each series' latest value).
 
 .. code-block:: python

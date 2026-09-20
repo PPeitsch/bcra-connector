@@ -8,7 +8,6 @@ import logging
 import math
 import os
 import statistics
-import unicodedata
 import warnings
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
@@ -19,7 +18,7 @@ from ._http import _redact  # noqa: F401  (re-exported: used by the tests)
 from ._http import HttpClient, TransportConfig
 from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
-from .clients import DeudoresClient
+from .clients import ChequesClient, DeudoresClient
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .exceptions import (  # noqa: F401  (re-exported for backwards compatibility)
     BCRAApiError,
@@ -46,13 +45,6 @@ def _deprecated(old: str, new: str) -> None:
         DeprecationWarning,
         stacklevel=3,
     )
-
-
-def _normalize_name(name: str) -> str:
-    """Casefold, strip accents and collapse whitespace for name matching."""
-    decomposed = unicodedata.normalize("NFKD", name)
-    stripped = "".join(c for c in decomposed if not unicodedata.combining(c))
-    return " ".join(stripped.casefold().split())
 
 
 def _has_active_handler(logger: logging.Logger) -> bool:
@@ -144,6 +136,7 @@ class BCRAConnector:
             rate_limiter=RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT),
             session=session,
         )
+        self.cheques = ChequesClient(self._http)
         self.deudores = DeudoresClient(self._http)
 
     def _transport_config(self) -> TransportConfig:
@@ -413,66 +406,22 @@ class BCRAConnector:
 
     # Cheques methods
     def get_entidades(self) -> List[Entidad]:
-        """
-        Fetch the list of all financial entities.
+        """Deprecated alias of :meth:`ChequesClient.entities`.
 
-        :return: A list of Entidad objects
-        :raises BCRAApiError: If the API request fails
+        .. deprecated:: 0.13.0
+           Use ``connector.cheques.entities()``; removed in 1.0.
         """
-        self.logger.info("Fetching financial entities")
-        try:
-            data = self._make_request("cheques/v1.0/entidades")
-            if "results" not in data or not isinstance(data["results"], list):
-                raise BCRAApiError(
-                    "Invalid response format for entities endpoint: 'results' key missing or not a list."
-                )
-            entities = [Entidad.from_dict(e) for e in data["results"]]
-            self.logger.info(f"Successfully fetched {len(entities)} entities")
-            return entities
-        except (KeyError, ValueError) as e:
-            raise BCRAApiError(
-                f"Unexpected response format or data for entities: {str(e)}"
-            ) from e
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            self.logger.exception(f"Unexpected error fetching financial entities: {e}")
-            raise BCRAApiError(f"Error fetching financial entities: {str(e)}") from e
+        _deprecated("get_entidades", "cheques.entities")
+        return self.cheques.entities()
 
     def get_cheque_denunciado(self, codigo_entidad: int, numero_cheque: int) -> Cheque:
-        """
-        Fetch information about a reported check.
+        """Deprecated alias of :meth:`ChequesClient.reported`.
 
-        :param codigo_entidad: The code of the financial entity
-        :param numero_cheque: The check number
-        :return: A Cheque object with the check's information
-        :raises BCRAApiError: If the API request fails or returns unexpected data
+        .. deprecated:: 0.13.0
+           Use ``connector.cheques.reported()``; removed in 1.0.
         """
-        self.logger.info(
-            f"Fetching information for check {numero_cheque} from entity {codigo_entidad}"
-        )
-        try:
-            data = self._make_request(
-                f"cheques/v1.0/denunciados/{codigo_entidad}/{numero_cheque}"
-            )
-            if "results" not in data or not isinstance(data["results"], dict):
-                raise BCRAApiError(
-                    "Invalid response format for reported check: 'results' key missing or not a dict."
-                )
-            return Cheque.from_dict(data["results"])
-        except (KeyError, ValueError) as e:
-            raise BCRAApiError(
-                f"Unexpected response format or data for check {numero_cheque}: {str(e)}"
-            ) from e
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            self.logger.exception(
-                f"Unexpected error fetching check {numero_cheque}: {e}"
-            )
-            raise BCRAApiError(
-                f"Error fetching reported check {numero_cheque}: {str(e)}"
-            ) from e
+        _deprecated("get_cheque_denunciado", "cheques.reported")
+        return self.cheques.reported(codigo_entidad, numero_cheque)
 
     # Estadísticas Cambiarias methods
     def get_divisas(self) -> List[Divisa]:
@@ -799,69 +748,13 @@ class BCRAConnector:
         )
 
     def check_denunciado(self, entity_name: str, check_number: int) -> bool:
+        """Deprecated alias of :meth:`ChequesClient.is_reported`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.cheques.is_reported()``; removed in 1.0.
         """
-        Check if a check is reported as stolen or lost.
-
-        The entity is matched by name, ignoring case and accents: an exact match
-        wins; otherwise a single entity containing ``entity_name`` is used.
-
-        :param entity_name: The name of the financial entity, or a unique part of it.
-        :param check_number: The check number. Must be positive.
-        :return: True if the check is reported, False otherwise (the API answers a
-            check that isn't reported with ``denunciado: false``).
-        :raises ValueError: If no entity or several entities match, or check_number
-            is invalid.
-        :raises BCRANotFoundError: If the API doesn't know the entity (HTTP 404).
-        :raises BCRAApiError: If the API request fails.
-        """
-        if check_number <= 0:
-            raise ValueError("Check number must be positive.")
-        try:
-            entities = self._cached("entidades", self.get_entidades)
-        except BCRAApiError as e:
-            self.logger.error(
-                f"Could not get entities to check denounced status for '{entity_name}': {e}"
-            )
-            raise
-        entity = self._find_entity(entities, entity_name)
-        try:
-            cheque = self.get_cheque_denunciado(entity.codigo_entidad, check_number)
-            return cheque.denunciado
-        except BCRAApiError as e:
-            self.logger.error(
-                f"API error checking denounced status for check {check_number} of entity '{entity_name}': {e}"
-            )
-            raise
-        except Exception as e:
-            self.logger.exception(
-                f"Unexpected error checking denounced status for check {check_number} of entity '{entity_name}': {e}"
-            )
-            raise BCRAApiError(
-                f"Unexpected error during check verification for '{entity_name}', check {check_number}: {e}"
-            ) from e
-
-    @staticmethod
-    def _find_entity(entities: List[Entidad], entity_name: str) -> Entidad:
-        """Resolve an entity by name: exact match first, then a unique substring."""
-        query = _normalize_name(entity_name)
-        named = [
-            (e, _normalize_name(e.denominacion)) for e in entities if e.denominacion
-        ]
-        exact = [e for e, name in named if name == query]
-        if exact:
-            return exact[0]
-        partial = [e for e, name in named if query and query in name]
-        if len(partial) == 1:
-            return partial[0]
-        if not partial:
-            raise ValueError(f"Entity '{entity_name}' not found")
-        names = sorted(e.denominacion for e in partial)
-        shown = 10
-        candidates = ", ".join(names[:shown]) + (", ..." if len(names) > shown else "")
-        raise ValueError(
-            f"Entity '{entity_name}' matches {len(partial)} entities: {candidates}. "
-            "Use a more specific name."
-        )
+        _deprecated("check_denunciado", "cheques.is_reported")
+        return self.cheques.is_reported(entity_name, check_number)
 
     def get_latest_quotations(self) -> Dict[str, float]:
         """

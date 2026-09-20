@@ -141,10 +141,10 @@ class TestEntitiesCache:
         )
         with (
             patch.object(
-                connector, "get_entidades", return_value=entities
+                connector.cheques, "entities", return_value=entities
             ) as mock_entities,
-            patch.object(connector, "get_cheque_denunciado", return_value=cheque),
+            patch.object(connector.cheques, "reported", return_value=cheque),
         ):
-            assert connector.check_denunciado("banco de la nacion", 1)
-            assert connector.check_denunciado("BANCO DE LA NACION", 2)
+            assert connector.cheques.is_reported("banco de la nacion", 1)
+            assert connector.cheques.is_reported("BANCO DE LA NACION", 2)
         assert mock_entities.call_count == 1

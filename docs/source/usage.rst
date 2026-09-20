@@ -69,7 +69,7 @@ To fetch information about financial entities:
 
 .. code-block:: python
 
-   entities = connector.get_entidades()
+   entities = connector.cheques.entities()
    for entity in entities[:5]:  # Print first 5 for brevity
        print(f"{entity.codigo_entidad}: {entity.denominacion}")
 
@@ -79,7 +79,7 @@ To check if a specific check is reported:
 
    codigo_entidad = 11  # Example entity code
    numero_cheque = 20377516  # Example check number
-   cheque = connector.get_cheque_denunciado(codigo_entidad, numero_cheque)
+   cheque = connector.cheques.reported(codigo_entidad, numero_cheque)
    print(f"Check {cheque.numero_cheque} is {'reported' if cheque.denunciado else 'not reported'}")
 
 Using the Estadísticas Cambiarias Module

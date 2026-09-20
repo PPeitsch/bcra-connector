@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Cheques now has its own client: `connector.cheques.entities()`, `.reported()` and
+  `.is_reported()`. `find_entity()` resolves an entity name (accent-insensitive, exact
+  match first, then a unique substring) without making a request (#123)
 - Central de Deudores now has its own client: `connector.deudores.debts()`,
   `.historical()` and `.rejected_checks()`. It accepts a CUIT with dashes, and the
   shared parsing helper reports which endpoint failed to parse (#121)
@@ -17,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open and still closes one the connector created (#119)
 
 ### Deprecated
+- `get_entidades()`, `get_cheque_denunciado()` and `check_denunciado()` are deprecated
+  in favour of `connector.cheques.*` and will be removed in 1.0 (#123)
 - `get_deudas()`, `get_deudas_historicas()` and `get_cheques_rechazados()` are
   deprecated in favour of `connector.deudores.*` and will be removed in 1.0. They
   delegate and emit a `DeprecationWarning` naming the replacement (#121)
