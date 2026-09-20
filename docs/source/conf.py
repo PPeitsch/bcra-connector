@@ -39,7 +39,9 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 
 # Correct the static path
-html_static_path = ["../build/_static"]
+# No static assets are shipped with the docs: the plots the examples produce are
+# written to docs/build/ by whoever runs them, not published here.
+html_static_path: list[str] = []
 
 # -- Extension configuration -------------------------------------------------
 autodoc_member_order = "bysource"
