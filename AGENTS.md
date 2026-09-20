@@ -184,53 +184,18 @@ The full step-by-step SOP lives in **[WORKFLOW.md](./WORKFLOW.md)**; the summary
 
 ## 6. Project overview
 
-**bcra-connector** is a Python library providing a typed, robust interface to the
-APIs published by Argentina's Central Bank (BCRA).
+**bcra-connector** is a Python library providing a typed, robust interface to the public
+APIs of Argentina's Central Bank (BCRA). No authentication is required.
 
-- Simplify access to BCRA public financial data
-- Provide strongly-typed dataclasses for all API responses
-- Handle rate limiting, retries and error cases automatically
-- Support bilingual contexts (Spanish API / English wrapper)
+See [`README.md`](./README.md) for features, installation and usage, and the
+[BCRA API catalog](https://www.bcra.gob.ar/Catalogo/apis.asp) for the upstream endpoints.
+Read the package layout from the source rather than from a diagram here: it goes stale.
 
-**Target users:** Python developers integrating BCRA data, data scientists analysing
-Argentine economic indicators, financial analysts needing programmatic access.
+Two conventions that the code does not make obvious:
 
-### Architecture
-
-```
-bcra-connector/
-├── src/bcra_connector/
-│   ├── __about__.py             # Single source of truth for version
-│   ├── bcra_connector.py        # Main BCRAConnector class
-│   ├── rate_limiter.py          # Rate limiting configuration
-│   ├── timeout_config.py        # Timeout configuration
-│   ├── principales_variables/   # Monetary statistics models
-│   ├── cheques/                 # Check (cheque) data models
-│   ├── estadisticas_cambiarias/ # Exchange rate models
-│   └── central_deudores/        # Debtor registry models
-├── tests/
-│   ├── unit/                    # Unit tests with mocks
-│   └── integration/             # Live API tests
-├── docs/source/                 # Sphinx documentation
-└── examples/                    # Usage examples
-```
-
-### Key design decisions
-
-1. **Dataclasses over dicts** — all API responses parse into typed dataclasses.
-2. **Optional pandas** — DataFrame support via `to_dataframe()`, requires the
-   `[pandas]` extra. Tests for it must use `pytest.importorskip("pandas")`.
-3. **Fail-safe** — built-in retry with exponential backoff.
-4. **No auth required** — BCRA APIs are public.
-
-### APIs covered
-
-| API | Version | Status |
-|-----|---------|--------|
-| Estadísticas Monetarias (Principales Variables) | v4.0 | ✅ Implemented |
-| Cheques Denunciados | v1.0 | ✅ Implemented |
-| Estadísticas Cambiarias | v1.0 | ✅ Implemented |
-| Central de Deudores | v1.0 | ✅ Implemented |
+1. **Dataclasses over dicts** — every API response parses into a typed dataclass.
+2. **Fail-safe transport** — retry with exponential backoff is built in; do not add
+   ad-hoc retry logic in the clients.
 
 ---
 
@@ -240,6 +205,8 @@ bcra-connector/
 - `black` (line length 88) and `isort` (black profile) — enforced by pre-commit
 - `mypy` must pass; the configuration is strict (`disallow_untyped_defs`)
 - Tests required for every fix and feature
+- **pandas is an optional extra** (`to_dataframe()`): any test touching it must use
+  `pytest.importorskip("pandas")`
 
 ---
 
@@ -252,18 +219,7 @@ python .skills/run_skill.py <tool_name> [arguments...]
 python .skills/run_skill.py run_tests_and_report --command "pytest tests/ -v"
 ```
 
-Full tool index: `.skills/tools/AGENT_MANIFEST.md`
-
-| Tool | Purpose |
-|------|---------|
-| `run_tests_and_report` | Run `pytest`, optionally comment results on a PR |
-| `update_changelog` | Parse git log and update `CHANGELOG.md` for a release |
-| `release_tag_push` | Wait for CI to pass, then safely push a version tag |
-| `lint_and_format_pr` | Check out a PR, run formatters, push fixes |
-| `check_security_vulnerabilities` | `bandit` + `safety` SAST/dependency scan |
-| `create_github_pr` / `create_github_issue` | Open a PR or issue from the CLI |
-| `read_github_issues` / `read_github_prs` | Fetch and summarize |
-| `generate_api_docs` | Generate HTML docs via `pdoc` |
+Full tool index, kept up to date: `.skills/tools/AGENT_MANIFEST.md`.
 
 Common workflows are documented as slash-command files in `.agent/workflows/`.
 They depend on the submodule being initialized (see [Bootstrap](#1-bootstrap-run-once-per-clone)).

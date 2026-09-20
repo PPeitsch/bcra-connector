@@ -35,7 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   working (#119)
 - Internal: `CLAUDE.md` is now a one-line `@AGENTS.md` import instead of a prose
   pointer, so the canonical instructions load automatically; the redundant `AGENT.md`
-  compatibility stub was removed
+  compatibility stub was removed. `AGENTS.md` dropped the descriptive project overview,
+  the hand-written directory tree (already stale — it predated `clients/` and `_http.py`)
+  and the skills table that duplicated `AGENT_MANIFEST.md`; every rule stays inline
 
 ### Added
 - `docs` extra with the documentation dependencies (`sphinx`, `sphinx-rtd-theme`,
