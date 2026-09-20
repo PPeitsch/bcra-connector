@@ -9,9 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Central de Deudores now has its own client: `connector.deudores.debts()`,
+  `.historical()` and `.rejected_checks()`. It accepts a CUIT with dashes, and the
+  shared parsing helper reports which endpoint failed to parse (#121)
 - `BCRAConnector(session=...)` accepts a `requests.Session`, for custom adapters,
   proxies or tests. The caller keeps ownership: `close()` leaves an injected session
   open and still closes one the connector created (#119)
+
+### Deprecated
+- `get_deudas()`, `get_deudas_historicas()` and `get_cheques_rechazados()` are
+  deprecated in favour of `connector.deudores.*` and will be removed in 1.0. They
+  delegate and emit a `DeprecationWarning` naming the replacement (#121)
 
 ### Changed
 - Internal: the HTTP transport (session, retries, rate limiting, timeouts, pagination

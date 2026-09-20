@@ -9,6 +9,7 @@ import math
 import os
 import statistics
 import unicodedata
+import warnings
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
@@ -18,6 +19,7 @@ from ._http import _redact  # noqa: F401  (re-exported: used by the tests)
 from ._http import HttpClient, TransportConfig
 from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
+from .clients import DeudoresClient
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .exceptions import (  # noqa: F401  (re-exported for backwards compatibility)
     BCRAApiError,
@@ -34,6 +36,16 @@ from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
 
 T = TypeVar("T")
+
+
+def _deprecated(old: str, new: str) -> None:
+    """Warn that ``BCRAConnector.<old>()`` moved to ``connector.<new>()``."""
+    warnings.warn(
+        f"BCRAConnector.{old}() is deprecated and will be removed in 1.0; "
+        f"use connector.{new}() instead.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
 
 
 def _normalize_name(name: str) -> str:
@@ -132,6 +144,7 @@ class BCRAConnector:
             rate_limiter=RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT),
             session=session,
         )
+        self.deudores = DeudoresClient(self._http)
 
     def _transport_config(self) -> TransportConfig:
         """Snapshot of the transport knobs, read by the client on every call.
@@ -1147,111 +1160,28 @@ class BCRAConnector:
 
     # Central de Deudores methods (v1.0)
     def get_deudas(self, identificacion: str) -> Deudor:
-        """
-        Fetch current debts for a CUIT/CUIL/CDI from the Central de Deudores.
+        """Deprecated alias of :meth:`DeudoresClient.debts`.
 
-        :param identificacion: The CUIT/CUIL/CDI (11 digits) to query.
-        :return: A Deudor object with current debt information.
-        :raises ValueError: If identificacion is not 11 digits.
-        :raises BCRAApiError: If the API request fails.
+        .. deprecated:: 0.13.0
+           Use ``connector.deudores.debts()``; removed in 1.0.
         """
-        identificacion = identificacion.replace("-", "").replace(" ", "")
-        if len(identificacion) != 11 or not identificacion.isdigit():
-            raise ValueError("Identificacion must be exactly 11 digits")
-
-        self.logger.info("Fetching current debts from Central de Deudores")
-        try:
-            data = self._make_request(f"CentralDeDeudores/v1.0/Deudas/{identificacion}")
-            if "results" not in data or not isinstance(data["results"], dict):
-                raise BCRAApiError(
-                    "Invalid response format: 'results' key missing or not a dict."
-                )
-            deudor = Deudor.from_dict(data["results"])
-            self.logger.info(
-                f"Successfully fetched debts ({len(deudor.periodos)} periods)"
-            )
-            return deudor
-        except (KeyError, ValueError) as e:
-            raise BCRAApiError(
-                f"Unexpected response format for deudas: {str(e)}"
-            ) from e
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            self.logger.exception(f"Unexpected error fetching deudas: {e}")
-            raise BCRAApiError(f"Error fetching deudas: {str(e)}") from e
+        _deprecated("get_deudas", "deudores.debts")
+        return self.deudores.debts(identificacion)
 
     def get_deudas_historicas(self, identificacion: str) -> Deudor:
-        """
-        Fetch historical debts (24 months) for a CUIT/CUIL/CDI.
+        """Deprecated alias of :meth:`DeudoresClient.historical`.
 
-        :param identificacion: The CUIT/CUIL/CDI (11 digits) to query.
-        :return: A Deudor object with historical debt information.
-        :raises ValueError: If identificacion is not 11 digits.
-        :raises BCRAApiError: If the API request fails.
+        .. deprecated:: 0.13.0
+           Use ``connector.deudores.historical()``; removed in 1.0.
         """
-        identificacion = identificacion.replace("-", "").replace(" ", "")
-        if len(identificacion) != 11 or not identificacion.isdigit():
-            raise ValueError("Identificacion must be exactly 11 digits")
-
-        self.logger.info("Fetching historical debts from Central de Deudores")
-        try:
-            data = self._make_request(
-                f"CentralDeDeudores/v1.0/Deudas/Historicas/{identificacion}"
-            )
-            if "results" not in data or not isinstance(data["results"], dict):
-                raise BCRAApiError(
-                    "Invalid response format: 'results' key missing or not a dict."
-                )
-            deudor = Deudor.from_dict(data["results"])
-            self.logger.info(
-                f"Successfully fetched historical debts ({len(deudor.periodos)} periods)"
-            )
-            return deudor
-        except (KeyError, ValueError) as e:
-            raise BCRAApiError(
-                f"Unexpected response format for deudas historicas: {str(e)}"
-            ) from e
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            self.logger.exception(f"Unexpected error fetching deudas historicas: {e}")
-            raise BCRAApiError(f"Error fetching deudas historicas: {str(e)}") from e
+        _deprecated("get_deudas_historicas", "deudores.historical")
+        return self.deudores.historical(identificacion)
 
     def get_cheques_rechazados(self, identificacion: str) -> ChequesRechazados:
-        """
-        Fetch rejected checks for a CUIT/CUIL/CDI from the Central de Deudores.
+        """Deprecated alias of :meth:`DeudoresClient.rejected_checks`.
 
-        :param identificacion: The CUIT/CUIL/CDI (11 digits) to query.
-        :return: A ChequesRechazados object with rejected check details.
-        :raises ValueError: If identificacion is not 11 digits.
-        :raises BCRAApiError: If the API request fails.
+        .. deprecated:: 0.13.0
+           Use ``connector.deudores.rejected_checks()``; removed in 1.0.
         """
-        identificacion = identificacion.replace("-", "").replace(" ", "")
-        if len(identificacion) != 11 or not identificacion.isdigit():
-            raise ValueError("Identificacion must be exactly 11 digits")
-
-        self.logger.info("Fetching rejected checks from Central de Deudores")
-        try:
-            data = self._make_request(
-                f"CentralDeDeudores/v1.0/Deudas/ChequesRechazados/{identificacion}"
-            )
-            if "results" not in data or not isinstance(data["results"], dict):
-                raise BCRAApiError(
-                    "Invalid response format: 'results' key missing or not a dict."
-                )
-            cheques = ChequesRechazados.from_dict(data["results"])
-            total_cheques = sum(
-                len(e.detalle) for c in cheques.causales for e in c.entidades
-            )
-            self.logger.info(f"Successfully fetched {total_cheques} rejected checks")
-            return cheques
-        except (KeyError, ValueError) as e:
-            raise BCRAApiError(
-                f"Unexpected response format for cheques rechazados: {str(e)}"
-            ) from e
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            self.logger.exception(f"Unexpected error fetching cheques rechazados: {e}")
-            raise BCRAApiError(f"Error fetching cheques rechazados: {str(e)}") from e
+        _deprecated("get_cheques_rechazados", "deudores.rejected_checks")
+        return self.deudores.rejected_checks(identificacion)
