@@ -33,15 +33,13 @@ from .estadisticas_cambiarias import (
     DivisaResponse,
 )
 from .estadisticas_cambiarias import ErrorResponse as CambiariasErrorResponse
-from .estadisticas_cambiarias import Metadata as EstadisticasCambiariasMetadata
-from .estadisticas_cambiarias import Resultset as EstadisticasCambiariasResultset
 from .exceptions import (
     BCRAApiError,
     BCRANotFoundError,
     BCRARateLimitError,
     BCRAServerError,
 )
-from .models import DateLike, Page
+from .models import DateLike, Metadata, Page, Resultset
 
 # Import from principales_variables
 from .principales_variables import (
@@ -52,6 +50,11 @@ from .principales_variables import (
 )
 from .rate_limiter import RateLimitConfig
 from .timeout_config import TimeoutConfig
+
+# One Resultset and one Metadata since #138; these names are the same objects,
+# kept until 1.0 for the code that imported them per API.
+EstadisticasCambiariasResultset = Resultset
+EstadisticasCambiariasMetadata = Metadata
 
 # Library logging convention: emit records, never configure output. Applications
 # decide handlers and levels (see BCRAConnector's ``debug`` flag for an opt-in).
@@ -69,6 +72,8 @@ __all__ = [
     "TimeoutConfig",
     "DateLike",
     "Page",
+    "Resultset",
+    "Metadata",
     # Principales Variables / Monetarias v4.0
     "PrincipalesVariables",
     "DatosVariable",

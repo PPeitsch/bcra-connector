@@ -56,6 +56,52 @@ def as_date(value: DateLike, param: str) -> date:
     )
 
 
+@dataclass
+class Resultset:
+    """The ``metadata.resultset`` block every paginated endpoint reports.
+
+    Kept for the deprecated ``*Response`` models; :class:`Page` carries the same
+    three numbers as plain attributes.
+    """
+
+    count: int
+    offset: int
+    limit: int
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Resultset":
+        """Create a Resultset instance from a dictionary."""
+        if (
+            not isinstance(data.get("count"), int)
+            or not isinstance(data.get("offset"), int)
+            or not isinstance(data.get("limit"), int)
+        ):
+            raise ValueError("Invalid types for Resultset fields")
+        return cls(count=data["count"], offset=data["offset"], limit=data["limit"])
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the Resultset instance to a dictionary."""
+        return {
+            "count": self.count,
+            "offset": self.offset,
+            "limit": self.limit,
+        }
+
+
+@dataclass
+class Metadata:
+    """The ``metadata`` block of a response, wrapping a :class:`Resultset`."""
+
+    resultset: Resultset
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Metadata":
+        """Create a Metadata instance from a dictionary."""
+        if "resultset" not in data or not isinstance(data["resultset"], dict):
+            raise ValueError("Missing or invalid 'resultset' in Metadata")
+        return cls(resultset=Resultset.from_dict(data["resultset"]))
+
+
 def install_legacy_names(cls: type, **aliases: str) -> None:
     """Keep a model's pre-1.0 field names working, with a ``DeprecationWarning``.
 
