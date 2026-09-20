@@ -2,7 +2,7 @@
 
 > **Canonical instructions for AI agents working in this repository.**
 > This file follows the [agents.md](https://agents.md) convention and is the
-> **single source of truth**. `CLAUDE.md` and `AGENT.md` are pointers to this file.
+> **single source of truth**. `CLAUDE.md` is a one-line `@AGENTS.md` import of this file.
 >
 > **Read this file completely before making any change.** Everything mandatory is
 > inline below — you should never need to open another file to know the rules.
