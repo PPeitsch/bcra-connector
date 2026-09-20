@@ -48,7 +48,7 @@ def _pair(connector: BCRAConnector, base: str, quote: str) -> Tuple[float, List[
         side_effect=lambda code, *a, **k: _series(code),
     ) as mock_evolution:
         result = connector.cambiarias.pair(base, quote, days=2)
-    assert [r["fecha"] for r in result] == [D1.isoformat(), D2.isoformat()]
+    assert [r["fecha"] for r in result] == [D1, D2]
     return result[-1]["tasa"], [c.args[0] for c in mock_evolution.call_args_list]
 
 
@@ -113,7 +113,7 @@ def test_missing_dates_are_skipped(connector: BCRAConnector) -> None:
 
     with patch.object(connector.cambiarias, "evolution", side_effect=evolution):
         result = connector.cambiarias.pair("EUR", "JPY", days=2)
-    assert [r["fecha"] for r in result] == [D2.isoformat()]
+    assert [r["fecha"] for r in result] == [D2]
 
 
 def test_entries_without_date_are_ignored(connector: BCRAConnector) -> None:

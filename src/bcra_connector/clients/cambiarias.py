@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from ..exceptions import BCRAApiError
-from ..models import Page, resultset
+from ..models import DateLike, Page, as_date, resultset
 from .base import DomainClient
 
 
@@ -39,19 +39,23 @@ class CambiariasClient(DomainClient):
             self.logger.exception(f"Unexpected error fetching currencies: {e}")
             raise BCRAApiError(f"Error fetching currencies: {str(e)}") from e
 
-    def quotations(self, fecha: Optional[str] = None) -> CotizacionFecha:
+    def quotations(self, fecha: Optional[DateLike] = None) -> CotizacionFecha:
         """
         Fetch currency quotations for a specific date.
 
-        :param fecha: The date for which to fetch quotations (format: YYYY-MM-DD), defaults to None (latest date)
+        :param fecha: The date for which to fetch quotations, as a ``date``, a
+            ``datetime`` or an ISO 8601 string. Defaults to None (latest date).
         :return: A CotizacionFecha object with the quotations
         :raises BCRAApiError: If the API request fails or returns unexpected data
+        :raises ValueError: If the date is a string that is not ISO 8601.
+        :raises TypeError: If the date is of an unsupported type.
         """
+        fecha_date = as_date(fecha, "fecha") if fecha is not None else None
         self.logger.info(
-            f"Fetching quotations for date: {fecha if fecha else 'latest'}"
+            f"Fetching quotations for date: {fecha_date.isoformat() if fecha_date else 'latest'}"
         )
         try:
-            params = {"fecha": fecha} if fecha else None
+            params = {"fecha": fecha_date.isoformat()} if fecha_date else None
             data = self._http.request(
                 "estadisticascambiarias/v1.0/Cotizaciones", params
             )
@@ -73,10 +77,10 @@ class CambiariasClient(DomainClient):
             raise
         except Exception as e:
             self.logger.exception(
-                f"Unexpected error fetching cotizaciones for {fecha}: {e}"
+                f"Unexpected error fetching cotizaciones for {fecha_date}: {e}"
             )
             raise BCRAApiError(
-                f"Error fetching quotations for date {fecha}: {str(e)}"
+                f"Error fetching quotations for date {fecha_date}: {str(e)}"
             ) from e
 
     def latest(self) -> Dict[str, float]:
@@ -105,8 +109,8 @@ class CambiariasClient(DomainClient):
     def series(
         self,
         moneda: str,
-        fecha_desde: Optional[str] = None,
-        fecha_hasta: Optional[str] = None,
+        fecha_desde: Optional[DateLike] = None,
+        fecha_hasta: Optional[DateLike] = None,
         limit: int = 1000,
         offset: int = 0,
     ) -> Page[CotizacionFecha]:
@@ -116,21 +120,26 @@ class CambiariasClient(DomainClient):
         For the whole range of the last n days, use :meth:`evolution`.
 
         :param moneda: The currency code (case-sensitive in URL path).
-        :param fecha_desde: Start date (format: YYYY-MM-DD), defaults to None.
-        :param fecha_hasta: End date (format: YYYY-MM-DD), defaults to None.
+        :param fecha_desde: Start date, as a ``date``, a ``datetime`` or an ISO 8601
+            string. Defaults to None.
+        :param fecha_hasta: End date, same types as ``fecha_desde``. Defaults to None.
         :param limit: Maximum number of results to return (10-1000), defaults to 1000.
         :param offset: Number of results to skip, defaults to 0.
         :return: A Page of CotizacionFecha objects with the currency's evolution data.
         :raises BCRAApiError: If the API request fails or returns unexpected data.
-        :raises ValueError: If the limit is out of range or offset is negative.
+        :raises ValueError: If a date is not ISO 8601, the limit is out of range or
+            the offset is negative.
+        :raises TypeError: If a date is of an unsupported type.
         """
         self.logger.info(f"Fetching evolution for currency: {moneda}")
+        desde = as_date(fecha_desde, "fecha_desde") if fecha_desde is not None else None
+        hasta = as_date(fecha_hasta, "fecha_hasta") if fecha_hasta is not None else None
         if not (10 <= limit <= 1000):
             raise ValueError("Limit must be between 10 and 1000 for 'evolucion_moneda'")
         if offset < 0:
             raise ValueError("Offset must be non-negative for 'evolucion_moneda'")
 
-        evolucion, total = self._page(moneda, fecha_desde, fecha_hasta, limit, offset)
+        evolucion, total = self._page(moneda, desde, hasta, limit, offset)
         page = Page(evolucion, count=total, offset=offset, limit=limit)
         if page.has_more:
             self.logger.warning(
@@ -161,10 +170,8 @@ class CambiariasClient(DomainClient):
         """
         if days <= 0:
             raise ValueError("Number of days must be positive.")
-        end_date = datetime.now()
+        end_date = datetime.now().date()
         start_date = end_date - timedelta(days=days)
-        fecha_desde = start_date.strftime("%Y-%m-%d")
-        fecha_hasta = end_date.strftime("%Y-%m-%d")
 
         if limit is None:
             if offset < 0:
@@ -174,7 +181,7 @@ class CambiariasClient(DomainClient):
                 page_limit: int, page_offset: int
             ) -> Tuple[List[CotizacionFecha], Optional[int]]:
                 return self._page(
-                    currency_code, fecha_desde, fecha_hasta, page_limit, page_offset
+                    currency_code, start_date, end_date, page_limit, page_offset
                 )
 
             rows = self._http.collect_pages(
@@ -187,8 +194,8 @@ class CambiariasClient(DomainClient):
 
         return self.series(
             currency_code,
-            fecha_desde=fecha_desde,
-            fecha_hasta=fecha_hasta,
+            fecha_desde=start_date,
+            fecha_hasta=end_date,
             limit=limit,
             offset=offset,
         )
@@ -212,7 +219,7 @@ class CambiariasClient(DomainClient):
         :param base_currency: The base currency code (e.g., 'USD'). Case-insensitive.
         :param quote_currency: The quote currency code (e.g., 'ARS'). Case-insensitive.
         :param days: The number of days to look back, defaults to 30. Must be positive.
-        :return: List of dictionaries with 'fecha' (ISO format) and 'tasa' (exchange
+        :return: List of dictionaries with 'fecha' (a ``date``) and 'tasa' (exchange
             rate), oldest first.
         :raises ValueError: If days is invalid.
         :raises BCRAApiError: If underlying API calls fail.
@@ -267,9 +274,7 @@ class CambiariasClient(DomainClient):
             base_usd = usd_per_unit(base_currency, day)
             quote_usd = usd_per_unit(quote_currency, day)
             if base_usd > 0 and quote_usd > 0:
-                pair_evolution.append(
-                    {"fecha": day.isoformat(), "tasa": base_usd / quote_usd}
-                )
+                pair_evolution.append({"fecha": day, "tasa": base_usd / quote_usd})
             else:
                 self.logger.warning(
                     f"No USD rate for {base_currency if base_usd <= 0 else quote_currency} "
@@ -302,8 +307,8 @@ class CambiariasClient(DomainClient):
     def _page(
         self,
         moneda: str,
-        fecha_desde: Optional[str],
-        fecha_hasta: Optional[str],
+        fecha_desde: Optional[date],
+        fecha_hasta: Optional[date],
         limit: int,
         offset: int,
     ) -> Tuple[List[CotizacionFecha], Optional[int]]:
@@ -311,8 +316,8 @@ class CambiariasClient(DomainClient):
         params = {
             k: v
             for k, v in {
-                "fechaDesde": fecha_desde,
-                "fechaHasta": fecha_hasta,
+                "fechaDesde": fecha_desde.isoformat() if fecha_desde else None,
+                "fechaHasta": fecha_hasta.isoformat() if fecha_hasta else None,
                 "limit": limit,
                 "offset": offset,
             }.items()

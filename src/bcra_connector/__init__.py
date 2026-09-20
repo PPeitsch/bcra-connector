@@ -41,7 +41,7 @@ from .exceptions import (
     BCRARateLimitError,
     BCRAServerError,
 )
-from .models import Page
+from .models import DateLike, Page
 
 # Import from principales_variables
 from .principales_variables import (
@@ -67,6 +67,7 @@ __all__ = [
     "BCRAServerError",
     "RateLimitConfig",
     "TimeoutConfig",
+    "DateLike",
     "Page",
     # Principales Variables / Monetarias v4.0
     "PrincipalesVariables",

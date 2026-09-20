@@ -13,7 +13,7 @@ To start using the BCRA API Connector, first import the necessary classes and cr
    import os
    import sys
    import logging
-   from datetime import datetime, timedelta
+   from datetime import date, datetime, timedelta
    from bcra_connector import BCRAConnector
 
    # Initialize the connector (default language is Spanish)
@@ -21,6 +21,30 @@ To start using the BCRA API Connector, first import the necessary classes and cr
 
    # For English responses, use:
    # connector = BCRAConnector(language="en-US")
+
+Dates
+-----
+
+Every parameter that takes a date accepts a :class:`datetime.date`, a
+:class:`datetime.datetime` or an ISO 8601 string, and they are interchangeable:
+
+.. code-block:: python
+
+   from datetime import date
+
+   connector.cambiarias.quotations(date(2024, 6, 12))
+   connector.cambiarias.quotations("2024-06-12")     # same request
+
+A ``datetime`` has its time dropped — the BCRA API works in whole days — and a string
+is parsed, so a malformed one fails immediately with a ``ValueError`` naming the
+parameter instead of becoming an opaque API error:
+
+.. code-block:: python
+
+   connector.cambiarias.quotations("12/06/2024")
+   # ValueError: 'fecha' must be an ISO 8601 date (YYYY-MM-DD), got '12/06/2024'
+
+Dates always come **back** as :class:`datetime.date`, everywhere in the library.
 
 Fetching Principal Variables
 ----------------------------
@@ -102,7 +126,7 @@ To get currency quotations for a specific date:
 
 .. code-block:: python
 
-   fecha = "2024-06-12"  # Example date
+   fecha = date(2024, 6, 12)  # a datetime or "2024-06-12" work too
    quotations = connector.cambiarias.quotations(fecha)
    for detail in quotations.detalle[:5]:  # Print first 5 for brevity
        print(f"{detail.codigo_moneda}: {detail.tipo_cotizacion}")
@@ -112,8 +136,8 @@ To fetch the evolution of a specific currency:
 .. code-block:: python
 
    moneda = "USD"
-   fecha_desde = "2024-06-01"
-   fecha_hasta = "2024-06-30"
+   fecha_desde = date(2024, 6, 1)
+   fecha_hasta = date(2024, 6, 30)
    evolution = connector.cambiarias.series(moneda, fecha_desde, fecha_hasta)
    for quotation in evolution[:5]:  # Print first 5 for brevity
        print(f"{quotation.fecha}: {quotation.detalle[0].tipo_cotizacion}")
