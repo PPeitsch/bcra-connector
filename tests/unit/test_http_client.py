@@ -38,7 +38,7 @@ class TestInjectedSession:
         session = requests.Session()
         BCRAConnector(language="en-US", session=session)
         assert session.headers["Accept-Language"] == "en-US"
-        assert session.headers["User-Agent"].startswith("bcra-connector/")
+        assert str(session.headers["User-Agent"]).startswith("bcra-connector/")
 
     def test_close_leaves_an_injected_session_open(self) -> None:
         session = requests.Session()
@@ -110,9 +110,7 @@ class TestDelegation:
         replacement = requests.Session()
         connector.session = replacement
         assert connector._http.session is replacement
-        with patch.object(
-            replacement, "get", return_value=_ok_response()
-        ) as mock_get:
+        with patch.object(replacement, "get", return_value=_ok_response()) as mock_get:
             connector._make_request("test")
         assert mock_get.call_count == 1
 

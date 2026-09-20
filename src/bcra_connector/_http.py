@@ -148,7 +148,9 @@ class HttpClient:
                     )
                     if attempt == max_retries - 1:
                         error_cls = (
-                            BCRARateLimitError if status_code == 429 else BCRAServerError
+                            BCRARateLimitError
+                            if status_code == 429
+                            else BCRAServerError
                         )
                         raise error_cls(
                             f"El servidor del BCRA rechazó la conexión "
@@ -198,9 +200,7 @@ class HttpClient:
             except (ValueError, json.JSONDecodeError) as e:
                 raise BCRAApiError(f"Invalid JSON response from {url}") from e
 
-        raise BCRAApiError(
-            f"Maximum retry attempts ({max_retries}) reached for {url}"
-        )
+        raise BCRAApiError(f"Maximum retry attempts ({max_retries}) reached for {url}")
 
     def clear_cache(self) -> None:
         """Drop the cached catalogs so the next name lookup fetches them again."""
