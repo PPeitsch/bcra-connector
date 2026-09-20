@@ -95,7 +95,7 @@ class TestBCRAIntegration:
 
     def test_get_currencies(self, connector: BCRAConnector) -> None:
         """Test retrieval of available currencies (Estadisticas Cambiarias)."""
-        currencies: List[Divisa] = connector.get_divisas()
+        currencies: List[Divisa] = connector.cambiarias.currencies()
 
         assert currencies, "Should retrieve a list of currencies"
         assert len(currencies) > 0
@@ -104,7 +104,7 @@ class TestBCRAIntegration:
 
     def test_get_exchange_rates(self, connector: BCRAConnector) -> None:
         """Test retrieval of exchange rates for today or latest (Estadisticas Cambiarias)."""
-        rates: CotizacionFecha = connector.get_cotizaciones()
+        rates: CotizacionFecha = connector.cambiarias.quotations()
 
         assert rates is not None
         assert rates.detalle is not None
@@ -158,7 +158,7 @@ class TestBCRAIntegration:
     def test_currency_evolution(self, connector: BCRAConnector) -> None:
         """Test currency evolution over time (Estadisticas Cambiarias)."""
         try:
-            evolution: List[CotizacionFecha] = connector.get_evolucion_moneda(
+            evolution: List[CotizacionFecha] = connector.cambiarias.series(
                 moneda="USD", limit=10
             )
         except BCRAApiError as e:

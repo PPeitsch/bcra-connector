@@ -105,14 +105,14 @@ def main() -> None:
     )
 
     test_case(
-        "Invalid currency code for get_currency_evolution",
-        lambda: connector.get_currency_evolution("XZY"),
+        "Invalid currency code for cambiarias.evolution",
+        lambda: connector.cambiarias.evolution("XZY"),
         expected_exception=BCRAApiError,
     )
 
     test_case(
-        "Invalid currency pair for get_currency_pair_evolution",
-        lambda: connector.get_currency_pair_evolution("XZY", "ABC"),
+        "Invalid currency pair for cambiarias.pair",
+        lambda: connector.cambiarias.pair("XZY", "ABC"),
         expected_exception=BCRAApiError,
     )
 

@@ -67,7 +67,7 @@ for point in history[:5]:
     print(point.fecha, point.valor)
 
 # 4. Official exchange rate: pesos per dollar
-usd_ars = connector.get_currency_pair_evolution("USD", "ARS", days=7)
+usd_ars = connector.cambiarias.pair("USD", "ARS", days=7)
 print(f"USD/ARS on {usd_ars[-1]['fecha']}: {usd_ars[-1]['tasa']}")
 ```
 

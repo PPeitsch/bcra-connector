@@ -243,38 +243,38 @@ class TestBCRAConnectorExtended:
             with pytest.raises(BCRAApiError, match="Error fetching reported check"):
                 connector.cheques.reported(1, 123)
 
-    # --- get_divisas edge cases ---
-    def test_get_divisas_success(self, connector: BCRAConnector):
+    # --- cambiarias.currencies() edge cases ---
+    def test_cambiarias_currencies_success(self, connector: BCRAConnector):
         data = {"results": [{"codigo": "USD", "denominacion": "Dolar USA"}]}
-        with patch.object(connector, "_make_request", return_value=data):
-            res = connector.get_divisas()
+        with patch.object(connector._http, "request", return_value=data):
+            res = connector.cambiarias.currencies()
             assert len(res) == 1
             assert res[0].codigo == "USD"
 
-    def test_get_divisas_invalid_format(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", return_value={"results": "bad"}):
+    def test_cambiarias_currencies_invalid_format(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", return_value={"results": "bad"}):
             with pytest.raises(BCRAApiError, match="Invalid response format"):
-                connector.get_divisas()
+                connector.cambiarias.currencies()
 
-    def test_get_divisas_parsing_error(self, connector: BCRAConnector):
+    def test_cambiarias_currencies_parsing_error(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", return_value={"results": [{"bad": "data"}]}
+            connector._http, "request", return_value={"results": [{"bad": "data"}]}
         ):
             with pytest.raises(BCRAApiError, match="Unexpected response format"):
-                connector.get_divisas()
+                connector.cambiarias.currencies()
 
-    def test_get_divisas_pass_bcra_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=BCRAApiError("Fail")):
+    def test_cambiarias_currencies_pass_bcra_error(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", side_effect=BCRAApiError("Fail")):
             with pytest.raises(BCRAApiError, match="Fail"):
-                connector.get_divisas()
+                connector.cambiarias.currencies()
 
-    def test_get_divisas_unexpected_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=Exception("Fail")):
+    def test_cambiarias_currencies_unexpected_error(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", side_effect=Exception("Fail")):
             with pytest.raises(BCRAApiError, match="Error fetching currencies"):
-                connector.get_divisas()
+                connector.cambiarias.currencies()
 
-    # --- get_cotizaciones edge cases ---
-    def test_get_cotizaciones_success(self, connector: BCRAConnector):
+    # --- cambiarias.quotations() edge cases ---
+    def test_cambiarias_quotations_success(self, connector: BCRAConnector):
         data = {
             "results": {
                 "fecha": "2024-01-01",
@@ -288,71 +288,71 @@ class TestBCRAConnectorExtended:
                 ],
             }
         }
-        with patch.object(connector, "_make_request", return_value=data) as mock_req:
-            res = connector.get_cotizaciones("2024-01-01")
+        with patch.object(connector._http, "request", return_value=data) as mock_req:
+            res = connector.cambiarias.quotations("2024-01-01")
             assert res.fecha == date(2024, 1, 1)
             mock_req.assert_called_with(
                 "estadisticascambiarias/v1.0/Cotizaciones", {"fecha": "2024-01-01"}
             )
 
-    def test_get_cotizaciones_invalid_format(self, connector: BCRAConnector):
+    def test_cambiarias_quotations_invalid_format(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", return_value={"results": []}
+            connector._http, "request", return_value={"results": []}
         ):  # Expected dict
             with pytest.raises(BCRAApiError, match="Invalid response format"):
-                connector.get_cotizaciones()
+                connector.cambiarias.quotations()
 
-    def test_get_cotizaciones_parsing_error(self, connector: BCRAConnector):
+    def test_cambiarias_quotations_parsing_error(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", return_value={"results": {"bad": "data"}}
+            connector._http, "request", return_value={"results": {"bad": "data"}}
         ):
             with pytest.raises(BCRAApiError, match="Unexpected response format"):
-                connector.get_cotizaciones()
+                connector.cambiarias.quotations()
 
-    def test_get_cotizaciones_pass_bcra_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=BCRAApiError("Fail")):
+    def test_cambiarias_quotations_pass_bcra_error(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", side_effect=BCRAApiError("Fail")):
             with pytest.raises(BCRAApiError, match="Fail"):
-                connector.get_cotizaciones()
+                connector.cambiarias.quotations()
 
-    def test_get_cotizaciones_unexpected_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=Exception("Fail")):
+    def test_cambiarias_quotations_unexpected_error(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", side_effect=Exception("Fail")):
             with pytest.raises(BCRAApiError, match="Error fetching quotations"):
-                connector.get_cotizaciones()
+                connector.cambiarias.quotations()
 
-    # --- get_evolucion_moneda edge cases ---
-    def test_get_evolucion_moneda_success(self, connector: BCRAConnector):
+    # --- cambiarias.series() edge cases ---
+    def test_cambiarias_series_success(self, connector: BCRAConnector):
         data = {"results": [{"fecha": "2024-01-01", "detalle": []}]}
-        with patch.object(connector, "_make_request", return_value=data):
-            res = connector.get_evolucion_moneda("USD")
+        with patch.object(connector._http, "request", return_value=data):
+            res = connector.cambiarias.series("USD")
             assert len(res) == 1
 
-    def test_get_evolucion_moneda_invalid_params(self, connector: BCRAConnector):
+    def test_cambiarias_series_invalid_params(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="Limit must be between"):
-            connector.get_evolucion_moneda("USD", limit=5)
+            connector.cambiarias.series("USD", limit=5)
         with pytest.raises(ValueError, match="Offset must be non-negative"):
-            connector.get_evolucion_moneda("USD", offset=-1)
+            connector.cambiarias.series("USD", offset=-1)
 
-    def test_get_evolucion_moneda_invalid_format(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", return_value={"results": "bad"}):
+    def test_cambiarias_series_invalid_format(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", return_value={"results": "bad"}):
             with pytest.raises(BCRAApiError, match="Invalid response format"):
-                connector.get_evolucion_moneda("USD")
+                connector.cambiarias.series("USD")
 
-    def test_get_evolucion_moneda_parsing_error(self, connector: BCRAConnector):
+    def test_cambiarias_series_parsing_error(self, connector: BCRAConnector):
         with patch.object(
-            connector, "_make_request", return_value={"results": [{"bad": "data"}]}
+            connector._http, "request", return_value={"results": [{"bad": "data"}]}
         ):
             with pytest.raises(BCRAApiError, match="Unexpected response format"):
-                connector.get_evolucion_moneda("USD")
+                connector.cambiarias.series("USD")
 
-    def test_get_evolucion_moneda_pass_bcra_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=BCRAApiError("Fail")):
+    def test_cambiarias_series_pass_bcra_error(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", side_effect=BCRAApiError("Fail")):
             with pytest.raises(BCRAApiError, match="Fail"):
-                connector.get_evolucion_moneda("USD")
+                connector.cambiarias.series("USD")
 
-    def test_get_evolucion_moneda_unexpected_error(self, connector: BCRAConnector):
-        with patch.object(connector, "_make_request", side_effect=Exception("Fail")):
+    def test_cambiarias_series_unexpected_error(self, connector: BCRAConnector):
+        with patch.object(connector._http, "request", side_effect=Exception("Fail")):
             with pytest.raises(BCRAApiError, match="Error fetching evolution"):
-                connector.get_evolucion_moneda("USD")
+                connector.cambiarias.series("USD")
 
     # --- helper methods ---
     def test_monetarias_find_found(self, connector: BCRAConnector):
@@ -456,26 +456,24 @@ class TestBCRAConnectorExtended:
                 assert len(res) == 1
                 mock_get_datos.assert_called_once()
 
-    def test_get_currency_evolution_helper(self, connector: BCRAConnector):
+    def test_cambiarias_evolution_helper(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="positive"):
-            connector.get_currency_evolution("USD", days=-1)
+            connector.cambiarias.evolution("USD", days=-1)
 
-        # Explicit limit: a single page through get_evolucion_moneda.
-        with patch.object(
-            connector, "get_evolucion_moneda", return_value=[]
-        ) as mock_get:
-            connector.get_currency_evolution("USD", days=10, limit=100)
+        # Explicit limit: a single page through series().
+        with patch.object(connector.cambiarias, "series", return_value=[]) as mock_get:
+            connector.cambiarias.evolution("USD", days=10, limit=100)
             mock_get.assert_called_once()
 
         # Default: the whole range, page by page.
         with patch.object(
-            connector, "_fetch_evolucion_moneda_page", return_value=([], 0)
+            connector.cambiarias, "_page", return_value=([], 0)
         ) as mock_page:
-            connector.get_currency_evolution("USD", days=10)
+            connector.cambiarias.evolution("USD", days=10)
             mock_page.assert_called_once()
 
         with pytest.raises(ValueError, match="non-negative"):
-            connector.get_currency_evolution("USD", days=10, offset=-1)
+            connector.cambiarias.evolution("USD", days=10, offset=-1)
 
     def test_check_denunciado_flow(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="positive"):
@@ -520,21 +518,21 @@ class TestBCRAConnectorExtended:
                 with pytest.raises(BCRAApiError, match="Unexpected error during check"):
                     connector.cheques.is_reported("BankOfTest", 123)
 
-    def test_get_latest_quotations_flow(self, connector: BCRAConnector):
+    def test_cambiarias_latest_flow(self, connector: BCRAConnector):
         # API Error
         with patch.object(
-            connector, "get_cotizaciones", side_effect=BCRAApiError("Fail")
+            connector.cambiarias, "quotations", side_effect=BCRAApiError("Fail")
         ):
             with pytest.raises(BCRAApiError):
-                connector.get_latest_quotations()
+                connector.cambiarias.latest()
 
         # Empty/None
         with patch.object(
-            connector,
-            "get_cotizaciones",
+            connector.cambiarias,
+            "quotations",
             return_value=CotizacionFecha(fecha=date.today(), detalle=[]),
         ):
-            res = connector.get_latest_quotations()
+            res = connector.cambiarias.latest()
             assert res == {}
 
         # Success - CotizacionDetalle has required fields
@@ -549,20 +547,20 @@ class TestBCRAConnectorExtended:
                 )
             ],
         )
-        with patch.object(connector, "get_cotizaciones", return_value=data):
-            res = connector.get_latest_quotations()
+        with patch.object(connector.cambiarias, "quotations", return_value=data):
+            res = connector.cambiarias.latest()
             assert res["USD"] == 100.0
 
-    def test_get_currency_pair_evolution_flow(self, connector: BCRAConnector):
+    def test_cambiarias_pair_flow(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="positive"):
-            connector.get_currency_pair_evolution("USD", "EUR", days=-1)
+            connector.cambiarias.pair("USD", "EUR", days=-1)
 
         # API Error
         with patch.object(
-            connector, "get_currency_evolution", side_effect=BCRAApiError("Fail")
+            connector.cambiarias, "evolution", side_effect=BCRAApiError("Fail")
         ):
             with pytest.raises(BCRAApiError):
-                connector.get_currency_pair_evolution("USD", "EUR")
+                connector.cambiarias.pair("USD", "EUR")
 
         # Success logic with division by zero avoidance and alignment
         d1 = date(2024, 1, 1)
@@ -595,22 +593,22 @@ class TestBCRAConnectorExtended:
                 ),  # Zero val
             ]
 
-        with patch.object(connector, "get_currency_evolution", side_effect=mock_get_ev):
-            res = connector.get_currency_pair_evolution("USD", "EUR")
+        with patch.object(connector.cambiarias, "evolution", side_effect=mock_get_ev):
+            res = connector.cambiarias.pair("USD", "EUR")
             # d1: 1 USD = 1 / 2.0 EUR
             # d2: EUR 0 -> skipped
             assert len(res) == 1
             assert res[0]["tasa"] == 0.5
 
-        # Helper _get_cotizacion_detalle errors
+        # Helper CambiariasClient.detalle errors
         # Let's force a ValueError by returning CotizacionFecha without the expected currency
         def mock_get_ev_missing(code, *args, **kwargs):
             return [CotizacionFecha(fecha=d1, detalle=[])]  # No details
 
         with patch.object(
-            connector, "get_currency_evolution", side_effect=mock_get_ev_missing
+            connector.cambiarias, "evolution", side_effect=mock_get_ev_missing
         ):
-            res = connector.get_currency_pair_evolution("USD", "EUR")
+            res = connector.cambiarias.pair("USD", "EUR")
             assert res == []
 
     def test_get_variable_correlation_flow(self, connector: BCRAConnector):
@@ -669,17 +667,17 @@ class TestBCRAConnectorExtended:
                     connector._make_request("test")
                     mock_sleep.assert_called_with(0.1)
 
-    def test_get_cotizacion_detalle_not_found(self, connector: BCRAConnector):
+    def test_cambiarias_detalle_not_found(self, connector: BCRAConnector):
         # type_passe and tipo_cotizacion are required args
         cf = CotizacionFecha(
             date(2024, 1, 1), [CotizacionDetalle("USD", "D", 100.0, 100.0)]
         )
         with pytest.raises(ValueError, match="not found in cotizacion"):
-            connector._get_cotizacion_detalle(cf, "EUR")
+            connector.cambiarias.detalle(cf, "EUR")
 
-    def test_get_cotizacion_detalle_empty(self, connector: BCRAConnector):
+    def test_cambiarias_detalle_empty(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="Invalid or empty"):
-            connector._get_cotizacion_detalle(None, "USD")
+            connector.cambiarias.detalle(None, "USD")
 
     def test_get_variable_correlation_nan(self, connector: BCRAConnector):
         d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)

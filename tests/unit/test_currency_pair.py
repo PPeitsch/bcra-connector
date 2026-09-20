@@ -1,4 +1,4 @@
-"""get_currency_pair_evolution: BASE/QUOTE convention and currencies without tipoCotizacion."""
+"""cambiarias.pair(): BASE/QUOTE convention and currencies without tipoCotizacion."""
 
 from datetime import date
 from typing import Dict, List, Tuple
@@ -43,11 +43,11 @@ def connector() -> BCRAConnector:
 def _pair(connector: BCRAConnector, base: str, quote: str) -> Tuple[float, List[str]]:
     """Return the rate on D2 and the currencies that were requested."""
     with patch.object(
-        connector,
-        "get_currency_evolution",
+        connector.cambiarias,
+        "evolution",
         side_effect=lambda code, *a, **k: _series(code),
     ) as mock_evolution:
-        result = connector.get_currency_pair_evolution(base, quote, days=2)
+        result = connector.cambiarias.pair(base, quote, days=2)
     assert [r["fecha"] for r in result] == [D1.isoformat(), D2.isoformat()]
     return result[-1]["tasa"], [c.args[0] for c in mock_evolution.call_args_list]
 
@@ -98,11 +98,11 @@ def test_currency_without_usd_rate_is_skipped(
     connector: BCRAConnector, caplog: pytest.LogCaptureFixture
 ) -> None:
     with patch.object(
-        connector,
-        "get_currency_evolution",
+        connector.cambiarias,
+        "evolution",
         side_effect=lambda code, *a, **k: _series(code),
     ):
-        assert connector.get_currency_pair_evolution("REF", "EUR", days=2) == []
+        assert connector.cambiarias.pair("REF", "EUR", days=2) == []
     assert "REF" in caplog.text
 
 
@@ -111,8 +111,8 @@ def test_missing_dates_are_skipped(connector: BCRAConnector) -> None:
         series = _series(code)
         return series if code == "EUR" else series[:1]  # JPY only has D2
 
-    with patch.object(connector, "get_currency_evolution", side_effect=evolution):
-        result = connector.get_currency_pair_evolution("EUR", "JPY", days=2)
+    with patch.object(connector.cambiarias, "evolution", side_effect=evolution):
+        result = connector.cambiarias.pair("EUR", "JPY", days=2)
     assert [r["fecha"] for r in result] == [D2.isoformat()]
 
 
@@ -120,8 +120,8 @@ def test_entries_without_date_are_ignored(connector: BCRAConnector) -> None:
     def evolution(code: str, *args: object, **kwargs: object) -> List[CotizacionFecha]:
         return _series(code) + [CotizacionFecha(fecha=None, detalle=[])]
 
-    with patch.object(connector, "get_currency_evolution", side_effect=evolution):
-        result = connector.get_currency_pair_evolution("USD", "EUR", days=2)
+    with patch.object(connector.cambiarias, "evolution", side_effect=evolution):
+        result = connector.cambiarias.pair("USD", "EUR", days=2)
     assert len(result) == 2
 
 

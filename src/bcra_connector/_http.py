@@ -50,6 +50,7 @@ class TransportConfig:
     max_pages: int = 100
     cache_ttl: float = 300.0
     max_page_size: int = 3000
+    fx_max_page_size: int = 1000
 
 
 class HttpClient:

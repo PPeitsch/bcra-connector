@@ -134,11 +134,11 @@ class TestVariableHistory:
 class TestCurrencyEvolution:
     def _evolution(self, connector: BCRAConnector, total: int, **kwargs: Any):
         with patch.object(
-            connector,
-            "_make_request",
+            connector._http,
+            "request",
             side_effect=lambda endpoint, params: _fx_page(params, total),
         ) as mock_req:
-            result = connector.get_currency_evolution("USD", days=3650, **kwargs)
+            result = connector.cambiarias.evolution("USD", days=3650, **kwargs)
         self.calls = mock_req.call_count
         return result
 
@@ -159,23 +159,23 @@ class TestCurrencyEvolution:
     ) -> None:
         """days + 15 used to exceed the API's 1000 limit and raise ValueError."""
         with patch.object(
-            connector,
-            "_make_request",
+            connector._http,
+            "request",
             side_effect=lambda endpoint, params: _fx_page(params, 2 * PAGE),
         ):
-            pairs = connector.get_currency_pair_evolution("USD", "USD", days=2000)
+            pairs = connector.cambiarias.pair("USD", "USD", days=2000)
         assert len(pairs) == 2 * PAGE
 
     def test_single_page_call_warns_when_truncated(
         self, connector: BCRAConnector, caplog: pytest.LogCaptureFixture
     ) -> None:
         with patch.object(
-            connector,
-            "_make_request",
+            connector._http,
+            "request",
             side_effect=lambda endpoint, params: _fx_page(params, 3 * PAGE),
         ):
             with caplog.at_level(logging.WARNING, logger="bcra_connector"):
-                result = connector.get_evolucion_moneda("USD", limit=PAGE)
+                result = connector.cambiarias.series("USD", limit=PAGE)
 
         assert len(result) == PAGE
         assert any(
@@ -187,12 +187,12 @@ class TestCurrencyEvolution:
         self, connector: BCRAConnector, caplog: pytest.LogCaptureFixture
     ) -> None:
         with patch.object(
-            connector,
-            "_make_request",
+            connector._http,
+            "request",
             side_effect=lambda endpoint, params: _fx_page(params, PAGE),
         ):
             with caplog.at_level(logging.WARNING, logger="bcra_connector"):
-                connector.get_evolucion_moneda("USD", limit=PAGE)
+                connector.cambiarias.series("USD", limit=PAGE)
         assert not [r for r in caplog.records if r.levelname == "WARNING"]
 
 
