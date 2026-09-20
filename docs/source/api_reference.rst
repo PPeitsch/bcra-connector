@@ -16,6 +16,13 @@ BCRAConnector
    :undoc-members:
    :show-inheritance:
 
+Domain Clients
+--------------
+
+.. automodule:: src.bcra_connector.clients.deudores
+   :members:
+   :show-inheritance:
+
 Exceptions
 ----------
 

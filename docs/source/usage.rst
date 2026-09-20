@@ -133,7 +133,8 @@ a pair against USD needs a single request. ``REF`` has no dollar rate and yields
 Using the Central de Deudores Module
 ------------------------------------
 
-To query debtor information, historical debts, and rejected checks by CUIT/CUIL:
+The Central de Deudores endpoints live in ``connector.deudores``. To query debtor
+information, historical debts, and rejected checks by CUIT/CUIL:
 
 .. code-block:: python
 
@@ -142,18 +143,18 @@ To query debtor information, historical debts, and rejected checks by CUIT/CUIL:
    identificacion = "20123456789"
 
    # Get current debts
-   deudor = connector.get_deudas(identificacion)
+   deudor = connector.deudores.debts(identificacion)
    print(f"Debtor: {deudor.denominacion}")
    for periodo in deudor.periodos:
        for entidad in periodo.entidades:
            print(f"- {entidad.entidad}: Situación {entidad.situacion}, ${entidad.monto}k")
 
    # Get historical debts (last 24 months)
-   historico = connector.get_deudas_historicas(identificacion)
+   historico = connector.deudores.historical(identificacion)
    print(f"Historical periods found: {len(historico.periodos)}")
 
    # Get rejected checks
-   rejected = connector.get_cheques_rechazados(identificacion)
+   rejected = connector.deudores.rejected_checks(identificacion)
    for causal in rejected.causales:
        print(f"Causal: {causal.causal}")
        for entidad in causal.entidades:
@@ -178,11 +179,11 @@ analysis workflows. This requires ``pandas`` to be installed
    df_vars = pd.DataFrame([v.to_dict() for v in variables])
 
    # Convert Central de Deudores info to DataFrame
-   deudor = connector.get_deudas(identificacion)
+   deudor = connector.deudores.debts(identificacion)
    df_deudas = deudor.to_dataframe()
 
    # Convert Rejected Checks to DataFrame
-   rejected = connector.get_cheques_rechazados(identificacion)
+   rejected = connector.deudores.rejected_checks(identificacion)
    df_checks = rejected.to_dataframe()
 
 Error Handling
@@ -212,7 +213,7 @@ several.
 
    connector = BCRAConnector()
    try:
-       deudor = connector.get_deudas("20123456789")
+       deudor = connector.deudores.debts("20123456789")
    except BCRANotFoundError:
        deudor = None  # No data for this CUIT
    except BCRAServerError as e:

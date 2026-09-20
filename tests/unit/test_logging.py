@@ -137,7 +137,7 @@ class TestRedaction:
             patch("bcra_connector._http.time.sleep"),
         ):
             with caplog.at_level(logging.DEBUG, logger="bcra_connector"):
-                connector.get_deudas(CUIT)
+                connector.deudores.debts(CUIT)
 
         messages = "\n".join(r.getMessage() for r in caplog.records)
         assert "Transient HTTP 503" in messages  # the retry path was logged

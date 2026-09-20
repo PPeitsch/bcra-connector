@@ -30,7 +30,7 @@ def demonstrate_central_deudores() -> None:
     # 1. Query current debts
     print("\n1. Fetching current debts...")
     try:
-        deudor = connector.get_deudas(cuit)
+        deudor = connector.deudores.debts(cuit)
         print(f"   Identificación: {deudor.identificacion}")
         print(f"   Denominación: {deudor.denominacion}")
         print(f"   Periodos: {len(deudor.periodos)}")
@@ -57,7 +57,7 @@ def demonstrate_central_deudores() -> None:
     # 2. Query historical debts (24 months)
     print("\n2. Fetching historical debts (24 months)...")
     try:
-        historico = connector.get_deudas_historicas(cuit)
+        historico = connector.deudores.historical(cuit)
         print(f"   Total periods in history: {len(historico.periodos)}")
 
         if historico.periodos:
@@ -75,7 +75,7 @@ def demonstrate_central_deudores() -> None:
     # 3. Query rejected checks
     print("\n3. Fetching rejected checks...")
     try:
-        cheques = connector.get_cheques_rechazados(cuit)
+        cheques = connector.deudores.rejected_checks(cuit)
         print(f"   Identificación: {cheques.identificacion}")
         print(f"   Denominación: {cheques.denominacion}")
         print(f"   Causales: {len(cheques.causales)}")

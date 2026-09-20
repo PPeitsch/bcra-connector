@@ -127,7 +127,7 @@ class TestMakeRequestErrors:
             patch.object(connector.session, "get", return_value=response),
             pytest.raises(BCRANotFoundError),
         ):
-            connector.get_deudas("20000000007")
+            connector.deudores.debts("20000000007")
 
 
 class TestCheckDenunciado:
