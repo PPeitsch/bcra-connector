@@ -10,6 +10,8 @@ It includes modules for retrieving:
 """
 
 import logging
+import warnings
+from importlib import import_module
 
 from .__about__ import __version__
 from .bcra_connector import BCRAConnector
@@ -22,17 +24,8 @@ from .central_deudores import (
     EntidadDeuda,
     Periodo,
 )
-from .cheques import Cheque, ChequeDetalle, ChequeResponse, Entidad, EntidadResponse
-from .cheques import ErrorResponse as ChequesErrorResponse
-from .estadisticas_cambiarias import (
-    CotizacionDetalle,
-    CotizacionesResponse,
-    CotizacionFecha,
-    CotizacionResponse,
-    Divisa,
-    DivisaResponse,
-)
-from .estadisticas_cambiarias import ErrorResponse as CambiariasErrorResponse
+from .cheques import Cheque, ChequeDetalle, Entidad
+from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
 from .exceptions import (
     BCRAApiError,
     BCRANotFoundError,
@@ -42,19 +35,54 @@ from .exceptions import (
 from .models import DateLike, Metadata, Page, Resultset
 
 # Import from principales_variables
-from .principales_variables import (
-    DatosVariable,
-    DatosVariableResponse,
-    DetalleMonetaria,
-    PrincipalesVariables,
-)
+from .principales_variables import DatosVariable, DetalleMonetaria, PrincipalesVariables
 from .rate_limiter import RateLimitConfig
 from .timeout_config import TimeoutConfig
 
-# One Resultset and one Metadata since #138; these names are the same objects,
-# kept until 1.0 for the code that imported them per API.
-EstadisticasCambiariasResultset = Resultset
-EstadisticasCambiariasMetadata = Metadata
+# Superseded names, kept until 1.0. Reaching one warns and says what replaces it;
+# the whole block goes away with the classes.
+_PAGE = "use the Page returned by the corresponding connector method"
+_ERROR = "every API error is raised as a BCRAApiError"
+_SHARED = "use bcra_connector.{} instead"
+
+
+def __getattr__(name: str) -> object:
+    """Serve the deprecated names, warning once per access site."""
+    sources = {
+        "DatosVariableResponse": ("principales_variables", "DatosVariableResponse"),
+        "EntidadResponse": ("cheques", "EntidadResponse"),
+        "ChequeResponse": ("cheques", "ChequeResponse"),
+        "ChequesErrorResponse": ("cheques", "ErrorResponse"),
+        "DivisaResponse": ("estadisticas_cambiarias", "DivisaResponse"),
+        "CotizacionResponse": ("estadisticas_cambiarias", "CotizacionResponse"),
+        "CotizacionesResponse": ("estadisticas_cambiarias", "CotizacionesResponse"),
+        "CambiariasErrorResponse": ("estadisticas_cambiarias", "ErrorResponse"),
+    }
+    if name in sources:
+        package, attribute = sources[name]
+        message = _ERROR if attribute == "ErrorResponse" else _PAGE
+        warnings.warn(
+            f"{name} is deprecated and will be removed in 1.0; {message}.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        module = import_module(f".{package}.{package}", __name__)
+        return getattr(module, attribute)
+    shared = {
+        "EstadisticasCambiariasResultset": ("Resultset", Resultset),
+        "EstadisticasCambiariasMetadata": ("Metadata", Metadata),
+    }
+    if name in shared:
+        canonical, value = shared[name]
+        warnings.warn(
+            f"{name} is deprecated and will be removed in 1.0; "
+            f"{_SHARED.format(canonical)}.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 # Library logging convention: emit records, never configure output. Applications
 # decide handlers and levels (see BCRAConnector's ``debug`` flag for an opt-in).

@@ -42,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open and still closes one the connector created (#119)
 
 ### Deprecated
+- The superseded model exports now emit a `DeprecationWarning` when they are
+  imported or accessed, naming what replaces them, instead of being deprecated only
+  in this file: the `*Response` wrappers (`Page` replaces them), both `ErrorResponse`
+  classes (every API error is raised as a `BCRAApiError`) and
+  `EstadisticasCambiariasResultset` / `EstadisticasCambiariasMetadata` (`Resultset`
+  and `Metadata`). They keep working until 1.0 (#140)
 - The camelCase field names of `PrincipalesVariables` and `DatosVariable`
   (`idVariable`, `tipoSerie`, `unidadExpresion`, `primerFechaInformada`,
   `ultFechaInformada`, `ultValorInformado`) are deprecated in favour of their

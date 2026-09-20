@@ -30,13 +30,13 @@ from .exceptions import (  # noqa: F401  (re-exported for backwards compatibilit
     BCRARateLimitError,
     BCRAServerError,
 )
-from .models import DateLike
-from .principales_variables import (
+from .models import DateLike, Metadata, Resultset
+from .principales_variables import DetalleMonetaria, PrincipalesVariables
+
+# Deprecated, and returned by a deprecated alias: imported from where it is
+# defined so that importing this module does not warn.
+from .principales_variables.principales_variables import (  # isort: skip
     DatosVariableResponse,
-    DetalleMonetaria,
-    Metadata,
-    PrincipalesVariables,
-    Resultset,
 )
 from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
