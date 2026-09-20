@@ -5,11 +5,11 @@ from typing import Any, Dict
 
 import pytest
 
-from bcra_connector.cheques import (
-    Cheque,
-    ChequeDetalle,
+from bcra_connector.cheques import Cheque, ChequeDetalle, Entidad
+
+# Deprecated: imported from their module, since the package export warns (#140).
+from bcra_connector.cheques.cheques import (  # isort: skip
     ChequeResponse,
-    Entidad,
     EntidadResponse,
     ErrorResponse,
 )

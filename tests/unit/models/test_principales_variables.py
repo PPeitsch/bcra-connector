@@ -5,13 +5,16 @@ from typing import Any, Dict, List
 
 import pytest
 
+from bcra_connector.models import Metadata, Resultset
 from bcra_connector.principales_variables import (
     DatosVariable,
-    DatosVariableResponse,
     DetalleMonetaria,
-    Metadata,
     PrincipalesVariables,
-    Resultset,
+)
+
+# Deprecated: imported from its module, since the package export warns (#140).
+from bcra_connector.principales_variables.principales_variables import (  # isort: skip
+    DatosVariableResponse,
 )
 
 

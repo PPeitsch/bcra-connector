@@ -7,15 +7,18 @@ import pytest
 
 from bcra_connector.estadisticas_cambiarias import (
     CotizacionDetalle,
-    CotizacionesResponse,
     CotizacionFecha,
-    CotizacionResponse,
     Divisa,
+)
+
+# Deprecated: imported from their module, since the package export warns (#140).
+from bcra_connector.estadisticas_cambiarias.estadisticas_cambiarias import (  # isort: skip
+    CotizacionesResponse,
+    CotizacionResponse,
     DivisaResponse,
     ErrorResponse,
-    Metadata,
-    Resultset,
 )
+from bcra_connector.models import Metadata, Resultset  # isort: skip
 
 
 class TestDivisa:

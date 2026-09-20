@@ -2,12 +2,8 @@
 
 import pytest
 
-from bcra_connector import (
-    EstadisticasCambiariasMetadata,
-    EstadisticasCambiariasResultset,
-    Metadata,
-    Resultset,
-)
+import bcra_connector
+from bcra_connector import Metadata, Resultset
 from bcra_connector.estadisticas_cambiarias import Metadata as CambiariasMetadata
 from bcra_connector.estadisticas_cambiarias import Resultset as CambiariasResultset
 from bcra_connector.models import Metadata as ModelsMetadata
@@ -36,8 +32,10 @@ class TestOneClass:
         assert alias is ModelsMetadata
 
     def test_the_old_per_api_aliases_still_resolve(self) -> None:
-        assert EstadisticasCambiariasResultset is Resultset
-        assert EstadisticasCambiariasMetadata is Metadata
+        with pytest.warns(DeprecationWarning, match="use bcra_connector.Resultset"):
+            assert bcra_connector.EstadisticasCambiariasResultset is Resultset
+        with pytest.warns(DeprecationWarning, match="use bcra_connector.Metadata"):
+            assert bcra_connector.EstadisticasCambiariasMetadata is Metadata
 
     def test_instances_compare_across_import_paths(self) -> None:
         assert MonetariasResultset.from_dict(BLOCK) == CambiariasResultset.from_dict(
