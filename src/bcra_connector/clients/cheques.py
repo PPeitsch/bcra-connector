@@ -26,7 +26,9 @@ class ChequesClient(DomainClient):
         :raises BCRAApiError: If the API request fails.
         """
         self.logger.info("Fetching financial entities")
-        entities = self._list("cheques/v1.0/entidades", Entidad.from_dict, "financial entities")
+        entities = self._list(
+            "cheques/v1.0/entidades", Entidad.from_dict, "financial entities"
+        )
         self.logger.info(f"Successfully fetched {len(entities)} entities")
         return entities
 
