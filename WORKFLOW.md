@@ -209,19 +209,38 @@ __version__ = "X.Y.Z"
 - Update the comparison links at the bottom:
   `[X.Y.Z]: .../compare/vPrevious...vX.Y.Z`
 
-### 5.3 Commit, tag and push
+### 5.3 Open the release PR
+
+`main` is protected: every commit reaches it through a PR with the five required
+checks green, and the release commit is no exception — it is the one that gets
+published to PyPI, so it gets the same scrutiny as any other change.
 
 ```bash
+git checkout -b release/X.Y.Z origin/main
 git add src/bcra_connector/__about__.py CHANGELOG.md
 git commit -m "[release]: Version X.Y.Z"
+git push -u origin release/X.Y.Z
+gh pr create --title "[release]: Version X.Y.Z" --body "..."
+```
+
+Wait for CI, then merge with `--delete-branch`.
+
+### 5.4 Tag the merge commit
+
+The tag goes on the merge commit that is already on `main`, so the published
+artifact is exactly what CI tested:
+
+```bash
+git checkout main && git pull
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
-git push origin main
 git push origin vX.Y.Z
 ```
 
-The tag must match the version exactly, with a `v` prefix.
+The tag must match the version exactly, with a `v` prefix. **Never push the release
+commit straight to `main`**: bypassing the protection publishes a commit no check
+ever saw.
 
-### 5.4 Verify
+### 5.5 Verify
 
 ```bash
 gh run list

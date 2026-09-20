@@ -177,8 +177,11 @@ The full step-by-step SOP lives in **[WORKFLOW.md](./WORKFLOW.md)**; the summary
    (`docs/source/conf.py` reads it automatically — no manual edit).
 3. In `CHANGELOG.md`: rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, add a
    fresh empty `## [Unreleased]`, and update the comparison links at the bottom.
-4. Commit `[release]: Version X.Y.Z`, tag `vX.Y.Z`, push both.
-5. Confirm the "Test and Publish" workflow started for the tag.
+4. Commit `[release]: Version X.Y.Z` on a `release/X.Y.Z` branch, open a PR, wait for
+   CI and merge it. `main` is protected and the release commit is no exception: never
+   push it straight to `main`.
+5. Tag `vX.Y.Z` on the merge commit already on `main` and push the tag.
+6. Confirm the "Test and Publish" workflow started for the tag.
 
 ---
 
