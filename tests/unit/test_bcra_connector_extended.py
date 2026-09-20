@@ -358,18 +358,18 @@ class TestBCRAConnectorExtended:
     def test_monetarias_find_found(self, connector: BCRAConnector):
         vars_list = [
             PrincipalesVariables(
-                idVariable=1,
+                id_variable=1,
                 descripcion="Reserva",
             )
         ]
         with patch.object(connector.monetarias, "list", return_value=vars_list):
             res = connector.monetarias.find("reserva")
-            assert res.idVariable == 1
+            assert res.id_variable == 1
 
     def test_monetarias_find_not_found(self, connector: BCRAConnector):
         vars_list = [
             PrincipalesVariables(
-                idVariable=1,
+                id_variable=1,
                 descripcion="Base",
             )
         ]
@@ -389,25 +389,25 @@ class TestBCRAConnectorExtended:
 
     def test_monetarias_find_prefers_exact_match(self, connector: BCRAConnector):
         vars_list = [
-            PrincipalesVariables(idVariable=1, descripcion="Reservas en oro"),
-            PrincipalesVariables(idVariable=2, descripcion="Reservas"),
+            PrincipalesVariables(id_variable=1, descripcion="Reservas en oro"),
+            PrincipalesVariables(id_variable=2, descripcion="Reservas"),
         ]
         with patch.object(connector.monetarias, "list", return_value=vars_list):
-            assert connector.monetarias.find(" reservas ").idVariable == 2
+            assert connector.monetarias.find(" reservas ").id_variable == 2
 
     def test_monetarias_find_warns_on_ambiguous_match(
         self, connector: BCRAConnector, caplog: pytest.LogCaptureFixture
     ):
         vars_list = [
-            PrincipalesVariables(idVariable=7, descripcion="Tasa BADLAR"),
-            PrincipalesVariables(idVariable=8, descripcion="Tasa TAMAR"),
-            PrincipalesVariables(idVariable=9, descripcion="Base monetaria"),
+            PrincipalesVariables(id_variable=7, descripcion="Tasa BADLAR"),
+            PrincipalesVariables(id_variable=8, descripcion="Tasa TAMAR"),
+            PrincipalesVariables(id_variable=9, descripcion="Base monetaria"),
         ]
         with patch.object(connector.monetarias, "list", return_value=vars_list):
             with caplog.at_level("WARNING", logger="bcra_connector"):
                 res = connector.monetarias.find("tasa")
 
-        assert res.idVariable == 7  # first match, as before
+        assert res.id_variable == 7  # first match, as before
         warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
         assert len(warnings) == 1
         assert "2 variables match 'tasa'" in warnings[0]
@@ -416,7 +416,7 @@ class TestBCRAConnectorExtended:
     def test_monetarias_find_single_match_no_warning(
         self, connector: BCRAConnector, caplog: pytest.LogCaptureFixture
     ):
-        vars_list = [PrincipalesVariables(idVariable=1, descripcion="Base monetaria")]
+        vars_list = [PrincipalesVariables(id_variable=1, descripcion="Base monetaria")]
         with patch.object(connector.monetarias, "list", return_value=vars_list):
             with caplog.at_level("WARNING", logger="bcra_connector"):
                 connector.monetarias.find("base")
@@ -425,7 +425,7 @@ class TestBCRAConnectorExtended:
     def test_monetarias_history_methods(self, connector: BCRAConnector):
         # We must mock find() first because history() calls it.
         mock_var = PrincipalesVariables(
-            idVariable=1,
+            id_variable=1,
             descripcion="Var",
         )
 
@@ -446,7 +446,7 @@ class TestBCRAConnectorExtended:
                     count=1,
                     results=[
                         DatosVariable(
-                            idVariable=1,
+                            id_variable=1,
                             detalle=[DetalleMonetaria(fecha=date.today(), valor=10.0)],
                         )
                     ],
@@ -703,7 +703,7 @@ class TestBCRAConnectorExtended:
             with pytest.raises(ValueError, match="not found"):
                 connector.generate_variable_report("Missing")
 
-        mock_var = PrincipalesVariables(idVariable=1, descripcion="Desc")
+        mock_var = PrincipalesVariables(id_variable=1, descripcion="Desc")
         with patch.object(connector.monetarias, "find", return_value=mock_var):
 
             # API Error
@@ -731,7 +731,7 @@ class TestBCRAConnectorExtended:
         self, connector: BCRAConnector
     ):
         """The API returns series newest-first; the report must not depend on it."""
-        mock_var = PrincipalesVariables(idVariable=1, descripcion="Desc")
+        mock_var = PrincipalesVariables(id_variable=1, descripcion="Desc")
         newest_first = [
             DetalleMonetaria(fecha=date(2024, 1, 3), valor=300.0),
             DetalleMonetaria(fecha=date(2024, 1, 2), valor=200.0),

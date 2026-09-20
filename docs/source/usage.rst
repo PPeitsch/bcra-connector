@@ -55,10 +55,10 @@ To retrieve all principal variables published by BCRA:
 
    variables = connector.monetarias.list()
    for var in variables[:5]:  # Print first 5 for brevity
-       print(f"{var.descripcion}: {var.ultValorInformado} ({var.ultFechaInformada})")
+       print(f"{var.descripcion}: {var.ult_valor_informado} ({var.ult_fecha_informada})")
 
 This returns a :class:`~bcra_connector.Page` of `PrincipalesVariables` objects, each
-containing information about a specific variable including metadata like `tipoSerie`,
+containing information about a specific variable including metadata like `tipo_serie`,
 `periodicidad`, and `moneda`. See `Paged results`_ below.
 
 Retrieving Historical Data

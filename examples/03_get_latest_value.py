@@ -57,9 +57,9 @@ def main() -> None:
             logger.info("Using first few available distinct variables for example.")
             seen_ids = set()
             for v_api in all_variables:
-                if v_api.idVariable not in seen_ids:
+                if v_api.id_variable not in seen_ids:
                     current_variable_names.append(v_api.descripcion)
-                    seen_ids.add(v_api.idVariable)
+                    seen_ids.add(v_api.id_variable)
                 if len(current_variable_names) >= 3:  # Limit to 3 for example
                     break
 
@@ -89,9 +89,9 @@ def main() -> None:
                 continue
 
             # v4.0: monetarias.latest() returns DetalleMonetaria (not DatosVariable)
-            latest_data_point = connector.monetarias.latest(variable_obj.idVariable)
+            latest_data_point = connector.monetarias.latest(variable_obj.id_variable)
             logger.info(
-                f"  ID: {variable_obj.idVariable}, Value: {latest_data_point.valor}, "
+                f"  ID: {variable_obj.id_variable}, Value: {latest_data_point.valor}, "
                 f"Date: {latest_data_point.fecha.isoformat()}, Category: {getattr(variable_obj, 'categoria', 'N/A')}"
             )
             latest_values_data.append(

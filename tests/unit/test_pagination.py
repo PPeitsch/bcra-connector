@@ -82,7 +82,7 @@ class TestCatalog:
         ) as mock_req:
             variables = connector.monetarias.list()
 
-        assert [v.idVariable for v in variables] == list(range(total))
+        assert [v.id_variable for v in variables] == list(range(total))
         assert mock_req.call_count == 3
 
     def test_exact_multiple_of_page_size(self, connector: BCRAConnector) -> None:
@@ -102,7 +102,7 @@ class TestVariableHistory:
     def _history(
         self, connector: BCRAConnector, total: int, **kwargs: Any
     ) -> List[Any]:
-        variable = PrincipalesVariables(idVariable=1, descripcion="Var")
+        variable = PrincipalesVariables(id_variable=1, descripcion="Var")
         with patch.object(connector.monetarias, "find", return_value=variable):
             with patch.object(
                 connector._http,

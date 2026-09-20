@@ -255,12 +255,12 @@ class MonetariasClient(DomainClient):
         if len(matches) > 1:
             shown = 10
             candidates = "; ".join(
-                f"{v.idVariable}: {v.descripcion}" for v in matches[:shown]
+                f"{v.id_variable}: {v.descripcion}" for v in matches[:shown]
             )
             more = f" (and {len(matches) - shown} more)" if len(matches) > shown else ""
             self.logger.warning(
                 f"{len(matches)} variables match '{variable_name}'; returning "
-                f"{matches[0].idVariable}. Use a more specific name or the id. "
+                f"{matches[0].id_variable}. Use a more specific name or the id. "
                 f"Candidates: {candidates}{more}"
             )
         return matches[0]
@@ -301,7 +301,7 @@ class MonetariasClient(DomainClient):
                 page_limit: int, page_offset: int
             ) -> Tuple[List[DetalleMonetaria], Optional[int]]:
                 page = self.series(
-                    variable.idVariable,
+                    variable.id_variable,
                     desde=start_date,
                     hasta=end_date,
                     limit=page_limit,
@@ -311,12 +311,12 @@ class MonetariasClient(DomainClient):
                 return points, page.count
 
             rows = self._http.collect_pages(
-                fetch_page, self._page_size(), f"variable {variable.idVariable}"
+                fetch_page, self._page_size(), f"variable {variable.id_variable}"
             )
             return Page(rows, count=len(rows))
 
         response_obj = self.series(
-            variable.idVariable,
+            variable.id_variable,
             desde=start_date,
             hasta=end_date,
             limit=limit,

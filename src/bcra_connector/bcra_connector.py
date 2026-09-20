@@ -518,7 +518,7 @@ class BCRAConnector:
 
         report_base = {
             "variable_name": variable_name,
-            "variable_id": variable.idVariable,
+            "variable_id": variable.id_variable,
             "description": variable.descripcion,
             "category": getattr(
                 variable, "categoria", "N/A"

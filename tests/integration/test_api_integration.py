@@ -38,11 +38,11 @@ class TestBCRAIntegration:
 
         first_var = variables[0]
         assert isinstance(first_var, PrincipalesVariables)
-        assert hasattr(first_var, "idVariable") and first_var.idVariable > 0
-        assert hasattr(first_var, "descripcion") and first_var.descripcion
-        # v4.0 has ultFechaInformada and ultValorInformado instead of fecha/valor
-        assert hasattr(first_var, "ultFechaInformada")
-        assert hasattr(first_var, "ultValorInformado")
+        assert first_var.id_variable > 0
+        assert first_var.descripcion
+        # v4.0 reports the last point on the variable itself, not fecha/valor
+        assert hasattr(first_var, "ult_fecha_informada")
+        assert hasattr(first_var, "ult_valor_informado")
         assert hasattr(first_var, "categoria")
 
     def test_get_historical_data_v3(self, connector: BCRAConnector) -> None:
@@ -53,7 +53,7 @@ class TestBCRAIntegration:
                 "No principal variables available to test historical data retrieval."
             )
 
-        variable_id: int = variables[0].idVariable
+        variable_id: int = variables[0].id_variable
         variable_desc: str = variables[0].descripcion
         connector.logger.info(
             f"Testing historical data for ID: {variable_id} ({variable_desc})"
@@ -77,7 +77,7 @@ class TestBCRAIntegration:
         else:
             first_data_point = response_data[0]
             assert isinstance(first_data_point, DatosVariable)
-            assert first_data_point.idVariable == variable_id
+            assert first_data_point.id_variable == variable_id
             # v4.0 has detalle array instead of direct fecha/valor
             assert len(first_data_point.detalle) > 0
             assert all(
@@ -133,7 +133,7 @@ class TestBCRAIntegration:
         ), "Failed to get principal variables list"
 
         variable: PrincipalesVariables = variables[0]
-        variable_id: int = variable.idVariable
+        variable_id: int = variable.id_variable
         connector.logger.info(
             f"Testing complete workflow for ID: {variable_id} ({variable.descripcion})"
         )

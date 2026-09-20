@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from ..models import install_legacy_names
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -63,28 +65,31 @@ class PrincipalesVariables:
     """
     Represents a principal variable or monetary series from the BCRA API (v4.0).
 
-    :param idVariable: The ID of the variable/series.
+    The API's own camelCase names (``idVariable``, ``ultValorInformado``, ...)
+    still work, with a ``DeprecationWarning``, until 1.0.
+
+    :param id_variable: The ID of the variable/series.
     :param descripcion: The description of the variable/series.
     :param categoria: The category of the monetary series.
-    :param tipoSerie: The type of series.
+    :param tipo_serie: The type of series.
     :param periodicidad: The periodicity of the series.
-    :param unidadExpresion: The unit of expression.
+    :param unidad_expresion: The unit of expression.
     :param moneda: The currency.
-    :param primerFechaInformada: The first date reported.
-    :param ultFechaInformada: The last date reported.
-    :param ultValorInformado: The last value reported.
+    :param primer_fecha_informada: The first date reported.
+    :param ult_fecha_informada: The last date reported.
+    :param ult_valor_informado: The last value reported.
     """
 
-    idVariable: int
+    id_variable: int
     descripcion: Optional[str] = None
     categoria: Optional[str] = None
-    tipoSerie: Optional[str] = None
+    tipo_serie: Optional[str] = None
     periodicidad: Optional[str] = None
-    unidadExpresion: Optional[str] = None
+    unidad_expresion: Optional[str] = None
     moneda: Optional[str] = None
-    primerFechaInformada: Optional[date] = None
-    ultFechaInformada: Optional[date] = None
-    ultValorInformado: Optional[float] = None
+    primer_fecha_informada: Optional[date] = None
+    ult_fecha_informada: Optional[date] = None
+    ult_valor_informado: Optional[float] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PrincipalesVariables":
@@ -105,16 +110,16 @@ class PrincipalesVariables:
                 ult_valor = float(data["ultValorInformado"])
 
             return cls(
-                idVariable=int(data["idVariable"]),
+                id_variable=int(data["idVariable"]),
                 descripcion=data.get("descripcion"),
                 categoria=data.get("categoria"),
-                tipoSerie=data.get("tipoSerie"),
+                tipo_serie=data.get("tipoSerie"),
                 periodicidad=data.get("periodicidad"),
-                unidadExpresion=data.get("unidadExpresion"),
+                unidad_expresion=data.get("unidadExpresion"),
                 moneda=data.get("moneda"),
-                primerFechaInformada=primer_fecha,
-                ultFechaInformada=ult_fecha,
-                ultValorInformado=ult_valor,
+                primer_fecha_informada=primer_fecha,
+                ult_fecha_informada=ult_fecha,
+                ult_valor_informado=ult_valor,
             )
         except KeyError as e:
             raise ValueError(f"Missing key in PrincipalesVariables data: {e}") from e
@@ -128,26 +133,26 @@ class PrincipalesVariables:
     def to_dict(self) -> Dict[str, Any]:
         """Convert the PrincipalesVariables instance to a dictionary (v4.0 format)."""
         result: Dict[str, Any] = {
-            "idVariable": self.idVariable,
+            "idVariable": self.id_variable,
         }
         if self.descripcion is not None:
             result["descripcion"] = self.descripcion
         if self.categoria is not None:
             result["categoria"] = self.categoria
-        if self.tipoSerie is not None:
-            result["tipoSerie"] = self.tipoSerie
+        if self.tipo_serie is not None:
+            result["tipoSerie"] = self.tipo_serie
         if self.periodicidad is not None:
             result["periodicidad"] = self.periodicidad
-        if self.unidadExpresion is not None:
-            result["unidadExpresion"] = self.unidadExpresion
+        if self.unidad_expresion is not None:
+            result["unidadExpresion"] = self.unidad_expresion
         if self.moneda is not None:
             result["moneda"] = self.moneda
-        if self.primerFechaInformada is not None:
-            result["primerFechaInformada"] = self.primerFechaInformada.isoformat()
-        if self.ultFechaInformada is not None:
-            result["ultFechaInformada"] = self.ultFechaInformada.isoformat()
-        if self.ultValorInformado is not None:
-            result["ultValorInformado"] = self.ultValorInformado
+        if self.primer_fecha_informada is not None:
+            result["primerFechaInformada"] = self.primer_fecha_informada.isoformat()
+        if self.ult_fecha_informada is not None:
+            result["ultFechaInformada"] = self.ult_fecha_informada.isoformat()
+        if self.ult_valor_informado is not None:
+            result["ultValorInformado"] = self.ult_valor_informado
         return result
 
     def to_dataframe(self) -> "pd.DataFrame":
@@ -167,6 +172,18 @@ class PrincipalesVariables:
                 "Install with: pip install bcra-connector[pandas]"
             )
         return pd.DataFrame([self.to_dict()])
+
+
+# The API's own camelCase names, until 1.0.
+install_legacy_names(
+    PrincipalesVariables,
+    idVariable="id_variable",
+    tipoSerie="tipo_serie",
+    unidadExpresion="unidad_expresion",
+    primerFechaInformada="primer_fecha_informada",
+    ultFechaInformada="ult_fecha_informada",
+    ultValorInformado="ult_valor_informado",
+)
 
 
 @dataclass
@@ -227,16 +244,19 @@ class DatosVariable:
     """
     Represents historical data for a variable/series (v4.0 structure).
 
-    :param idVariable: The ID of the variable/series.
+    The API's own ``idVariable`` still works, with a ``DeprecationWarning``,
+    until 1.0.
+
+    :param id_variable: The ID of the variable/series.
     :param detalle: List of DetalleMonetaria objects with historical data points.
     """
 
-    idVariable: int
+    id_variable: int
     detalle: List[DetalleMonetaria]
 
     def __post_init__(self) -> None:
         """Validate instance after initialization."""
-        if not isinstance(self.idVariable, int) or self.idVariable < 0:
+        if not isinstance(self.id_variable, int) or self.id_variable < 0:
             raise ValueError("Variable ID must be a non-negative integer")
         if not isinstance(self.detalle, list):
             raise ValueError("Detalle must be a list")
@@ -252,7 +272,7 @@ class DatosVariable:
                 ]
 
             return cls(
-                idVariable=int(data["idVariable"]),
+                id_variable=int(data["idVariable"]),
                 detalle=detalle_list,
             )
         except KeyError as e:
@@ -265,7 +285,7 @@ class DatosVariable:
     def to_dict(self) -> Dict[str, Any]:
         """Convert the DatosVariable instance to a dictionary."""
         return {
-            "idVariable": self.idVariable,
+            "idVariable": self.id_variable,
             "detalle": [item.to_dict() for item in self.detalle],
         }
 
@@ -289,16 +309,13 @@ class DatosVariable:
                 "Install with: pip install bcra-connector[pandas]"
             )
         rows = [
-            {"idVariable": self.idVariable, "fecha": d.fecha, "valor": d.valor}
+            {"idVariable": self.id_variable, "fecha": d.fecha, "valor": d.valor}
             for d in self.detalle
         ]
         return pd.DataFrame(rows)
 
-    def __eq__(self, other: object) -> bool:
-        """Compare DatosVariable instances based on idVariable."""
-        if not isinstance(other, DatosVariable):
-            return NotImplemented
-        return self.idVariable == other.idVariable
+
+install_legacy_names(DatosVariable, idVariable="id_variable")
 
 
 @dataclass

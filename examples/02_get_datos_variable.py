@@ -47,10 +47,10 @@ def main() -> None:
                 return
             target_variable = all_variables[0]
             logger.info(
-                f"Using variable ID: {target_variable.idVariable} ({target_variable.descripcion}) for demonstration."
+                f"Using variable ID: {target_variable.id_variable} ({target_variable.descripcion}) for demonstration."
             )
 
-        variable_id_to_use = target_variable.idVariable
+        variable_id_to_use = target_variable.id_variable
         display_variable_name = target_variable.descripcion
 
         end_date = datetime.now()
