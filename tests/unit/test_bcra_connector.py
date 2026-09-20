@@ -525,7 +525,7 @@ class TestBCRAConnector:
     ) -> None:
         """Transient 429/5xx responses retry with backoff instead of failing."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
-            with patch("bcra_connector.bcra_connector.time.sleep") as mock_sleep:
+            with patch("bcra_connector._http.time.sleep") as mock_sleep:
                 error_response: Mock = mock_api_response(
                     {"errorMessages": ["Transient"]}, transient_code
                 )
@@ -552,7 +552,7 @@ class TestBCRAConnector:
     ) -> None:
         """A 5xx that never recovers raises only after MAX_RETRIES attempts."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
-            with patch("bcra_connector.bcra_connector.time.sleep"):
+            with patch("bcra_connector._http.time.sleep"):
                 error_response: Mock = mock_api_response(
                     {"errorMessages": ["Service Unavailable"]}, 503
                 )

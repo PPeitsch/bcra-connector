@@ -134,7 +134,7 @@ class TestRedaction:
                 "get",
                 side_effect=[_response({}, 503), _response(DEUDAS_OK)],
             ),
-            patch("bcra_connector.bcra_connector.time.sleep"),
+            patch("bcra_connector._http.time.sleep"),
         ):
             with caplog.at_level(logging.DEBUG, logger="bcra_connector"):
                 connector.get_deudas(CUIT)

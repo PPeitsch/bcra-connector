@@ -4,21 +4,18 @@ Provides interfaces for variables, checks, and currency exchange rate data endpo
 Handles rate limiting, retries, and error cases.
 """
 
-import json
 import logging
 import math
 import os
-import re
 import statistics
-import time
 import unicodedata
 from datetime import date, datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import requests
-import urllib3  # For urllib3.disable_warnings
 
-from .__about__ import __version__
+from ._http import _redact  # noqa: F401  (re-exported: used by the tests)
+from ._http import HttpClient, TransportConfig
 from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
 from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
@@ -37,14 +34,6 @@ from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
 
 T = TypeVar("T")
-
-# CUIT/CUIL/CDI are 11-digit identifiers (personal data under Ley 25.326).
-_IDENTIFICACION_RE = re.compile(r"(?<!\d)(\d{2})\d{8}(\d)(?!\d)")
-
-
-def _redact(text: str) -> str:
-    """Mask 11-digit identifiers (CUIT/CUIL/CDI) so they don't reach the logs."""
-    return _IDENTIFICACION_RE.sub(r"\1********\2", text)
 
 
 def _normalize_name(name: str) -> str:
@@ -94,6 +83,7 @@ class BCRAConnector:
         debug: bool = False,
         rate_limit: Optional[RateLimitConfig] = None,
         timeout: Optional[Union[TimeoutConfig, float]] = None,
+        session: Optional[requests.Session] = None,
     ):
         """Initialize the BCRAConnector.
 
@@ -108,29 +98,10 @@ class BCRAConnector:
         :param rate_limit: Rate limiting configuration, defaults to DEFAULT_RATE_LIMIT
         :param timeout: Request timeout configuration, can be TimeoutConfig or float,
                       defaults to DEFAULT_TIMEOUT
+        :param session: A ``requests.Session`` to use instead of a new one, for
+                      custom adapters, proxies or tests. The caller keeps ownership:
+                      ``close()`` leaves it open.
         """
-        self.session = requests.Session()
-        self.session.headers.update(
-            {"Accept-Language": language, "User-Agent": f"bcra-connector/{__version__}"}
-        )
-        self.verify_ssl: Union[bool, str]
-        if isinstance(verify_ssl, bool):
-            self.verify_ssl = verify_ssl
-        else:
-            self.verify_ssl = os.fspath(verify_ssl)
-            if not os.path.exists(self.verify_ssl):
-                raise ValueError(f"CA bundle not found: {self.verify_ssl}")
-
-        if isinstance(timeout, (int, float)):
-            self.timeout = TimeoutConfig.from_total(float(timeout))
-        elif isinstance(timeout, TimeoutConfig):
-            self.timeout = timeout
-        else:
-            self.timeout = self.DEFAULT_TIMEOUT
-
-        self.rate_limiter = RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT)
-        self._cache: Dict[str, Tuple[float, Any]] = {}
-
         # A library must not configure logging: handlers and levels belong to the
         # application. ``debug=True`` is the only, explicit, exception.
         self.logger = logging.getLogger(__name__)
@@ -145,15 +116,69 @@ class BCRAConnector:
                 )
                 self.logger.addHandler(handler)
 
-        if not self.verify_ssl:
-            self.logger.warning(
-                "SSL verification is disabled. This is not recommended for production use."
-            )
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        if isinstance(timeout, (int, float)):
+            resolved_timeout = TimeoutConfig.from_total(float(timeout))
+        elif isinstance(timeout, TimeoutConfig):
+            resolved_timeout = timeout
+        else:
+            resolved_timeout = self.DEFAULT_TIMEOUT
+
+        self._http = HttpClient(
+            logger=self.logger,
+            config=self._transport_config,
+            language=language,
+            verify_ssl=verify_ssl,
+            timeout=resolved_timeout,
+            rate_limiter=RateLimiter(rate_limit or self.DEFAULT_RATE_LIMIT),
+            session=session,
+        )
+
+    def _transport_config(self) -> TransportConfig:
+        """Snapshot of the transport knobs, read by the client on every call.
+
+        They stay class attributes so that overriding them on a subclass (the
+        documented way) or on an instance keeps working. In 1.0 they become
+        constructor arguments.
+        """
+        return TransportConfig(
+            base_url=self.BASE_URL,
+            max_retries=self.MAX_RETRIES,
+            retry_delay=self.RETRY_DELAY,
+            max_pages=self.MAX_PAGES,
+            cache_ttl=self.CATALOG_CACHE_TTL,
+        )
+
+    # The transport owns these; the attributes stay for backwards compatibility.
+    @property
+    def session(self) -> requests.Session:
+        """The underlying ``requests`` session."""
+        return self._http.session
+
+    @session.setter
+    def session(self, value: requests.Session) -> None:
+        self._http.session = value
+
+    @property
+    def verify_ssl(self) -> Union[bool, str]:
+        """Whether (or against which CA bundle) certificates are verified."""
+        return self._http.verify_ssl
+
+    @property
+    def timeout(self) -> TimeoutConfig:
+        """Connect/read timeouts used for every request."""
+        return self._http.timeout
+
+    @property
+    def rate_limiter(self) -> RateLimiter:
+        """The client-side rate limiter."""
+        return self._http.rate_limiter
 
     def close(self) -> None:
-        """Close the underlying HTTP session and its pooled connections."""
-        self.session.close()
+        """Close the HTTP session and its pooled connections.
+
+        A session passed in by the caller is left open: whoever created it closes it.
+        """
+        self._http.close()
 
     def __enter__(self) -> "BCRAConnector":
         return self
@@ -165,128 +190,15 @@ class BCRAConnector:
         self, endpoint: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Make a request to the BCRA API with retry logic and rate limiting."""
-        url = f"{self.BASE_URL}/{endpoint}"
-        log_url = _redact(url)
-
-        for attempt in range(self.MAX_RETRIES):
-            try:
-                delay = self.rate_limiter.acquire()
-                if delay > 0:
-                    self.logger.debug(
-                        f"Rate limit applied. Waiting {delay:.2f} seconds"
-                    )
-                    time.sleep(delay)
-
-                self.logger.debug(f"Making request to {log_url} with params {params}")
-                response = self.session.get(
-                    url,
-                    params=params,
-                    verify=self.verify_ssl,
-                    timeout=self.timeout.as_tuple,
-                )
-                response.raise_for_status()
-                return dict(response.json())
-
-            except requests.HTTPError as e:
-                status_code = e.response.status_code
-                error_msg = f"HTTP {status_code} for {e.response.url}"
-                try:
-                    error_data = e.response.json()
-                    if "errorMessages" in error_data:
-                        error_msg += f": {', '.join(error_data['errorMessages'])}"
-                    elif isinstance(error_data, dict):
-                        error_msg += f": {str(error_data)}"
-                except (ValueError, json.JSONDecodeError):
-                    error_msg += f": {e.response.reason}"
-
-                if status_code == 404:
-                    raise BCRANotFoundError(
-                        f"Resource not found (404): {error_msg}", status_code
-                    ) from e
-                # Server-side (5xx) and rate-limit (429) errors are transient: retry
-                # with exponential backoff before giving up.
-                if status_code == 429 or 500 <= status_code <= 599:
-                    self.logger.warning(
-                        f"Transient HTTP {status_code} from {log_url} "
-                        f"(attempt {attempt + 1}/{self.MAX_RETRIES}): "
-                        f"{_redact(error_msg)}"
-                    )
-                    if attempt == self.MAX_RETRIES - 1:
-                        error_cls = (
-                            BCRARateLimitError
-                            if status_code == 429
-                            else BCRAServerError
-                        )
-                        raise error_cls(
-                            f"El servidor del BCRA rechazó la conexión "
-                            f"(HTTP {status_code}) tras {self.MAX_RETRIES} intentos. "
-                            f"El servidor puede estar caído o sobrecargado. "
-                            f"Detalle: {error_msg}",
-                            status_code,
-                        ) from e
-                    time.sleep(self.RETRY_DELAY * (2**attempt))
-                    continue
-                raise BCRAApiError(error_msg, status_code) from e
-
-            except requests.Timeout as e:
-                self.logger.error(
-                    f"Request timed out to {log_url} (attempt {attempt + 1}/{self.MAX_RETRIES})"
-                )
-                if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(
-                        f"Request timed out after {self.MAX_RETRIES} attempts to {url}"
-                    ) from e
-                time.sleep(self.RETRY_DELAY * (2**attempt))
-
-            except requests.ConnectionError as e:
-                if "SSL" in str(e).upper():
-                    raise BCRAApiError(f"SSL issue for {url}: {e}") from e
-                self.logger.warning(
-                    f"Connection error to {log_url} "
-                    f"(attempt {attempt + 1}/{self.MAX_RETRIES}): {_redact(str(e))}"
-                )
-                if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(
-                        f"API request failed: Connection error to {url} after {self.MAX_RETRIES} attempts"
-                    ) from e
-                time.sleep(self.RETRY_DELAY * (2**attempt))
-
-            except requests.RequestException as e:
-                self.logger.error(
-                    f"API request exception for {log_url}: {_redact(str(e))} "
-                    f"(attempt {attempt+1}/{self.MAX_RETRIES})"
-                )
-                if attempt == self.MAX_RETRIES - 1:
-                    raise BCRAApiError(
-                        f"API request failed after {self.MAX_RETRIES} attempts: {e}"
-                    ) from e
-                time.sleep(self.RETRY_DELAY * (2**attempt))
-
-            except (ValueError, json.JSONDecodeError) as e:
-                raise BCRAApiError(f"Invalid JSON response from {url}") from e
-
-        raise BCRAApiError(
-            f"Maximum retry attempts ({self.MAX_RETRIES}) reached for {url}"
-        )
+        return self._http.request(endpoint, params)
 
     def clear_cache(self) -> None:
         """Drop the cached catalogs so the next name lookup fetches them again."""
-        self._cache.clear()
+        self._http.clear_cache()
 
     def _cached(self, key: str, loader: Callable[[], T]) -> T:
-        """Return ``loader()``, reusing its last result for ``CATALOG_CACHE_TTL``.
-
-        Only successful results are stored: an exception propagates and the next
-        call tries again.
-        """
-        now = time.monotonic()
-        entry = self._cache.get(key)
-        if entry is not None and now - entry[0] < self.CATALOG_CACHE_TTL:
-            return cast(T, entry[1])
-        value = loader()
-        if self.CATALOG_CACHE_TTL > 0:
-            self._cache[key] = (now, value)
-        return value
+        """Return ``loader()``, reusing its last result for ``CATALOG_CACHE_TTL``."""
+        return self._http.cached(key, loader)
 
     def _collect_pages(
         self,
@@ -295,25 +207,8 @@ class BCRAConnector:
         what: str,
         start: int = 0,
     ) -> List[T]:
-        """Fetch consecutive pages until the results are exhausted.
-
-        ``fetch_page(limit, offset)`` returns the page items and the total number of
-        results when the endpoint reports it reliably (``None`` otherwise). Paging
-        stops on a short page or once the total is reached.
-        """
-        items: List[T] = []
-        for page_number in range(self.MAX_PAGES):
-            page, total = fetch_page(page_size, start + page_number * page_size)
-            items.extend(page)
-            if len(page) < page_size or (
-                total is not None and start + len(items) >= total
-            ):
-                return items
-        self.logger.warning(
-            f"Stopped paging {what} after {self.MAX_PAGES} pages "
-            f"({len(items)} results); the result may be incomplete."
-        )
-        return items
+        """Fetch consecutive pages until the results are exhausted."""
+        return self._http.collect_pages(fetch_page, page_size, what, start)
 
     # Principales Variables / Monetarias methods (v4.0)
     def get_principales_variables(self) -> List[PrincipalesVariables]:
