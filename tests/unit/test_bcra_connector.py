@@ -108,10 +108,10 @@ class TestBCRAConnector:
         assert len(result) == 1
         pv = result[0]
         assert isinstance(pv, PrincipalesVariables)
-        assert pv.idVariable == 1
+        assert pv.id_variable == 1
         assert pv.descripcion == "Test Variable v4"
         assert pv.categoria == "Indicadores Monetarios"
-        assert pv.ultValorInformado == 100.0
+        assert pv.ult_valor_informado == 100.0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
     def test_get_principales_variables_empty_response_v3(
@@ -175,7 +175,7 @@ class TestBCRAConnector:
         assert len(response) == 1
         dv = response[0]
         assert isinstance(dv, DatosVariable)
-        assert dv.idVariable == 1
+        assert dv.id_variable == 1
         assert len(dv.detalle) == 2
         assert dv.detalle[1].fecha == date(2024, 3, 5)
         assert dv.detalle[1].valor == 100.0
@@ -217,7 +217,7 @@ class TestBCRAConnector:
             limit=10,
             results=[
                 DatosVariable(
-                    idVariable=1,
+                    id_variable=1,
                     detalle=[
                         DetalleMonetaria(fecha=date(2024, 3, 3), valor=95.0),
                         DetalleMonetaria(fecha=date(2024, 3, 5), valor=100.0),
@@ -269,7 +269,7 @@ class TestBCRAConnector:
             limit=30,
             results=[
                 DatosVariable(
-                    idVariable=1,
+                    id_variable=1,
                     detalle=[
                         DetalleMonetaria(fecha=date(2024, 2, 1), valor=50.0),
                         DetalleMonetaria(fecha=date(2024, 2, 15), valor=75.0),

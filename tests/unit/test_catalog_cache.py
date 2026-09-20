@@ -16,8 +16,8 @@ from bcra_connector.principales_variables import (
 )
 
 CATALOG = [
-    PrincipalesVariables(idVariable=1, descripcion="Reservas internacionales"),
-    PrincipalesVariables(idVariable=15, descripcion="Base monetaria"),
+    PrincipalesVariables(id_variable=1, descripcion="Reservas internacionales"),
+    PrincipalesVariables(id_variable=15, descripcion="Base monetaria"),
 ]
 
 
@@ -27,7 +27,7 @@ def _series(id_variable: int, *args: object, **kwargs: object) -> Page[DatosVari
         for d in (3, 2, 1)
     ]
     return Page(
-        [DatosVariable(idVariable=id_variable, detalle=detalle)],
+        [DatosVariable(id_variable=id_variable, detalle=detalle)],
         count=3,
         offset=0,
         limit=3000,
@@ -112,7 +112,7 @@ class TestVariableCatalogCache:
             with pytest.raises(BCRAApiError):
                 connector.monetarias.find("Base monetaria")
             variable = connector.monetarias.find("Base monetaria")
-        assert variable is not None and variable.idVariable == 15
+        assert variable is not None and variable.id_variable == 15
         assert mock_catalog.call_count == 2
 
     def test_public_catalog_call_is_not_cached(self, connector: BCRAConnector) -> None:

@@ -47,7 +47,7 @@ def test_import_without_numpy_or_scipy() -> None:
 def test_report_without_numpy(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "numpy", None)
     connector = BCRAConnector(rate_limit=None)
-    variable = PrincipalesVariables(idVariable=1, descripcion="Reservas")
+    variable = PrincipalesVariables(id_variable=1, descripcion="Reservas")
     with patch.object(connector.monetarias, "find", return_value=variable):
         with patch.object(connector.monetarias, "history", return_value=_series()):
             report = connector.generate_variable_report("Reservas", days=4)

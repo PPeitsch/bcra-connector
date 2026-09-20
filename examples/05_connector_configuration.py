@@ -28,10 +28,10 @@ def test_connection(connector: BCRAConnector, description: str) -> None:
 
         first_var = variables[0]
         logger.info(
-            f"First variable: ID={first_var.idVariable}, Desc='{first_var.descripcion}', Cat='{first_var.categoria}'"
+            f"First variable: ID={first_var.id_variable}, Desc='{first_var.descripcion}', Cat='{first_var.categoria}'"
         )
 
-        variable_id_to_test = first_var.idVariable
+        variable_id_to_test = first_var.id_variable
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
 

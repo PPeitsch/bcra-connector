@@ -44,21 +44,21 @@ def main() -> None:
         logger.info("First 5 variables/series:")
         for var in variables[:5]:
             logger.info(
-                f"ID: {var.idVariable}, Description: {var.descripcion}, "
+                f"ID: {var.id_variable}, Description: {var.descripcion}, "
                 f"Category: {var.categoria if var.categoria else 'N/A'}"
             )
-            if var.ultValorInformado is not None and var.ultFechaInformada:
+            if var.ult_valor_informado is not None and var.ult_fecha_informada:
                 logger.info(
-                    f"  Latest value: {var.ultValorInformado} ({var.ultFechaInformada.isoformat()})"
+                    f"  Latest value: {var.ult_valor_informado} ({var.ult_fecha_informada.isoformat()})"
                 )
             else:
                 logger.info("  Latest value: Not available")
 
         plot_count = min(10, len(variables))
         if plot_count > 0:
-            # Filter variables that have ultValorInformado
+            # Filter variables that have ult_valor_informado
             plottable_vars = [
-                v for v in variables[:plot_count] if v.ultValorInformado is not None
+                v for v in variables[:plot_count] if v.ult_valor_informado is not None
             ]
 
             if plottable_vars:
@@ -69,7 +69,7 @@ def main() -> None:
                         + (f" ({v.categoria[:10]})" if v.categoria else "")
                         for v in plottable_vars
                     ],
-                    [v.ultValorInformado for v in plottable_vars],
+                    [v.ult_valor_informado for v in plottable_vars],
                 )
                 ax.set_title(
                     f"Top {len(plottable_vars)} Principal Variables/Series (v4.0)"

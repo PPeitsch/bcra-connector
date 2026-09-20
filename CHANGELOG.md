@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- The Monetarias models are snake_case like the rest of the library:
+  `PrincipalesVariables.id_variable`, `.tipo_serie`, `.unidad_expresion`,
+  `.primer_fecha_informada`, `.ult_fecha_informada`, `.ult_valor_informado` and
+  `DatosVariable.id_variable`. The API's camelCase names still work — both when
+  reading an attribute and when constructing a model — with a `DeprecationWarning`
+  naming the replacement, until 1.0. `from_dict()`/`to_dict()` are unchanged: that is
+  the API's own wire format (#135)
 - Every date parameter accepts a `date`, a `datetime` or an ISO 8601 string, and the
   three are interchangeable: `monetarias.series(desde=...)` no longer demands a
   `datetime`, and `cambiarias.quotations()` / `.series()` no longer demand a string. A
@@ -35,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open and still closes one the connector created (#119)
 
 ### Deprecated
+- The camelCase field names of `PrincipalesVariables` and `DatosVariable`
+  (`idVariable`, `tipoSerie`, `unidadExpresion`, `primerFechaInformada`,
+  `ultFechaInformada`, `ultValorInformado`) are deprecated in favour of their
+  snake_case equivalents and will be removed in 1.0 (#135)
 - The `*Response` models (`DatosVariableResponse`, `DivisaResponse`, `EntidadResponse`,
   `CotizacionResponse`, `CotizacionesResponse`, `ChequeResponse`) are superseded by
   `Page` and will be removed in 1.0. The deprecated `get_*` methods still return the old
@@ -53,6 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   delegate and emit a `DeprecationWarning` naming the replacement (#121)
 
 ### Changed
+- `DatosVariable` instances now compare every field. `__eq__` looked only at
+  `idVariable`, so two series with the same id but different `detalle` — or an empty
+  one — compared equal (#135)
 - `cambiarias.pair()` reports `fecha` as a `date` instead of an ISO string, so every
   date the library returns is now a `date` (#133)
 - Internal: the HTTP transport (session, retries, rate limiting, timeouts, pagination

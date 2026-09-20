@@ -134,16 +134,16 @@ class TestPrincipalesVariables:
         """Test creation of PrincipalesVariables from dictionary (v4.0 format)."""
         variable = PrincipalesVariables.from_dict(sample_v4_variable_data)
 
-        assert variable.idVariable == 1
+        assert variable.id_variable == 1
         assert variable.descripcion == "Test Variable v4"
         assert variable.categoria == "Principales Indicadores"
-        assert variable.tipoSerie == "Diaria"
+        assert variable.tipo_serie == "Diaria"
         assert variable.periodicidad == "D"
-        assert variable.unidadExpresion == "Millones"
+        assert variable.unidad_expresion == "Millones"
         assert variable.moneda == "ARS"
-        assert variable.primerFechaInformada == date(2020, 1, 1)
-        assert variable.ultFechaInformada == date(2024, 3, 5)
-        assert variable.ultValorInformado == 100.0
+        assert variable.primer_fecha_informada == date(2020, 1, 1)
+        assert variable.ult_fecha_informada == date(2024, 3, 5)
+        assert variable.ult_valor_informado == 100.0
 
     def test_principales_variables_to_dict_v4(
         self, sample_v4_variable_data: Dict[str, Any]
@@ -167,7 +167,7 @@ class TestPrincipalesVariables:
         """Test creation with only required field (idVariable)."""
         minimal_data = {"idVariable": 1}
         variable = PrincipalesVariables.from_dict(minimal_data)
-        assert variable.idVariable == 1
+        assert variable.id_variable == 1
         assert variable.descripcion is None
         assert variable.categoria is None
 
@@ -210,7 +210,7 @@ class TestDatosVariable:
     def test_datos_variable_from_dict(self, sample_datos_data: Dict[str, Any]) -> None:
         """Test creation of DatosVariable from dictionary."""
         dato = DatosVariable.from_dict(sample_datos_data)
-        assert dato.idVariable == 1
+        assert dato.id_variable == 1
         assert len(dato.detalle) == 2
         assert isinstance(dato.detalle[0], DetalleMonetaria)
         assert dato.detalle[0].fecha == date(2024, 3, 5)
@@ -229,29 +229,32 @@ class TestDatosVariable:
         """Test DatosVariable with empty detalle list."""
         data = {"idVariable": 1, "detalle": []}
         dato = DatosVariable.from_dict(data)
-        assert dato.idVariable == 1
+        assert dato.id_variable == 1
         assert len(dato.detalle) == 0
 
     def test_datos_variable_post_init_validation(self) -> None:
         """Test __post_init__ validation logic."""
         # Valid case
-        DatosVariable(idVariable=1, detalle=[])
+        DatosVariable(id_variable=1, detalle=[])
 
         # Invalid idVariable
         with pytest.raises(
             ValueError, match="Variable ID must be a non-negative integer"
         ):
-            DatosVariable(idVariable=-1, detalle=[])
+            DatosVariable(id_variable=-1, detalle=[])
 
         # Invalid detalle type
         with pytest.raises(ValueError, match="Detalle must be a list"):
-            DatosVariable(idVariable=1, detalle="not a list")
+            DatosVariable(id_variable=1, detalle="not a list")
 
     def test_datos_variable_equality(self) -> None:
-        """Test equality comparison of DatosVariable instances."""
-        d1 = DatosVariable(idVariable=1, detalle=[])
-        d2 = DatosVariable(idVariable=1, detalle=[])
-        d3 = DatosVariable(idVariable=2, detalle=[])
+        """Test equality comparison of DatosVariable instances.
+
+        Field by field since #135; see ``test_legacy_names.py`` for ``detalle``.
+        """
+        d1 = DatosVariable(id_variable=1, detalle=[])
+        d2 = DatosVariable(id_variable=1, detalle=[])
+        d3 = DatosVariable(id_variable=2, detalle=[])
 
         assert d1 == d2
         assert d1 != d3

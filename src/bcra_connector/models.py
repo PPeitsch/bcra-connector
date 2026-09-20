@@ -1,5 +1,6 @@
 """Types shared by every domain client."""
 
+import warnings
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import (
@@ -53,6 +54,46 @@ def as_date(value: DateLike, param: str) -> date:
         f"'{param}' must be a date, a datetime or an ISO 8601 string, "
         f"got {type(value).__name__}"
     )
+
+
+def install_legacy_names(cls: type, **aliases: str) -> None:
+    """Keep a model's pre-1.0 field names working, with a ``DeprecationWarning``.
+
+    Called right after the class body with ``oldName="new_name"`` pairs, it makes
+    each old name readable as an attribute and accepted as a keyword argument,
+    both warning and both removed in 1.0 — when the call goes away with its
+    arguments.
+
+    Only the names listed here are aliased: anything else still raises
+    ``AttributeError`` or ``TypeError`` as usual, so a typo stays a typo.
+    """
+
+    def warn(old: str, new: str) -> None:
+        warnings.warn(
+            f"{cls.__name__}.{old} is deprecated and will be removed in 1.0; "
+            f"use .{new} instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    original_init = getattr(cls, "__init__")
+
+    def __init__(self: Any, *args: Any, **kwargs: Any) -> None:
+        for old, new in aliases.items():
+            if old in kwargs:
+                warn(old, new)
+                kwargs[new] = kwargs.pop(old)
+        original_init(self, *args, **kwargs)
+
+    def __getattr__(self: Any, name: str) -> Any:
+        new = aliases.get(name)
+        if new is None:
+            raise AttributeError(f"{cls.__name__!r} object has no attribute {name!r}")
+        warn(name, new)
+        return getattr(self, new)
+
+    setattr(cls, "__init__", __init__)
+    setattr(cls, "__getattr__", __getattr__)
 
 
 @dataclass
