@@ -34,7 +34,7 @@ def main():
     try:
         # 1. Get Currencies
         logger.info("Fetching available currencies...")
-        currencies = connector.get_divisas()
+        currencies = connector.cambiarias.currencies()
         logger.info(f"Found {len(currencies)} currencies.")
 
         logger.info("First 5 currencies:")
@@ -43,7 +43,7 @@ def main():
 
         # 2. Get Latest Quotations
         logger.info("Fetching latest quotations...")
-        quotations = connector.get_cotizaciones()
+        quotations = connector.cambiarias.quotations()
         date_str = quotations.fecha.isoformat() if quotations.fecha else "Unknown Date"
         logger.info(f"Quotations for date: {date_str}")
 
@@ -61,7 +61,7 @@ def main():
         )
 
         try:
-            usd_evolution = connector.get_currency_evolution(
+            usd_evolution = connector.cambiarias.evolution(
                 target_currency, days=days_to_fetch
             )
 

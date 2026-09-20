@@ -89,7 +89,7 @@ To fetch the list of all currencies:
 
 .. code-block:: python
 
-   currencies = connector.get_divisas()
+   currencies = connector.cambiarias.currencies()
    for currency in currencies[:5]:  # Print first 5 for brevity
        print(f"{currency.codigo}: {currency.denominacion}")
 
@@ -98,7 +98,7 @@ To get currency quotations for a specific date:
 .. code-block:: python
 
    fecha = "2024-06-12"  # Example date
-   quotations = connector.get_cotizaciones(fecha)
+   quotations = connector.cambiarias.quotations(fecha)
    for detail in quotations.detalle[:5]:  # Print first 5 for brevity
        print(f"{detail.codigo_moneda}: {detail.tipo_cotizacion}")
 
@@ -109,7 +109,7 @@ To fetch the evolution of a specific currency:
    moneda = "USD"
    fecha_desde = "2024-06-01"
    fecha_hasta = "2024-06-30"
-   evolution = connector.get_evolucion_moneda(moneda, fecha_desde, fecha_hasta)
+   evolution = connector.cambiarias.series(moneda, fecha_desde, fecha_hasta)
    for quotation in evolution[:5]:  # Print first 5 for brevity
        print(f"{quotation.fecha}: {quotation.detalle[0].tipo_cotizacion}")
 
@@ -122,7 +122,7 @@ To get the evolution of a currency pair:
 
 .. code-block:: python
 
-   for point in connector.get_currency_pair_evolution("USD", "ARS", days=7):
+   for point in connector.cambiarias.pair("USD", "ARS", days=7):
        print(f"{point['fecha']}: {point['tasa']:.2f}")  # pesos per dollar
 
 ``tasa`` follows the ``BASE/QUOTE`` convention: the amount of the quote currency for one

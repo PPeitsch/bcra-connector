@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Estadísticas Cambiarias now has its own client: `connector.cambiarias.currencies()`,
+  `.quotations()`, `.latest()`, `.series()`, `.evolution()` and `.pair()` (#129)
 - Monetarias now has its own client: `connector.monetarias.list()`, `.series()`,
   `.latest()`, `.find()` and `.history()` (#126)
 - Cheques now has its own client: `connector.cheques.entities()`, `.reported()` and
@@ -22,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open and still closes one the connector created (#119)
 
 ### Deprecated
+- `get_divisas()`, `get_cotizaciones()`, `get_evolucion_moneda()`,
+  `get_currency_evolution()`, `get_latest_quotations()` and
+  `get_currency_pair_evolution()` are deprecated in favour of `connector.cambiarias.*`
+  and will be removed in 1.0 (#129)
 - `get_principales_variables()`, `get_datos_variable()`, `get_latest_value()`,
   `get_variable_by_name()` and `get_variable_history()` are deprecated in favour of
   `connector.monetarias.*` and will be removed in 1.0 (#126)

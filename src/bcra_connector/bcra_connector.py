@@ -9,7 +9,7 @@ import math
 import os
 import statistics
 import warnings
-from datetime import date, datetime, timedelta
+from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import requests
@@ -18,8 +18,13 @@ from ._http import _redact  # noqa: F401  (re-exported: used by the tests)
 from ._http import HttpClient, TransportConfig
 from .central_deudores import ChequesRechazados, Deudor
 from .cheques import Cheque, Entidad
-from .clients import ChequesClient, DeudoresClient, MonetariasClient
-from .estadisticas_cambiarias import CotizacionDetalle, CotizacionFecha, Divisa
+from .clients import (
+    CambiariasClient,
+    ChequesClient,
+    DeudoresClient,
+    MonetariasClient,
+)
+from .estadisticas_cambiarias import CotizacionFecha, Divisa
 from .exceptions import (  # noqa: F401  (re-exported for backwards compatibility)
     BCRAApiError,
     BCRANotFoundError,
@@ -138,6 +143,7 @@ class BCRAConnector:
         )
         self.cheques = ChequesClient(self._http)
         self.monetarias = MonetariasClient(self._http)
+        self.cambiarias = CambiariasClient(self._http)
         self.deudores = DeudoresClient(self._http)
 
     def _transport_config(self) -> TransportConfig:
@@ -154,6 +160,7 @@ class BCRAConnector:
             max_pages=self.MAX_PAGES,
             cache_ttl=self.CATALOG_CACHE_TTL,
             max_page_size=self.MAX_PAGE_SIZE,
+            fx_max_page_size=self.FX_MAX_PAGE_SIZE,
         )
 
     # The transport owns these; the attributes stay for backwards compatibility.
@@ -274,71 +281,22 @@ class BCRAConnector:
 
     # Estadísticas Cambiarias methods
     def get_divisas(self) -> List[Divisa]:
-        """
-        Fetch the list of all currencies.
+        """Deprecated alias of :meth:`CambiariasClient.currencies`.
 
-        :return: A list of Divisa objects
-        :raises BCRAApiError: If the API request fails or returns unexpected data
+        .. deprecated:: 0.13.0
+           Use ``connector.cambiarias.currencies()``; removed in 1.0.
         """
-        self.logger.info("Fetching currencies")
-        try:
-            data = self._make_request("estadisticascambiarias/v1.0/Maestros/Divisas")
-            if "results" not in data or not isinstance(data["results"], list):
-                raise BCRAApiError(
-                    "Invalid response format for currencies: 'results' key missing or not a list."
-                )
-            divisas = [Divisa.from_dict(d) for d in data["results"]]
-            self.logger.info(f"Successfully fetched {len(divisas)} currencies")
-            return divisas
-        except (KeyError, ValueError) as e:
-            raise BCRAApiError(
-                f"Unexpected response format or data for divisas: {str(e)}"
-            ) from e
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            self.logger.exception(f"Unexpected error fetching currencies: {e}")
-            raise BCRAApiError(f"Error fetching currencies: {str(e)}") from e
+        _deprecated("get_divisas", "cambiarias.currencies")
+        return self.cambiarias.currencies()
 
     def get_cotizaciones(self, fecha: Optional[str] = None) -> CotizacionFecha:
-        """
-        Fetch currency quotations for a specific date.
+        """Deprecated alias of :meth:`CambiariasClient.quotations`.
 
-        :param fecha: The date for which to fetch quotations (format: YYYY-MM-DD), defaults to None (latest date)
-        :return: A CotizacionFecha object with the quotations
-        :raises BCRAApiError: If the API request fails or returns unexpected data
+        .. deprecated:: 0.13.0
+           Use ``connector.cambiarias.quotations()``; removed in 1.0.
         """
-        self.logger.info(
-            f"Fetching quotations for date: {fecha if fecha else 'latest'}"
-        )
-        try:
-            params = {"fecha": fecha} if fecha else None
-            data = self._make_request(
-                "estadisticascambiarias/v1.0/Cotizaciones", params
-            )
-            if "results" not in data or not isinstance(data["results"], dict):
-                raise BCRAApiError(
-                    "Invalid response format for quotations: 'results' key missing or not a dict."
-                )
-            cotizacion = CotizacionFecha.from_dict(data["results"])
-            fecha_log = (
-                cotizacion.fecha.isoformat() if cotizacion.fecha else "latest available"
-            )
-            self.logger.info(f"Successfully fetched quotations for {fecha_log}")
-            return cotizacion
-        except (KeyError, ValueError) as e:
-            raise BCRAApiError(
-                f"Unexpected response format or data for cotizaciones: {str(e)}"
-            ) from e
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            self.logger.exception(
-                f"Unexpected error fetching cotizaciones for {fecha}: {e}"
-            )
-            raise BCRAApiError(
-                f"Error fetching quotations for date {fecha}: {str(e)}"
-            ) from e
+        _deprecated("get_cotizaciones", "cambiarias.quotations")
+        return self.cambiarias.quotations(fecha)
 
     def get_evolucion_moneda(
         self,
@@ -348,86 +306,13 @@ class BCRAConnector:
         limit: int = 1000,
         offset: int = 0,
     ) -> List[CotizacionFecha]:
+        """Deprecated alias of :meth:`CambiariasClient.series`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.cambiarias.series()``; removed in 1.0.
         """
-        Fetch the evolution of a specific currency's quotation.
-
-        :param moneda: The currency code (case-sensitive in URL path).
-        :param fecha_desde: Start date (format: YYYY-MM-DD), defaults to None.
-        :param fecha_hasta: End date (format: YYYY-MM-DD), defaults to None.
-        :param limit: Maximum number of results to return (10-1000), defaults to 1000.
-        :param offset: Number of results to skip, defaults to 0.
-        :return: A list of CotizacionFecha objects with the currency's evolution data.
-        :raises BCRAApiError: If the API request fails or returns unexpected data.
-        :raises ValueError: If the limit is out of range or offset is negative.
-        """
-        self.logger.info(f"Fetching evolution for currency: {moneda}")
-        if not (10 <= limit <= 1000):
-            raise ValueError("Limit must be between 10 and 1000 for 'evolucion_moneda'")
-        if offset < 0:
-            raise ValueError("Offset must be non-negative for 'evolucion_moneda'")
-
-        evolucion, total = self._fetch_evolucion_moneda_page(
-            moneda, fecha_desde, fecha_hasta, limit, offset
-        )
-        if total is not None and offset + len(evolucion) < total:
-            self.logger.warning(
-                f"Returned {len(evolucion)} of {total} quotations for {moneda} "
-                f"(offset {offset}). Page with limit/offset, or use "
-                f"get_currency_evolution() to fetch the whole range."
-            )
-        return evolucion
-
-    def _fetch_evolucion_moneda_page(
-        self,
-        moneda: str,
-        fecha_desde: Optional[str],
-        fecha_hasta: Optional[str],
-        limit: int,
-        offset: int,
-    ) -> Tuple[List[CotizacionFecha], Optional[int]]:
-        """Fetch one page of a currency's evolution and the total result count."""
-        params = {
-            k: v
-            for k, v in {
-                "fechaDesde": fecha_desde,
-                "fechaHasta": fecha_hasta,
-                "limit": limit,
-                "offset": offset,
-            }.items()
-            if v is not None
-        }
-
-        endpoint = f"estadisticascambiarias/v1.0/Cotizaciones/{moneda}"
-        try:
-            data = self._make_request(endpoint, params=params if params else None)
-            if "results" not in data or not isinstance(data["results"], list):
-                raise BCRAApiError(
-                    f"Invalid response format for currency evolution ({moneda}): 'results' key missing/invalid."
-                )
-            evolucion = [CotizacionFecha.from_dict(cf) for cf in data["results"]]
-            self.logger.info(
-                f"Successfully fetched {len(evolucion)} data points for {moneda}"
-            )
-            metadata = data.get("metadata")
-            count = (
-                metadata.get("resultset", {}).get("count")
-                if isinstance(metadata, dict)
-                else None
-            )
-            return evolucion, count if isinstance(count, int) else None
-        except (KeyError, ValueError) as e:
-            raise BCRAApiError(
-                f"Unexpected response format or data for {moneda} evolution: {str(e)}"
-            ) from e
-        except BCRAApiError:
-            raise
-        except Exception as e:
-            self.logger.exception(
-                f"Unexpected error fetching evolution for {moneda}: {e}"
-            )
-            raise BCRAApiError(
-                f"Error fetching evolution for {moneda}: {str(e)}"
-            ) from e
+        _deprecated("get_evolucion_moneda", "cambiarias.series")
+        return self.cambiarias.series(moneda, fecha_desde, fecha_hasta, limit, offset)
 
     # --- Helper Methods ---
     def get_variable_by_name(
@@ -463,50 +348,13 @@ class BCRAConnector:
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> List[CotizacionFecha]:
+        """Deprecated alias of :meth:`CambiariasClient.evolution`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.cambiarias.evolution()``; removed in 1.0.
         """
-        Get the evolution of a currency's quotation for the last n days.
-
-        :param currency_code: The currency code (e.g., 'USD', 'EUR'). Case-sensitive for URL.
-        :param days: The number of days to look back, defaults to 30. Must be positive.
-        :param limit: Maximum number of results (10-1000). By default (None) the whole
-                      range is returned, fetching as many pages as needed.
-        :param offset: Number of results to skip, defaults to 0.
-        :return: A list of CotizacionFecha objects.
-        :raises ValueError: If days/limit/offset are invalid.
-        :raises BCRAApiError: If the API request fails.
-        """
-        if days <= 0:
-            raise ValueError("Number of days must be positive.")
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
-        fecha_desde = start_date.strftime("%Y-%m-%d")
-        fecha_hasta = end_date.strftime("%Y-%m-%d")
-
-        if limit is None:
-            if offset < 0:
-                raise ValueError("Offset must be non-negative.")
-
-            def fetch_page(
-                page_limit: int, page_offset: int
-            ) -> Tuple[List[CotizacionFecha], Optional[int]]:
-                return self._fetch_evolucion_moneda_page(
-                    currency_code, fecha_desde, fecha_hasta, page_limit, page_offset
-                )
-
-            return self._collect_pages(
-                fetch_page,
-                self.FX_MAX_PAGE_SIZE,
-                f"{currency_code} quotations",
-                start=offset,
-            )
-
-        return self.get_evolucion_moneda(
-            currency_code,
-            fecha_desde=fecha_desde,
-            fecha_hasta=fecha_hasta,
-            limit=limit,
-            offset=offset,
-        )
+        _deprecated("get_currency_evolution", "cambiarias.evolution")
+        return self.cambiarias.evolution(currency_code, days, limit, offset)
 
     def check_denunciado(self, entity_name: str, check_number: int) -> bool:
         """Deprecated alias of :meth:`ChequesClient.is_reported`.
@@ -518,130 +366,24 @@ class BCRAConnector:
         return self.cheques.is_reported(entity_name, check_number)
 
     def get_latest_quotations(self) -> Dict[str, float]:
-        """
-        Get the latest quotations (tipo_cotizacion) for all currencies.
+        """Deprecated alias of :meth:`CambiariasClient.latest`.
 
-        :return: A dictionary with currency codes as keys and their latest quotations as values.
-        :raises BCRAApiError: If fetching quotations fails.
+        .. deprecated:: 0.13.0
+           Use ``connector.cambiarias.latest()``; removed in 1.0.
         """
-        try:
-            cotizaciones = self.get_cotizaciones()
-        except BCRAApiError as e:
-            self.logger.error(f"Failed to get latest quotations: {e}")
-            raise
-        if not cotizaciones or not cotizaciones.detalle:
-            self.logger.warning(
-                "No quotation details found in the latest API response for quotations."
-            )
-            return {}
-        return {
-            detail.codigo_moneda: detail.tipo_cotizacion
-            for detail in cotizaciones.detalle
-            if detail.codigo_moneda
-        }
+        _deprecated("get_latest_quotations", "cambiarias.latest")
+        return self.cambiarias.latest()
 
     def get_currency_pair_evolution(
         self, base_currency: str, quote_currency: str, days: int = 30
     ) -> List[Dict[str, Any]]:
+        """Deprecated alias of :meth:`CambiariasClient.pair`.
+
+        .. deprecated:: 0.13.0
+           Use ``connector.cambiarias.pair()``; removed in 1.0.
         """
-        Get the evolution of a currency pair exchange rate for the last n days.
-
-        ``tasa`` follows the usual ``BASE/QUOTE`` convention: the amount of
-        ``quote_currency`` for one unit of ``base_currency`` (``USD/ARS`` ~ 1500
-        pesos per dollar, ``EUR/USD`` ~ 1.15 dollars per euro).
-
-        Both currencies are expressed in US dollars on each date: ``USD`` is 1,
-        ``ARS`` is ``1 / tipoCotizacion`` of USD, and any other currency is its
-        ``tipoPase`` (dollars per unit). Only the series needed are requested, so a
-        pair against USD makes one request. Dates where a currency has no usable
-        rate (e.g. ``REF``, which has no ``tipoPase``) are skipped with a warning.
-
-        :param base_currency: The base currency code (e.g., 'USD'). Case-insensitive.
-        :param quote_currency: The quote currency code (e.g., 'ARS'). Case-insensitive.
-        :param days: The number of days to look back, defaults to 30. Must be positive.
-        :return: List of dictionaries with 'fecha' (ISO format) and 'tasa' (exchange
-            rate), oldest first.
-        :raises ValueError: If days is invalid.
-        :raises BCRAApiError: If underlying API calls fail.
-        """
-        if days <= 0:
-            raise ValueError("Number of days must be positive.")
-        base_currency = base_currency.upper()
-        quote_currency = quote_currency.upper()
-        pair = f"{base_currency}/{quote_currency}"
-
-        # Series each currency needs: USD needs none, ARS needs USD's quotation.
-        sources = {"USD": None, "ARS": "USD"}
-        needed: List[str] = []
-        for code in (base_currency, quote_currency):
-            source = sources.get(code, code)
-            if source and source not in needed:
-                needed.append(source)
-        if not needed:  # USD/USD: fetch USD just for its dates
-            needed.append("USD")
-
-        series: Dict[str, Dict[date, CotizacionDetalle]] = {}
-        try:
-            for code in needed:
-                by_date: Dict[date, CotizacionDetalle] = {}
-                for cf in self.get_currency_evolution(code, days):
-                    if not cf.fecha:
-                        continue
-                    try:
-                        by_date[cf.fecha] = self._get_cotizacion_detalle(cf, code)
-                    except ValueError:
-                        self.logger.debug(
-                            f"{code} not in cotizacion for {cf.fecha.isoformat()}"
-                        )
-                series[code] = by_date
-        except BCRAApiError as e:
-            self.logger.error(
-                f"Failed to get evolution for currency pair {pair} due to API error: {e}"
-            )
-            raise
-
-        def usd_per_unit(code: str, day: date) -> float:
-            if code == "USD":
-                return 1.0
-            if code == "ARS":
-                ars_per_usd = series["USD"][day].tipo_cotizacion
-                return 1.0 / ars_per_usd if ars_per_usd else 0.0
-            return series[code][day].tipo_pase
-
-        common_dates = sorted(set.intersection(*(set(s) for s in series.values())))
-        pair_evolution = []
-        for day in common_dates:
-            base_usd = usd_per_unit(base_currency, day)
-            quote_usd = usd_per_unit(quote_currency, day)
-            if base_usd > 0 and quote_usd > 0:
-                pair_evolution.append(
-                    {"fecha": day.isoformat(), "tasa": base_usd / quote_usd}
-                )
-            else:
-                self.logger.warning(
-                    f"No USD rate for {base_currency if base_usd <= 0 else quote_currency} "
-                    f"on {day.isoformat()}, skipping {pair}."
-                )
-        self.logger.info(
-            f"Calculated {len(pair_evolution)} data points for {pair} pair evolution."
-        )
-        return pair_evolution
-
-    @staticmethod
-    def _get_cotizacion_detalle(
-        cotizacion_fecha: CotizacionFecha, currency_code: str
-    ) -> CotizacionDetalle:
-        """Helper method to get CotizacionDetalle for a specific currency from CotizacionFecha."""
-        if not cotizacion_fecha or not cotizacion_fecha.detalle:
-            raise ValueError(
-                f"Invalid or empty CotizacionFecha object provided for currency {currency_code}."
-            )
-        for detail in cotizacion_fecha.detalle:
-            if detail.codigo_moneda == currency_code:
-                return detail
-        raise ValueError(
-            f"Currency {currency_code} not found in cotizacion for date {cotizacion_fecha.fecha.isoformat() if cotizacion_fecha.fecha else 'N/A'}"
-        )
+        _deprecated("get_currency_pair_evolution", "cambiarias.pair")
+        return self.cambiarias.pair(base_currency, quote_currency, days)
 
     def get_variable_correlation(
         self, variable_name1: str, variable_name2: str, days: int = 30
