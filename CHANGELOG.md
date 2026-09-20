@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MAX_PAGE_SIZE`, `FX_MAX_PAGE_SIZE`, `MAX_PAGES` and `CATALOG_CACHE_TTL` remain class
   attributes and are read on every call, so subclassing or assigning them keeps
   working (#119)
+- Internal: `CLAUDE.md` is now a one-line `@AGENTS.md` import instead of a prose
+  pointer, so the canonical instructions load automatically; the redundant `AGENT.md`
+  compatibility stub was removed. `AGENTS.md` dropped the descriptive project overview,
+  the hand-written directory tree (already stale — it predated `clients/` and `_http.py`)
+  and the skills table that duplicated `AGENT_MANIFEST.md`; every rule stays inline
 
 ### Added
 - `docs` extra with the documentation dependencies (`sphinx`, `sphinx-rtd-theme`,
