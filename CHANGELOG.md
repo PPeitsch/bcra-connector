@@ -69,6 +69,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deprecated in favour of `connector.deudores.*` and will be removed in 1.0. They
   delegate and emit a `DeprecationWarning` naming the replacement (#121)
 
+### Fixed
+- The package now ships the PEP 561 `py.typed` marker. Without it type checkers
+  ignored every annotation in the installed library — `Page[T]`, `DateLike` and all
+  the models resolved to `Any` downstream — despite the README advertising full type
+  hinting (#137)
+
 ### Changed
 - `Resultset` and `Metadata` are defined once, in `bcra_connector.models`, instead of
   once per API package. Every previous import path — including
