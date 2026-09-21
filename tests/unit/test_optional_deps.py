@@ -1,4 +1,4 @@
-"""The connector must work without numpy/scipy; only analytics need numpy."""
+"""The whole library works without numpy or scipy: neither is a dependency."""
 
 import math
 import subprocess
@@ -50,7 +50,8 @@ def test_report_without_numpy(monkeypatch: pytest.MonkeyPatch) -> None:
     variable = PrincipalesVariables(id_variable=1, descripcion="Reservas")
     with patch.object(connector.monetarias, "find", return_value=variable):
         with patch.object(connector.monetarias, "history", return_value=_series()):
-            report = connector.generate_variable_report("Reservas", days=4)
+            with pytest.deprecated_call():
+                report = connector.generate_variable_report("Reservas", days=4)
 
     assert report["start_date"] == "2024-01-01"
     assert report["latest_value"] == 40.0
@@ -64,25 +65,31 @@ def test_report_without_numpy(monkeypatch: pytest.MonkeyPatch) -> None:
     assert report["data_points"] == 4
 
 
-def test_correlation_without_numpy_asks_for_extra(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_correlation_without_numpy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """It used to raise ImportError asking for the [analytics] extra (issue #149)."""
     monkeypatch.setitem(sys.modules, "numpy", None)
-    connector = BCRAConnector(rate_limit=None)
-    with patch.object(connector.monetarias, "history", return_value=_series()):
-        with pytest.raises(ImportError, match=r"bcra-connector\[analytics\]"):
-            connector.get_variable_correlation("A", "B")
-
-
-def test_correlation_matches_pearson() -> None:
-    pytest.importorskip("numpy")
     connector = BCRAConnector(rate_limit=None)
     other = [
         DetalleMonetaria(fecha=d.fecha, valor=v)
         for d, v in zip(_series(), [1.0, 2.0, 4.0, 3.0])
     ]
     with patch.object(connector.monetarias, "history", side_effect=[_series(), other]):
-        corr = connector.get_variable_correlation("A", "B", days=4)
+        with pytest.deprecated_call():
+            corr = connector.get_variable_correlation("A", "B", days=4)
+
+    assert corr == pytest.approx(-0.2)
+
+
+def test_correlation_matches_pearson() -> None:
+    """The same r as when numpy computed it, to the digit."""
+    connector = BCRAConnector(rate_limit=None)
+    other = [
+        DetalleMonetaria(fecha=d.fecha, valor=v)
+        for d, v in zip(_series(), [1.0, 2.0, 4.0, 3.0])
+    ]
+    with patch.object(connector.monetarias, "history", side_effect=[_series(), other]):
+        with pytest.deprecated_call():
+            corr = connector.get_variable_correlation("A", "B", days=4)
 
     # Pearson r of (20, 30, 10, 40) vs (3, 4, 2, 1), oldest first.
     assert corr == pytest.approx(-0.2)

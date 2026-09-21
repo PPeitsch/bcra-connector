@@ -3,11 +3,12 @@ Extended test suite for BCRAConnector class to achieve 100% coverage.
 """
 
 import json
+import math
+import statistics
 from datetime import date
 from typing import Any, Callable, Dict
 from unittest.mock import Mock, patch
 
-import numpy as np
 import pytest
 from requests.exceptions import ConnectionError, HTTPError, RequestException
 
@@ -623,13 +624,13 @@ class TestBCRAConnectorExtended:
 
         # Insufficient data (None returned)
         with patch.object(connector.monetarias, "history", return_value=[]):
-            assert np.isnan(connector.get_variable_correlation("A", "B"))
+            assert math.isnan(connector.get_variable_correlation("A", "B"))
 
         # Insufficient unique dates
         d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
         with patch.object(connector.monetarias, "history", return_value=[d1, d1]):
             # Same date twice (set len < 2)
-            assert np.isnan(connector.get_variable_correlation("A", "B"))
+            assert math.isnan(connector.get_variable_correlation("A", "B"))
 
         # Safe mock for success
         d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
@@ -648,7 +649,7 @@ class TestBCRAConnectorExtended:
         with patch.object(
             connector.monetarias, "history", side_effect=[[dc1, dc2], [d1, d2]]
         ):
-            assert np.isnan(connector.get_variable_correlation("A", "B"))
+            assert math.isnan(connector.get_variable_correlation("A", "B"))
 
     def test_init_numeric_timeout(self):
         c = BCRAConnector(timeout=10.0)
@@ -679,21 +680,23 @@ class TestBCRAConnectorExtended:
             connector.cambiarias.detalle(None, "USD")
 
     def test_get_variable_correlation_nan(self, connector: BCRAConnector):
+        """Pearson itself coming back undefined, past the constant-series check."""
         d1 = DetalleMonetaria(fecha=date(2024, 1, 1), valor=10.0)
         d2 = DetalleMonetaria(fecha=date(2024, 1, 2), valor=20.0)
         d3 = DetalleMonetaria(fecha=date(2024, 1, 3), valor=30.0)
+        series = [[d1, d2, d3], [d1, d2, d3]]
 
-        with patch.object(
-            connector.monetarias, "history", side_effect=[[d1, d2, d3], [d1, d2, d3]]
-        ):
+        with patch.object(connector.monetarias, "history", side_effect=list(series)):
+            with patch("statistics.correlation", return_value=math.nan):
+                assert math.isnan(connector.get_variable_correlation("A", "B"))
+
+        # statistics.correlation raises rather than returning NaN for degenerate input
+        with patch.object(connector.monetarias, "history", side_effect=list(series)):
             with patch(
-                "numpy.corrcoef",
-                return_value=np.array([[1.0, np.nan], [np.nan, 1.0]]),
+                "statistics.correlation",
+                side_effect=statistics.StatisticsError("no variance"),
             ):
-                res = connector.get_variable_correlation("A", "B")
-                assert np.isnan(res)
-
-        # Pearson error? handled by constant check usually, but code has try-catch.
+                assert math.isnan(connector.get_variable_correlation("A", "B"))
 
     def test_generate_variable_report_flow(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="positive"):

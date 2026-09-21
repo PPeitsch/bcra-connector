@@ -51,6 +51,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open and still closes one the connector created (#119)
 
 ### Deprecated
+- `get_variable_correlation()` and `generate_variable_report()`, removed in 1.0. Computing
+  statistics is not a connector's job, and the correlation is misleading as it stands: it
+  correlates *levels* of two series that both carry a trend, so almost any two BCRA series
+  come out related (two real ones: 0.94 on levels, -0.05 on returns). `usage.rst` has the
+  pandas recipe that replaces both and makes explicit what is being computed. These were
+  the last two methods on `BCRAConnector` that were not already deprecated aliases (#149)
 - The superseded model exports now emit a `DeprecationWarning` when they are
   imported or accessed, naming what replaces them, instead of being deprecated only
   in this file: the `*Response` wrappers (`Page` replaces them), both `ErrorResponse`
@@ -86,6 +92,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ignored every annotation in the installed library — `Page[T]`, `DateLike` and all
   the models resolved to `Any` downstream — despite the README advertising full type
   hinting (#137)
+
+### Removed
+- The `[analytics]` extra, and with it numpy: it was there only for
+  `get_variable_correlation()`, which now computes Pearson on the standard library
+  (`statistics.correlation` plus the linear interpolation numpy used to do). Verified
+  identical on live data — `0.507249107355878` either way — and over 300 random cases
+  (max deviation 1.1e-13 for the interpolation, 4.4e-16 for the correlation). Runtime
+  dependencies are `requests` and `urllib3`, with `[pandas]` as the only extra, and a plain
+  `pip install bcra-connector` brings neither numpy nor scipy. (`[pandas]` still pulls numpy
+  in *transitively*, as pandas requires it — what changed is that nothing in this project
+  declares it.) `pip install "bcra-connector[analytics]"` now warns that the extra does not
+  exist instead of failing, and installs the library (#149)
 
 ### Changed
 - Date columns in a DataFrame are `datetime64[ns]`, whichever call built the frame, so

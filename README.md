@@ -37,9 +37,6 @@ pip install bcra-connector
 
 # With pandas support for DataFrame conversion
 pip install "bcra-connector[pandas]"
-
-# With numpy, needed only by get_variable_correlation()
-pip install "bcra-connector[analytics]"
 ```
 
 For detailed installation instructions and requirements, see our [Installation Guide](https://bcra-connector.readthedocs.io/en/latest/installation.html).

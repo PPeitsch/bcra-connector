@@ -9,6 +9,7 @@ import math
 import os
 import statistics
 import warnings
+from bisect import bisect_left
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import requests
@@ -44,14 +45,63 @@ from .timeout_config import TimeoutConfig
 T = TypeVar("T")
 
 
-def _deprecated(old: str, new: str) -> None:
-    """Warn that ``BCRAConnector.<old>()`` moved to ``connector.<new>()``."""
+def _deprecated(old: str, new: Optional[str] = None) -> None:
+    """Warn that ``BCRAConnector.<old>()`` is on its way out.
+
+    With ``new``, the method moved to ``connector.<new>()``. Without it, it is
+    going away for good: the analytics helpers have no replacement inside the
+    library, only a recipe in the docs.
+    """
     warnings.warn(
         f"BCRAConnector.{old}() is deprecated and will be removed in 1.0; "
-        f"use connector.{new}() instead.",
+        + (
+            f"use connector.{new}() instead."
+            if new
+            else "it computes statistics, which is not a connector's job — see the "
+            "DataFrame recipe in the documentation."
+        ),
         DeprecationWarning,
         stacklevel=3,
     )
+
+
+def _interpolate(xs: List[int], ys: List[float], at: List[int]) -> List[float]:
+    """Linear interpolation of ``ys`` over ``xs``, sampled at ``at``.
+
+    The semantics ``numpy.interp`` had here, written out so the deprecated
+    correlation keeps working without numpy: linear between the two surrounding
+    points, clamped to the first and last value outside the range. ``xs`` need not
+    be sorted — the API returns series newest-first — so they are sorted here.
+
+    :param xs: The x of each known point, as ordinal days.
+    :param ys: The value of each known point, in the same order as ``xs``.
+    :param at: The x to sample, ascending.
+    """
+    points = sorted(zip(xs, ys))
+    known_x = [x for x, _ in points]
+    known_y = [y for _, y in points]
+    out = []
+    for x in at:
+        if x <= known_x[0]:
+            out.append(known_y[0])
+        elif x >= known_x[-1]:
+            out.append(known_y[-1])
+        else:
+            hi = bisect_left(known_x, x)
+            if known_x[hi] == x:
+                out.append(known_y[hi])
+            else:
+                lo = hi - 1
+                span = known_x[hi] - known_x[lo]
+                weight = (x - known_x[lo]) / span
+                out.append(known_y[lo] + (known_y[hi] - known_y[lo]) * weight)
+    return out
+
+
+def _is_constant(values: List[float]) -> bool:
+    """Whether every value is the first one, to floating-point tolerance."""
+    first = values[0]
+    return all(math.isclose(v, first, rel_tol=1e-9, abs_tol=1e-12) for v in values)
 
 
 def _has_active_handler(logger: logging.Logger) -> bool:
@@ -406,8 +456,14 @@ class BCRAConnector:
         """
         Calculate Pearson correlation between two variables/series over last n days (Monetarias v4.0).
 
-        Handles missing data by linear interpolation. Requires numpy
-        (``pip install "bcra-connector[analytics]"``).
+        Handles missing data by linear interpolation.
+
+        .. deprecated:: 0.13.0
+           Removed in 1.0. Correlating *levels* of two series that both carry a
+           trend says little — almost any two BCRA series come out strongly
+           correlated — and picking the right transformation is the caller's
+           call, not a connector's. Build a DataFrame and correlate there; the
+           documentation has the recipe.
 
         :param variable_name1: Name of the first variable/series.
         :param variable_name2: Name of the second variable/series.
@@ -415,17 +471,10 @@ class BCRAConnector:
         :return: Correlation coefficient (-1 to 1), or NaN if not calculable.
         :raises ValueError: If variables not found or days invalid.
         :raises BCRAApiError: If underlying API calls fail.
-        :raises ImportError: If numpy is not installed.
         """
+        _deprecated("get_variable_correlation")
         if days <= 1:
             raise ValueError("Number of days must be greater than 1 for correlation.")
-        try:
-            import numpy as np
-        except ImportError as e:
-            raise ImportError(
-                "get_variable_correlation() requires numpy. Install it with: "
-                'pip install "bcra-connector[analytics]"'
-            ) from e
         try:
             data1 = self.monetarias.history(variable_name1, days)
             data2 = self.monetarias.history(variable_name2, days)
@@ -443,8 +492,8 @@ class BCRAConnector:
 
         dates1 = [d.fecha for d in data1]
         dates2 = [d.fecha for d in data2]
-        values1 = np.array([d.valor for d in data1], dtype=float)
-        values2 = np.array([d.valor for d in data2], dtype=float)
+        values1 = [float(d.valor) for d in data1]
+        values2 = [float(d.valor) for d in data2]
 
         if (
             len(set(dates1)) < 2 or len(set(dates2)) < 2
@@ -454,31 +503,24 @@ class BCRAConnector:
             )
             return math.nan
 
-        all_dates_ord = np.array(
-            sorted(list(set(d.toordinal() for d in dates1 + dates2))), dtype=float
+        all_dates_ord = sorted({d.toordinal() for d in dates1 + dates2})
+        interp_values1 = _interpolate(
+            [d.toordinal() for d in dates1], values1, all_dates_ord
         )
-        dates1_ord = np.array([d.toordinal() for d in dates1], dtype=float)
-        dates2_ord = np.array([d.toordinal() for d in dates2], dtype=float)
-
-        # Sort data before interpolation as np.interp requires x-coordinates to be increasing
-        sort_idx1 = np.argsort(dates1_ord)
-        sort_idx2 = np.argsort(dates2_ord)
-        interp_values1 = np.interp(
-            all_dates_ord, dates1_ord[sort_idx1], values1[sort_idx1]
-        )
-        interp_values2 = np.interp(
-            all_dates_ord, dates2_ord[sort_idx2], values2[sort_idx2]
+        interp_values2 = _interpolate(
+            [d.toordinal() for d in dates2], values2, all_dates_ord
         )
 
-        # Check for constant series after interpolation, which makes correlation undefined or NaN
-        if np.allclose(interp_values1, interp_values1[0]) or np.allclose(
-            interp_values2, interp_values2[0]
-        ):
+        # A constant series has no variance, so the correlation is undefined
+        if _is_constant(interp_values1) or _is_constant(interp_values2):
             self.logger.warning(
                 f"One or both series ('{variable_name1}', '{variable_name2}') are constant after interpolation. Correlation is undefined."
             )
             return math.nan
-        correlation = float(np.corrcoef(interp_values1, interp_values2)[0, 1])
+        try:
+            correlation = statistics.correlation(interp_values1, interp_values2)
+        except statistics.StatisticsError:
+            correlation = math.nan
 
         if math.isnan(correlation):
             self.logger.warning(
@@ -497,12 +539,18 @@ class BCRAConnector:
         """
         Generate a comprehensive report for a given variable/series (Monetarias v4.0).
 
+        .. deprecated:: 0.13.0
+           Removed in 1.0. Every number in it is one call to pandas over the
+           series — ``df["valor"].describe()`` and a couple of lines — which
+           also makes explicit what is being computed. See the documentation.
+
         :param variable_name: The name of the variable/series.
         :param days: The number of days to look back, defaults to 30. Must be positive.
         :return: A dictionary containing various statistics and information.
         :raises ValueError: If the variable is not found or days is invalid.
         :raises BCRAApiError: If the API request fails.
         """
+        _deprecated("generate_variable_report")
         if days <= 0:
             raise ValueError("Number of days must be positive.")
         variable = self.monetarias.find(variable_name)
