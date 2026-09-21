@@ -79,6 +79,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hinting (#137)
 
 ### Changed
+- Every model reads the API payload the same way, through two helpers in
+  `bcra_connector.models`. A malformed response now fails with a message naming the
+  field and what was expected — `field 'codigoEntidad' is missing`, `field 'valor' must
+  be float, got 'x'` — wrapped by the client into the endpoint it came from
+  (`BCRAApiError: Unexpected response format for financial entities: field
+  'codigoEntidad' is missing`). Before, the same broken payload raised a bare
+  `KeyError('codigoEntidad')` in `Entidad`/`Divisa`, an `invalid literal for int()` that
+  never said which field it was in `ChequeRechazado`/`Deudor`, and hand-written prose
+  in the Monetarias models. Numeric strings are now converted wherever a number is
+  expected, which the Monetarias and Deudores models already did and `Resultset` did
+  not (#145)
 - `Resultset` and `Metadata` are defined once, in `bcra_connector.models`, instead of
   once per API package. Every previous import path — including
   `EstadisticasCambiariasResultset` and `EstadisticasCambiariasMetadata` — now resolves

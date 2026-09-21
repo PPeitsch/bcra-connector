@@ -58,6 +58,78 @@ def as_date(value: DateLike, param: str) -> date:
     )
 
 
+_MISSING = object()
+
+
+def require(data: Dict[str, Any], key: str, kind: type) -> Any:
+    """Read one field of an API response, converted and checked.
+
+    The single way every ``from_dict`` reads the payload, so that a malformed
+    response fails the same way wherever it came from, naming the field and what
+    was expected instead of raising a bare ``KeyError('codigoEntidad')`` or an
+    ``invalid literal for int()`` that never says which field it was.
+
+    ``kind`` is the type wanted: ``int``, ``float`` and ``bool`` convert,
+    :class:`datetime.date` goes through :func:`as_date`, ``str`` converts
+    anything scalar, and ``list``/``dict`` are checked without converting. Every
+    failure is a ``ValueError``, whatever the field's type.
+
+    The endpoint is not named here on purpose: the domain clients already wrap a
+    parse failure into a :class:`BCRAApiError` that says which endpoint was being
+    read, and the two messages compose.
+
+    :raises ValueError: If the field is missing, or cannot be read as ``kind``.
+    """
+    value = data.get(key, _MISSING)
+    if value is _MISSING:
+        raise ValueError(f"field {key!r} is missing")
+    return _convert(value, key, kind)
+
+
+def optional(data: Dict[str, Any], key: str, kind: type, default: Any = None) -> Any:
+    """Read a field that the API may omit or report as null.
+
+    Same conversion and the same errors as :func:`require`; a missing or ``None``
+    value yields ``default`` instead of failing.
+
+    :raises ValueError: If the field is present and cannot be read as ``kind``.
+    """
+    value = data.get(key)
+    if value is None:
+        return default
+    return _convert(value, key, kind)
+
+
+def _convert(value: Any, key: str, kind: type) -> Any:
+    """Convert one already-present value, or say what was expected."""
+    if kind is date:
+        try:
+            return as_date(value, key)
+        except TypeError as e:
+            # One failure mode for the helpers: as_date rejects a wrong type with
+            # TypeError, but every caller here only knows about ValueError.
+            raise ValueError(str(e)) from e
+    if kind in (list, dict):
+        if not isinstance(value, kind):
+            raise ValueError(
+                f"field {key!r} must be {'a list' if kind is list else 'an object'}, "
+                f"got {type(value).__name__}"
+            )
+        return value
+    if kind is bool:
+        return bool(value)
+    if kind is str:
+        if isinstance(value, (list, dict)):
+            raise ValueError(
+                f"field {key!r} must be a string, got {type(value).__name__}"
+            )
+        return value if isinstance(value, str) else str(value)
+    try:
+        return kind(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"field {key!r} must be {kind.__name__}, got {value!r}") from e
+
+
 @dataclass
 class Resultset:
     """The ``metadata.resultset`` block every paginated endpoint reports.
@@ -73,13 +145,11 @@ class Resultset:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Resultset":
         """Create a Resultset instance from a dictionary."""
-        if (
-            not isinstance(data.get("count"), int)
-            or not isinstance(data.get("offset"), int)
-            or not isinstance(data.get("limit"), int)
-        ):
-            raise ValueError("Invalid types for Resultset fields")
-        return cls(count=data["count"], offset=data["offset"], limit=data["limit"])
+        return cls(
+            count=require(data, "count", int),
+            offset=require(data, "offset", int),
+            limit=require(data, "limit", int),
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the Resultset instance to a dictionary."""
@@ -99,9 +169,7 @@ class Metadata:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Metadata":
         """Create a Metadata instance from a dictionary."""
-        if "resultset" not in data or not isinstance(data["resultset"], dict):
-            raise ValueError("Missing or invalid 'resultset' in Metadata")
-        return cls(resultset=Resultset.from_dict(data["resultset"]))
+        return cls(resultset=Resultset.from_dict(require(data, "resultset", dict)))
 
 
 def deprecated_exports(source: str, **replacements: str) -> Callable[[str], Any]:

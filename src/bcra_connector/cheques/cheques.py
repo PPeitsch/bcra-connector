@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List
 
+from ..models import optional, require
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -34,7 +36,8 @@ class Entidad:
     def from_dict(cls, data: Dict[str, Any]) -> "Entidad":
         """Create an Entidad instance from a dictionary."""
         return cls(
-            codigo_entidad=data["codigoEntidad"], denominacion=data["denominacion"]
+            codigo_entidad=require(data, "codigoEntidad", int),
+            denominacion=require(data, "denominacion", str),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -78,9 +81,9 @@ class ChequeDetalle:
     def from_dict(cls, data: Dict[str, Any]) -> "ChequeDetalle":
         """Create a ChequeDetalle instance from a dictionary."""
         return cls(
-            sucursal=data["sucursal"],
-            numero_cuenta=data["numeroCuenta"],
-            causal=data["causal"],
+            sucursal=require(data, "sucursal", int),
+            numero_cuenta=require(data, "numeroCuenta", int),
+            causal=require(data, "causal", str),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -121,11 +124,14 @@ class Cheque:
     def from_dict(cls, data: Dict[str, Any]) -> "Cheque":
         """Create a Cheque instance from a dictionary."""
         return cls(
-            numero_cheque=data["numeroCheque"],
-            denunciado=data["denunciado"],
-            fecha_procesamiento=date.fromisoformat(data["fechaProcesamiento"]),
-            denominacion_entidad=data["denominacionEntidad"],
-            detalles=[ChequeDetalle.from_dict(d) for d in data.get("detalles", [])],
+            numero_cheque=require(data, "numeroCheque", int),
+            denunciado=require(data, "denunciado", bool),
+            fecha_procesamiento=require(data, "fechaProcesamiento", date),
+            denominacion_entidad=require(data, "denominacionEntidad", str),
+            detalles=[
+                ChequeDetalle.from_dict(d)
+                for d in optional(data, "detalles", list, default=[])
+            ],
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -201,8 +207,8 @@ class EntidadResponse:
     def from_dict(cls, data: Dict[str, Any]) -> "EntidadResponse":
         """Create an EntidadResponse instance from a dictionary."""
         return cls(
-            status=data["status"],
-            results=[Entidad.from_dict(e) for e in data["results"]],
+            status=require(data, "status", int),
+            results=[Entidad.from_dict(e) for e in require(data, "results", list)],
         )
 
 
@@ -221,7 +227,10 @@ class ChequeResponse:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ChequeResponse":
         """Create a ChequeResponse instance from a dictionary."""
-        return cls(status=data["status"], results=Cheque.from_dict(data["results"]))
+        return cls(
+            status=require(data, "status", int),
+            results=Cheque.from_dict(require(data, "results", dict)),
+        )
 
 
 @dataclass
@@ -239,4 +248,7 @@ class ErrorResponse:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ErrorResponse":
         """Create an ErrorResponse instance from a dictionary."""
-        return cls(status=data["status"], error_messages=data["errorMessages"])
+        return cls(
+            status=require(data, "status", int),
+            error_messages=require(data, "errorMessages", list),
+        )

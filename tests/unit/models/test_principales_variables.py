@@ -32,9 +32,9 @@ class TestResultset:
 
     def test_resultset_invalid_types(self) -> None:
         """Test Resultset creation with invalid data types."""
-        with pytest.raises(ValueError, match="Invalid types for Resultset fields"):
-            Resultset.from_dict({"count": "100", "offset": 0, "limit": 50})
-        with pytest.raises(ValueError, match="Invalid types for Resultset fields"):
+        with pytest.raises(ValueError, match="field 'count' must be int"):
+            Resultset.from_dict({"count": "many", "offset": 0, "limit": 50})
+        with pytest.raises(ValueError, match="field 'offset' must be int"):
             Resultset.from_dict({"count": 100, "offset": None, "limit": 50})
 
 
@@ -50,15 +50,13 @@ class TestMetadata:
 
     def test_metadata_missing_resultset(self) -> None:
         """Test Metadata creation with missing resultset key."""
-        with pytest.raises(
-            ValueError, match="Missing or invalid 'resultset' in Metadata"
-        ):
+        with pytest.raises(ValueError, match="field 'resultset' is missing"):
             Metadata.from_dict({})
 
     def test_metadata_invalid_resultset_type(self) -> None:
         """Test Metadata creation with invalid resultset type."""
         with pytest.raises(
-            ValueError, match="Missing or invalid 'resultset' in Metadata"
+            ValueError, match="field 'resultset' must be an object, got str"
         ):
             Metadata.from_dict({"resultset": "not a dict"})
 
@@ -89,26 +87,22 @@ class TestDetalleMonetaria:
 
     def test_detalle_monetaria_invalid_date(self) -> None:
         """Test handling of invalid date format."""
-        with pytest.raises(
-            ValueError, match="Invalid data type or format in DetalleMonetaria data"
-        ):
+        with pytest.raises(ValueError, match="'fecha' must be an ISO 8601 date"):
             DetalleMonetaria.from_dict({"fecha": "invalid-date", "valor": 100.0})
 
     def test_detalle_monetaria_invalid_valor(self) -> None:
         """Test handling of invalid valor type."""
-        with pytest.raises(
-            ValueError, match="Invalid data type or format in DetalleMonetaria data"
-        ):
+        with pytest.raises(ValueError, match="field 'valor' must be float"):
             DetalleMonetaria.from_dict({"fecha": "2024-01-01", "valor": "not-a-float"})
 
     def test_detalle_monetaria_missing_fecha(self) -> None:
         """Test handling of missing fecha key."""
-        with pytest.raises(ValueError, match="Missing key in DetalleMonetaria data"):
+        with pytest.raises(ValueError, match="field 'fecha' is missing"):
             DetalleMonetaria.from_dict({"valor": 100.0})
 
     def test_detalle_monetaria_missing_valor(self) -> None:
         """Test handling of missing valor key."""
-        with pytest.raises(ValueError, match="Missing key in DetalleMonetaria data"):
+        with pytest.raises(ValueError, match="field 'valor' is missing"):
             DetalleMonetaria.from_dict({"fecha": "2024-01-01"})
 
 
@@ -179,9 +173,7 @@ class TestPrincipalesVariables:
         invalid_data: Dict[str, Any] = {
             "descripcion": "Test Variable",
         }
-        with pytest.raises(
-            ValueError, match="Missing key in PrincipalesVariables data"
-        ):
+        with pytest.raises(ValueError, match="field 'idVariable' is missing"):
             PrincipalesVariables.from_dict(invalid_data)
 
     def test_principales_variables_invalid_date_format(self) -> None:
@@ -191,7 +183,7 @@ class TestPrincipalesVariables:
             "primerFechaInformada": "invalid-date",
         }
         with pytest.raises(
-            ValueError, match="Invalid data type or format in PrincipalesVariables data"
+            ValueError, match="'primerFechaInformada' must be an ISO 8601 date"
         ):
             PrincipalesVariables.from_dict(invalid_data)
 
@@ -265,7 +257,7 @@ class TestDatosVariable:
 
     def test_datos_variable_missing_id(self) -> None:
         """Test handling of missing idVariable key."""
-        with pytest.raises(ValueError, match="Missing key in DatosVariable data"):
+        with pytest.raises(ValueError, match="field 'idVariable' is missing"):
             DatosVariable.from_dict(
                 {"detalle": [{"fecha": "2024-01-01", "valor": 10.0}]}
             )
@@ -340,11 +332,11 @@ class TestDatosVariableResponse:
 
     def test_datos_variable_response_missing_keys(self) -> None:
         """Test from_dict with missing required keys."""
-        with pytest.raises(ValueError, match="Missing 'status'"):
+        with pytest.raises(ValueError, match="field 'status' is missing"):
             DatosVariableResponse.from_dict({"metadata": {}, "results": []})
-        with pytest.raises(ValueError, match="Missing or invalid 'metadata'"):
+        with pytest.raises(ValueError, match="field 'metadata' is missing"):
             DatosVariableResponse.from_dict({"status": 200, "results": []})
-        with pytest.raises(ValueError, match="Missing or invalid 'results'"):
+        with pytest.raises(ValueError, match="field 'results' is missing"):
             DatosVariableResponse.from_dict(
                 {
                     "status": 200,
@@ -354,11 +346,13 @@ class TestDatosVariableResponse:
 
     def test_datos_variable_response_invalid_types(self) -> None:
         """Test from_dict with invalid types for fields."""
-        with pytest.raises(ValueError, match="Missing or invalid 'metadata'"):
+        with pytest.raises(
+            ValueError, match="field 'metadata' must be an object, got str"
+        ):
             DatosVariableResponse.from_dict(
                 {"status": 200, "metadata": "not a dict", "results": []}
             )
-        with pytest.raises(ValueError, match="Missing or invalid 'results'"):
+        with pytest.raises(ValueError, match="field 'results' must be a list, got str"):
             DatosVariableResponse.from_dict(
                 {
                     "status": 200,
@@ -381,6 +375,6 @@ class TestDatosVariableResponse:
             "results": invalid_results_data,
         }
         with pytest.raises(
-            ValueError, match="Error parsing components of DatosVariableResponse"
+            ValueError, match="field 'idVariable' must be int, got 'invalid'"
         ):
             DatosVariableResponse.from_dict(data)
