@@ -211,6 +211,28 @@ A ``Page`` converts itself, one row per result; single objects convert themselve
    rejected = connector.deudores.rejected_checks(identificacion)
    df_checks = rejected.to_dataframe()
 
+For any other list of models — a slice of a page, a filtered selection, models you
+collected yourself — the package-level ``to_dataframe()`` does the same:
+
+.. code-block:: python
+
+   from bcra_connector import to_dataframe
+
+   catalog = connector.monetarias.list()
+   df = to_dataframe(v for v in catalog if v.moneda == "USD")
+
+Date columns come out as ``datetime64[ns]``, whichever call built the frame, so the
+usual time-series work needs no conversion first:
+
+.. code-block:: python
+
+   # monetarias.series() answers with a page of one series, whose detalle holds the
+   # data points: convert the series itself to get one row per point.
+   df = connector.monetarias.series(1, desde="2024-01-01")[0].to_dataframe()
+
+   monthly = df.set_index("fecha")["valor"].resample("ME").mean()
+   df["mes"] = df["fecha"].dt.month
+
 Paged results
 -------------
 

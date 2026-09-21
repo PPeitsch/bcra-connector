@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import optional, require
+from ..models import optional, require, to_dataframe
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -136,13 +136,6 @@ class Deudor:
         :return: DataFrame with all debt records.
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                "Install with: pip install bcra-connector[pandas]"
-            )
         rows = []
         for periodo in self.periodos:
             for entidad in periodo.entidades:
@@ -171,7 +164,7 @@ class Deudor:
                     "procesoJud": None,
                 }
             ]
-        return pd.DataFrame(rows)
+        return to_dataframe(rows)
 
 
 @dataclass
@@ -340,13 +333,6 @@ class ChequesRechazados:
         :return: DataFrame with all rejected check records.
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                "Install with: pip install bcra-connector[pandas]"
-            )
         rows = []
         for causal in self.causales:
             for entidad in causal.entidades:
@@ -388,4 +374,4 @@ class ChequesRechazados:
                     "procesoJud": None,
                 }
             ]
-        return pd.DataFrame(rows)
+        return to_dataframe(rows)

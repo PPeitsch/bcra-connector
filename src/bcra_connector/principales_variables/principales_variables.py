@@ -7,7 +7,13 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import Metadata, install_legacy_names, optional, require
+from ..models import (
+    Metadata,
+    install_legacy_names,
+    optional,
+    require,
+    to_dataframe,
+)
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -94,14 +100,7 @@ class PrincipalesVariables:
         :return: A single-row DataFrame with all variable attributes.
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                "Install with: pip install bcra-connector[pandas]"
-            )
-        return pd.DataFrame([self.to_dict()])
+        return to_dataframe([self])
 
 
 # The API's own camelCase names, until 1.0.
@@ -152,14 +151,7 @@ class DetalleMonetaria:
         :return: A single-row DataFrame with fecha and valor.
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                "Install with: pip install bcra-connector[pandas]"
-            )
-        return pd.DataFrame([self.to_dict()])
+        return to_dataframe([self])
 
 
 @dataclass
@@ -214,18 +206,11 @@ class DatosVariable:
         :return: DataFrame with all historical data points.
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                "Install with: pip install bcra-connector[pandas]"
-            )
         rows = [
             {"idVariable": self.id_variable, "fecha": d.fecha, "valor": d.valor}
             for d in self.detalle
         ]
-        return pd.DataFrame(rows)
+        return to_dataframe(rows)
 
 
 install_legacy_names(DatosVariable, idVariable="id_variable")
