@@ -7,7 +7,6 @@ no longer need numpy for anything: the correlation runs on the standard library.
 
 import math
 import sys
-import tomllib
 from datetime import date
 from pathlib import Path
 from typing import List
@@ -69,19 +68,18 @@ class TestTheWarning:
 class TestNoNumpy:
     """numpy is not a dependency of anything any more."""
 
-    def test_it_is_not_in_the_metadata(self) -> None:
-        pyproject = tomllib.loads(
-            (Path(__file__).parents[2] / "pyproject.toml").read_text()
-        )
-        project = pyproject["project"]
-        extras = project["optional-dependencies"]
+    def test_it_is_not_in_the_manifest(self) -> None:
+        """Read as text: `tomllib` is 3.11+, and the assertion needs no parser.
 
-        assert "analytics" not in extras
-        assert list(extras) == ["pandas", "docs", "dev"]
-        every_requirement = " ".join(
-            project["dependencies"] + [r for group in extras.values() for r in group]
-        )
-        assert "numpy" not in every_requirement
+        Against `pyproject.toml` rather than the installed distribution's metadata,
+        which only refreshes on reinstall and would make this pass or fail by
+        accident of when the venv was last built.
+        """
+        manifest = (Path(__file__).parents[2] / "pyproject.toml").read_text()
+
+        assert "numpy" not in manifest
+        assert "scipy" not in manifest
+        assert "analytics = [" not in manifest
 
     def test_the_correlation_runs_without_it(
         self, connector: BCRAConnector, monkeypatch: pytest.MonkeyPatch
@@ -121,9 +119,7 @@ class TestInterpolation:
 
     def test_unsorted_input(self) -> None:
         """The API returns series newest-first, so x arrives descending."""
-        assert _interpolate([40, 20, 10], [4.0, 2.0, 1.0], [15]) == [
-            pytest.approx(1.5)
-        ]
+        assert _interpolate([40, 20, 10], [4.0, 2.0, 1.0], [15]) == [pytest.approx(1.5)]
 
     def test_a_single_point_is_flat(self) -> None:
         assert _interpolate([10], [7.0], [1, 10, 99]) == [7.0, 7.0, 7.0]

@@ -99,9 +99,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`statistics.correlation` plus the linear interpolation numpy used to do). Verified
   identical on live data — `0.507249107355878` either way — and over 300 random cases
   (max deviation 1.1e-13 for the interpolation, 4.4e-16 for the correlation). Runtime
-  dependencies are `requests` and `urllib3`, with `[pandas]` as the only extra.
-  `pip install "bcra-connector[analytics]"` now warns that the extra does not exist
-  instead of failing, and installs the library (#149)
+  dependencies are `requests` and `urllib3`, with `[pandas]` as the only extra, and a plain
+  `pip install bcra-connector` brings neither numpy nor scipy. (`[pandas]` still pulls numpy
+  in *transitively*, as pandas requires it — what changed is that nothing in this project
+  declares it.) `pip install "bcra-connector[analytics]"` now warns that the extra does not
+  exist instead of failing, and installs the library (#149)
 
 ### Changed
 - Date columns in a DataFrame are `datetime64[ns]`, whichever call built the frame, so
