@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-21
+
 ### Added
 - `to_dataframe(rows)` at package level builds a DataFrame from any iterable of models —
   a slice of a page, a filtered selection, a generator — which replaces the
@@ -49,61 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BCRAConnector(session=...)` accepts a `requests.Session`, for custom adapters,
   proxies or tests. The caller keeps ownership: `close()` leaves an injected session
   open and still closes one the connector created (#119)
-
-### Deprecated
-- `get_variable_correlation()` and `generate_variable_report()`, removed in 1.0. Computing
-  statistics is not a connector's job, and the correlation is misleading as it stands: it
-  correlates *levels* of two series that both carry a trend, so almost any two BCRA series
-  come out related (two real ones: 0.94 on levels, -0.05 on returns). `usage.rst` has the
-  pandas recipe that replaces both and makes explicit what is being computed. These were
-  the last two methods on `BCRAConnector` that were not already deprecated aliases (#149)
-- The superseded model exports now emit a `DeprecationWarning` when they are
-  imported or accessed, naming what replaces them, instead of being deprecated only
-  in this file: the `*Response` wrappers (`Page` replaces them), both `ErrorResponse`
-  classes (every API error is raised as a `BCRAApiError`) and
-  `EstadisticasCambiariasResultset` / `EstadisticasCambiariasMetadata` (`Resultset`
-  and `Metadata`). They keep working until 1.0 (#140)
-- The camelCase field names of `PrincipalesVariables` and `DatosVariable`
-  (`idVariable`, `tipoSerie`, `unidadExpresion`, `primerFechaInformada`,
-  `ultFechaInformada`, `ultValorInformado`) are deprecated in favour of their
-  snake_case equivalents and will be removed in 1.0 (#135)
-- The `*Response` models (`DatosVariableResponse`, `DivisaResponse`, `EntidadResponse`,
-  `CotizacionResponse`, `CotizacionesResponse`, `ChequeResponse`) are superseded by
-  `Page` and will be removed in 1.0. The deprecated `get_*` methods still return the old
-  types, so code on 0.12 is unaffected (#131)
-- `get_divisas()`, `get_cotizaciones()`, `get_evolucion_moneda()`,
-  `get_currency_evolution()`, `get_latest_quotations()` and
-  `get_currency_pair_evolution()` are deprecated in favour of `connector.cambiarias.*`
-  and will be removed in 1.0 (#129)
-- `get_principales_variables()`, `get_datos_variable()`, `get_latest_value()`,
-  `get_variable_by_name()` and `get_variable_history()` are deprecated in favour of
-  `connector.monetarias.*` and will be removed in 1.0 (#126)
-- `get_entidades()`, `get_cheque_denunciado()` and `check_denunciado()` are deprecated
-  in favour of `connector.cheques.*` and will be removed in 1.0 (#123)
-- `get_deudas()`, `get_deudas_historicas()` and `get_cheques_rechazados()` are
-  deprecated in favour of `connector.deudores.*` and will be removed in 1.0. They
-  delegate and emit a `DeprecationWarning` naming the replacement (#121)
-
-### Fixed
-- The API reference documents all four domain clients: `monetarias` and `cambiarias`
-  were missing since they were introduced, so the reference described the deprecated
-  aliases better than the current API. The duplicated page title is gone too (#143)
-- The package now ships the PEP 561 `py.typed` marker. Without it type checkers
-  ignored every annotation in the installed library — `Page[T]`, `DateLike` and all
-  the models resolved to `Any` downstream — despite the README advertising full type
-  hinting (#137)
-
-### Removed
-- The `[analytics]` extra, and with it numpy: it was there only for
-  `get_variable_correlation()`, which now computes Pearson on the standard library
-  (`statistics.correlation` plus the linear interpolation numpy used to do). Verified
-  identical on live data — `0.507249107355878` either way — and over 300 random cases
-  (max deviation 1.1e-13 for the interpolation, 4.4e-16 for the correlation). Runtime
-  dependencies are `requests` and `urllib3`, with `[pandas]` as the only extra, and a plain
-  `pip install bcra-connector` brings neither numpy nor scipy. (`[pandas]` still pulls numpy
-  in *transitively*, as pandas requires it — what changed is that nothing in this project
-  declares it.) `pip install "bcra-connector[analytics]"` now warns that the extra does not
-  exist instead of failing, and installs the library (#149)
+- `docs` extra with the documentation dependencies (`sphinx`, `sphinx-rtd-theme`,
+  `myst-parser`), so `pip install -e ".[docs]"` is enough to build the docs locally.
+  `docs/requirements.txt` and `.readthedocs.yaml` now point at it instead of keeping a
+  second list (#115)
 
 ### Changed
 - Date columns in a DataFrame are `datetime64[ns]`, whichever call built the frame, so
@@ -147,21 +98,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   compatibility stub was removed. `AGENTS.md` dropped the descriptive project overview,
   the hand-written directory tree (already stale — it predated `clients/` and `_http.py`)
   and the skills table that duplicated `AGENT_MANIFEST.md`; every rule stays inline
-
-### Added
-- `docs` extra with the documentation dependencies (`sphinx`, `sphinx-rtd-theme`,
-  `myst-parser`), so `pip install -e ".[docs]"` is enough to build the docs locally.
-  `docs/requirements.txt` and `.readthedocs.yaml` now point at it instead of keeping a
-  second list (#115)
-
-### Changed
 - `pre-commit` hooks updated (`pre-commit-hooks` v6.0.0, `black` 26.5.1, `isort` 9.0.1,
   `flake8` 7.3.0, `mypy` v2.3.1), which removes the deprecated stage-name warnings. The
   mypy hook now pins the newest pandas/numpy that still support Python 3.10, the
   project's minimum: pandas 3 and pandas-stubs 3 require 3.11+, and mypy silently typed
   their `DataFrame` as `Any` (#115)
 
+### Deprecated
+- `get_variable_correlation()` and `generate_variable_report()`, removed in 1.0. Computing
+  statistics is not a connector's job, and the correlation is misleading as it stands: it
+  correlates *levels* of two series that both carry a trend, so almost any two BCRA series
+  come out related (two real ones: 0.94 on levels, -0.05 on returns). `usage.rst` has the
+  pandas recipe that replaces both and makes explicit what is being computed. These were
+  the last two methods on `BCRAConnector` that were not already deprecated aliases (#149)
+- The superseded model exports now emit a `DeprecationWarning` when they are
+  imported or accessed, naming what replaces them, instead of being deprecated only
+  in this file: the `*Response` wrappers (`Page` replaces them), both `ErrorResponse`
+  classes (every API error is raised as a `BCRAApiError`) and
+  `EstadisticasCambiariasResultset` / `EstadisticasCambiariasMetadata` (`Resultset`
+  and `Metadata`). They keep working until 1.0 (#140)
+- The camelCase field names of `PrincipalesVariables` and `DatosVariable`
+  (`idVariable`, `tipoSerie`, `unidadExpresion`, `primerFechaInformada`,
+  `ultFechaInformada`, `ultValorInformado`) are deprecated in favour of their
+  snake_case equivalents and will be removed in 1.0 (#135)
+- The `*Response` models (`DatosVariableResponse`, `DivisaResponse`, `EntidadResponse`,
+  `CotizacionResponse`, `CotizacionesResponse`, `ChequeResponse`) are superseded by
+  `Page` and will be removed in 1.0. The deprecated `get_*` methods still return the old
+  types, so code on 0.12 is unaffected (#131)
+- `get_divisas()`, `get_cotizaciones()`, `get_evolucion_moneda()`,
+  `get_currency_evolution()`, `get_latest_quotations()` and
+  `get_currency_pair_evolution()` are deprecated in favour of `connector.cambiarias.*`
+  and will be removed in 1.0 (#129)
+- `get_principales_variables()`, `get_datos_variable()`, `get_latest_value()`,
+  `get_variable_by_name()` and `get_variable_history()` are deprecated in favour of
+  `connector.monetarias.*` and will be removed in 1.0 (#126)
+- `get_entidades()`, `get_cheque_denunciado()` and `check_denunciado()` are deprecated
+  in favour of `connector.cheques.*` and will be removed in 1.0 (#123)
+- `get_deudas()`, `get_deudas_historicas()` and `get_cheques_rechazados()` are
+  deprecated in favour of `connector.deudores.*` and will be removed in 1.0. They
+  delegate and emit a `DeprecationWarning` naming the replacement (#121)
+
+### Removed
+- The `[analytics]` extra, and with it numpy: it was there only for
+  `get_variable_correlation()`, which now computes Pearson on the standard library
+  (`statistics.correlation` plus the linear interpolation numpy used to do). Verified
+  identical on live data — `0.507249107355878` either way — and over 300 random cases
+  (max deviation 1.1e-13 for the interpolation, 4.4e-16 for the correlation). Runtime
+  dependencies are `requests` and `urllib3`, with `[pandas]` as the only extra, and a plain
+  `pip install bcra-connector` brings neither numpy nor scipy. (`[pandas]` still pulls numpy
+  in *transitively*, as pandas requires it — what changed is that nothing in this project
+  declares it.) `pip install "bcra-connector[analytics]"` now warns that the extra does not
+  exist instead of failing, and installs the library (#149)
+
 ### Fixed
+- The API reference documents all four domain clients: `monetarias` and `cambiarias`
+  were missing since they were introduced, so the reference described the deprecated
+  aliases better than the current API. The duplicated page title is gone too (#143)
+- The package now ships the PEP 561 `py.typed` marker. Without it type checkers
+  ignored every annotation in the installed library — `Page[T]`, `DateLike` and all
+  the models resolved to `Any` downstream — despite the README advertising full type
+  hinting (#137)
 - Documentation: the examples page embedded three images that returned 404 in the
   published docs. They are produced by running the examples, which write them to the
   gitignored `docs/build/`, so Read the Docs never had them (#117)
@@ -726,6 +722,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[0.13.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.9.4...v0.10.0
