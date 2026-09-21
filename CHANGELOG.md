@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `to_dataframe(rows)` at package level builds a DataFrame from any iterable of models —
+  a slice of a page, a filtered selection, a generator — which replaces the
+  `pd.DataFrame([x.to_dict() for x in ...])` recipe. `Page.to_dataframe()` and the nine
+  per-object `to_dataframe()` methods now all go through it, so there is one code path
+  and one `ImportError` naming the `[pandas]` extra instead of nine copies in two
+  wordings (#147)
+- `Divisa.to_dict()` and `CotizacionDetalle.to_dict()`, the two models that had none.
+  Without them a `Page[Divisa]` put the dataclass itself in the cell instead of its
+  columns (#147)
 - The Monetarias models are snake_case like the rest of the library:
   `PrincipalesVariables.id_variable`, `.tipo_serie`, `.unidad_expresion`,
   `.primer_fecha_informada`, `.ult_fecha_informada`, `.ult_valor_informado` and
@@ -79,6 +88,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hinting (#137)
 
 ### Changed
+- Date columns in a DataFrame are `datetime64[ns]`, whichever call built the frame, so
+  `.dt`, `resample()` and date comparisons work without a `pd.to_datetime()` first.
+  Before, the same `fecha` came out as a *string* from `PrincipalesVariables`,
+  `DetalleMonetaria` and any `Page` of them (their rows come from `to_dict()`, the API's
+  wire format) and as `object` holding `datetime.date` from `DatosVariable`, `Cheque`
+  and `CotizacionFecha` (their rows are built by hand). A column is converted only when
+  every value in it is a date, so `periodo` (`YYYYMM`) stays a string (#147)
 - Every model reads the API payload the same way, through two helpers in
   `bcra_connector.models`. A malformed response now fails with a message naming the
   field and what was expected — `field 'codigoEntidad' is missing`, `field 'valor' must

@@ -32,7 +32,7 @@ from .exceptions import (
     BCRARateLimitError,
     BCRAServerError,
 )
-from .models import DateLike, Metadata, Page, Resultset
+from .models import DateLike, Metadata, Page, Resultset, to_dataframe
 
 # Import from principales_variables
 from .principales_variables import DatosVariable, DetalleMonetaria, PrincipalesVariables
@@ -100,6 +100,7 @@ __all__ = [
     "TimeoutConfig",
     "DateLike",
     "Page",
+    "to_dataframe",
     "Resultset",
     "Metadata",
     # Principales Variables / Monetarias v4.0

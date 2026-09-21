@@ -196,3 +196,207 @@ class TestCotizacionFechaToDataframe:
         assert df.iloc[0]["codigoMoneda"] == "USD"
         assert df.iloc[1]["codigoMoneda"] == "EUR"
         assert df.iloc[0]["tipoCotizacion"] == 850.0
+
+
+DIVISA_DATA = {"codigo": "USD", "denominacion": "DOLAR ESTADOUNIDENSE"}
+
+DEUDOR_DATA = {
+    "identificacion": 20000000001,
+    "denominacion": "Test SA",
+    "periodos": [
+        {
+            "periodo": "202401",
+            "entidades": [
+                {
+                    "entidad": "BANCO TEST",
+                    "situacion": 1,
+                    "monto": 100.0,
+                    "enRevision": False,
+                    "procesoJud": False,
+                }
+            ],
+        }
+    ],
+}
+
+
+class TestModuleLevelToDataframe:
+    """`to_dataframe(rows)` is the one way the library hands data to pandas."""
+
+    def test_it_is_exported(self) -> None:
+        import bcra_connector
+
+        assert "to_dataframe" in bcra_connector.__all__
+
+    def test_one_row_per_model(self) -> None:
+        pd = pytest.importorskip("pandas")
+
+        from bcra_connector import to_dataframe
+        from bcra_connector.principales_variables import DetalleMonetaria
+
+        rows = [
+            DetalleMonetaria.from_dict({"fecha": "2024-01-01", "valor": 1.0}),
+            DetalleMonetaria.from_dict({"fecha": "2024-01-02", "valor": 2.0}),
+        ]
+        df = to_dataframe(rows)
+
+        assert isinstance(df, pd.DataFrame)
+        assert list(df.columns) == ["fecha", "valor"]
+        assert df["valor"].tolist() == [1.0, 2.0]
+
+    def test_it_takes_any_iterable(self) -> None:
+        """A generator, so a filtered selection needs no intermediate list."""
+        pytest.importorskip("pandas")
+
+        from bcra_connector import to_dataframe
+        from bcra_connector.principales_variables import DetalleMonetaria
+
+        rows = [
+            DetalleMonetaria.from_dict({"fecha": "2024-01-01", "valor": 1.0}),
+            DetalleMonetaria.from_dict({"fecha": "2024-01-02", "valor": 200.0}),
+        ]
+        df = to_dataframe(row for row in rows if row.valor > 100)
+
+        assert df["valor"].tolist() == [200.0]
+
+    def test_plain_dicts_pass_through(self) -> None:
+        pytest.importorskip("pandas")
+
+        from bcra_connector import to_dataframe
+
+        assert to_dataframe([{"a": 1}, {"a": 2}])["a"].tolist() == [1, 2]
+
+    def test_empty_input_gives_an_empty_frame(self) -> None:
+        pd = pytest.importorskip("pandas")
+
+        from bcra_connector import to_dataframe
+
+        df = to_dataframe([])
+        assert isinstance(df, pd.DataFrame)
+        assert df.empty
+
+    def test_without_pandas_it_names_the_extra(self) -> None:
+        from bcra_connector import to_dataframe
+
+        with patch.dict("sys.modules", {"pandas": None}):
+            with pytest.raises(ImportError, match=r"bcra-connector\[pandas\]"):
+                to_dataframe([])
+
+
+class TestDateColumns:
+    """Dates are `datetime64[ns]`, whichever call built the frame (issue #147)."""
+
+    def _frames(self) -> dict:
+        from bcra_connector.cheques import Cheque
+        from bcra_connector.estadisticas_cambiarias import CotizacionFecha
+        from bcra_connector.models import Page
+        from bcra_connector.principales_variables import (
+            DatosVariable,
+            DetalleMonetaria,
+            PrincipalesVariables,
+        )
+
+        detalle = DetalleMonetaria.from_dict(DETALLE_MONETARIA_DATA)
+        variable = PrincipalesVariables.from_dict(PRINCIPALES_VARIABLES_DATA)
+        return {
+            # rows built from to_dict(), so the wire format's ISO strings
+            "PrincipalesVariables": (variable.to_dataframe(), "ultFechaInformada"),
+            "DetalleMonetaria": (detalle.to_dataframe(), "fecha"),
+            "Page[PrincipalesVariables]": (
+                Page([variable]).to_dataframe(),
+                "ultFechaInformada",
+            ),
+            "Page[DetalleMonetaria]": (Page([detalle]).to_dataframe(), "fecha"),
+            # rows built by hand, so real date objects
+            "DatosVariable": (
+                DatosVariable.from_dict(DATOS_VARIABLE_DATA).to_dataframe(),
+                "fecha",
+            ),
+            "Cheque": (
+                Cheque.from_dict(CHEQUE_DATA).to_dataframe(),
+                "fechaProcesamiento",
+            ),
+            "CotizacionFecha": (
+                CotizacionFecha.from_dict(COTIZACION_FECHA_DATA).to_dataframe(),
+                "fecha",
+            ),
+        }
+
+    def test_every_call_agrees_on_the_dtype(self) -> None:
+        """Before #147: `str` in four of these, `object` in the other three."""
+        pytest.importorskip("pandas")
+
+        for label, (df, column) in self._frames().items():
+            assert str(df[column].dtype) == "datetime64[ns]", label
+
+    def test_the_datetime_accessor_works(self) -> None:
+        pytest.importorskip("pandas")
+
+        from bcra_connector.principales_variables import DatosVariable
+
+        df = DatosVariable.from_dict(DATOS_VARIABLE_DATA).to_dataframe()
+        assert df["fecha"].dt.day.tolist() == [1, 2, 3]
+
+    def test_a_null_date_becomes_nat(self) -> None:
+        pd = pytest.importorskip("pandas")
+
+        from bcra_connector.principales_variables import PrincipalesVariables
+
+        df = PrincipalesVariables.from_dict(
+            {"idVariable": 1, "primerFechaInformada": "2020-01-01"}
+        ).to_dataframe()
+        assert "ultFechaInformada" not in df.columns
+        df = pd.concat(
+            [
+                df,
+                PrincipalesVariables.from_dict(
+                    {"idVariable": 2, "ultFechaInformada": "2024-01-01"}
+                ).to_dataframe(),
+            ]
+        )
+        assert df["primerFechaInformada"].isna().sum() == 1
+
+    def test_a_column_of_plain_strings_is_left_alone(self) -> None:
+        """Only a column that is *all* dates is converted."""
+        pytest.importorskip("pandas")
+
+        from bcra_connector import to_dataframe
+
+        df = to_dataframe([{"fecha": "2024-01-01"}, {"fecha": "not a date"}])
+        assert str(df["fecha"].dtype) in ("object", "str")
+
+    def test_a_period_is_not_a_date(self) -> None:
+        """`periodo` is YYYYMM, which is not an ISO date and must stay a string."""
+        pytest.importorskip("pandas")
+
+        from bcra_connector.central_deudores import Deudor
+
+        df = Deudor.from_dict(DEUDOR_DATA).to_dataframe()
+        assert df["periodo"].tolist() == ["202401"]
+        assert str(df["periodo"].dtype) in ("object", "str")
+
+
+class TestMissingToDict:
+    """`Divisa` and `CotizacionDetalle` can describe themselves now (issue #147)."""
+
+    def test_divisa_to_dict(self) -> None:
+        from bcra_connector.estadisticas_cambiarias import Divisa
+
+        assert Divisa.from_dict(DIVISA_DATA).to_dict() == DIVISA_DATA
+
+    def test_cotizacion_detalle_to_dict(self) -> None:
+        from bcra_connector.estadisticas_cambiarias import CotizacionDetalle
+
+        block = COTIZACION_FECHA_DATA["detalle"][0]
+        assert CotizacionDetalle.from_dict(block).to_dict() == block
+
+    def test_a_page_of_divisas_has_real_columns(self) -> None:
+        """Without to_dict() the dataclass itself landed in the cell."""
+        pytest.importorskip("pandas")
+
+        from bcra_connector.estadisticas_cambiarias import Divisa
+        from bcra_connector.models import Page
+
+        df = Page([Divisa.from_dict(DIVISA_DATA)]).to_dataframe()
+        assert list(df.columns) == ["codigo", "denominacion"]
+        assert df.iloc[0]["codigo"] == "USD"

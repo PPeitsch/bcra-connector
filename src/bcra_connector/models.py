@@ -1,5 +1,6 @@
 """Types shared by every domain client."""
 
+import re
 import warnings
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -10,6 +11,7 @@ from typing import (
     Callable,
     Dict,
     Generic,
+    Iterable,
     Iterator,
     List,
     Optional,
@@ -317,16 +319,78 @@ class Page(Generic[T]):
 
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError as e:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                'Install it with: pip install "bcra-connector[pandas]"'
-            ) from e
-        return pd.DataFrame(
-            [row.to_dict() if hasattr(row, "to_dict") else row for row in self.results]
-        )
+        return to_dataframe(self.results)
+
+
+#: A date on the wire: what ``to_dict()`` writes and the API sends.
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _pandas() -> Any:
+    """Import pandas, or say which extra installs it.
+
+    One message for the whole library: every ``to_dataframe`` comes through here.
+    """
+    try:
+        import pandas as pd
+    except ImportError as e:
+        raise ImportError(
+            "pandas is required for to_dataframe(). "
+            'Install it with: pip install "bcra-connector[pandas]"'
+        ) from e
+    return pd
+
+
+def _is_dates(present: List[Any]) -> bool:
+    """Whether a column holds nothing but dates, written either way.
+
+    ``to_dict()`` is the API's wire format, so its dates are ISO strings, while a
+    model that builds its rows by hand puts ``date`` objects in them. Both are the
+    same column to a caller, so both become ``datetime64[ns]``. A column is only
+    converted when *every* value in it is a date: one plain string among them and
+    the column is left alone, rather than turning that value into ``NaT``.
+
+    :param present: The column's values, nulls already dropped.
+    """
+    if not present:
+        return False
+    if all(isinstance(v, (date, datetime)) for v in present):
+        return True
+    return all(isinstance(v, str) and _ISO_DATE.match(v) for v in present)
+
+
+def _row(obj: Any) -> Any:
+    """One DataFrame row out of a model, a mapping, or anything else as-is."""
+    to_dict = getattr(obj, "to_dict", None)
+    return to_dict() if callable(to_dict) else obj
+
+
+def to_dataframe(rows: Iterable[Any]) -> "pd.DataFrame":
+    """Build a DataFrame with one row per model.
+
+    The one way the library hands data to pandas: every ``to_dataframe()`` method
+    ends up here, so a column means the same thing whichever call produced it.
+    Takes anything iterable — a :class:`Page`, a list of models, a list of plain
+    dicts — and uses each row's ``to_dict()`` when it has one.
+
+    Date columns come out as ``datetime64[ns]`` rather than as ``object`` or as
+    strings, so ``.dt``, resampling and date comparisons work without a
+    ``pd.to_datetime()`` first. A column is converted only when everything in it
+    is a date; see :func:`_is_dates`. The unit is pinned to ``ns`` on purpose:
+    pandas 3 infers it from the input, so the same column came out ``us`` when
+    parsed from the wire format's strings and ``s`` when built from ``date``
+    objects — two dtypes for one column, which is the thing this replaces.
+
+    :param rows: The models, or dicts, to lay out as rows.
+    :return: A DataFrame, empty if ``rows`` is.
+    :raises ImportError: If pandas is not installed.
+    """
+    pandas = _pandas()
+    frame: "pd.DataFrame" = pandas.DataFrame([_row(obj) for obj in rows])
+    for column in frame.columns:
+        if _is_dates(frame[column].dropna().tolist()):
+            frame[column] = pandas.to_datetime(frame[column]).astype("datetime64[ns]")
+    return frame
 
 
 def resultset(data: Dict[str, Any]) -> Dict[str, Any]:

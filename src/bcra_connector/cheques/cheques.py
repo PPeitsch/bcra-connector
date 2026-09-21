@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List
 
-from ..models import optional, require
+from ..models import optional, require, to_dataframe
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -53,14 +53,7 @@ class Entidad:
         :return: A single-row DataFrame with entity information.
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                "Install with: pip install bcra-connector[pandas]"
-            )
-        return pd.DataFrame([self.to_dict()])
+        return to_dataframe([self])
 
 
 @dataclass
@@ -156,13 +149,6 @@ class Cheque:
         :return: DataFrame with check data and details.
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                "Install with: pip install bcra-connector[pandas]"
-            )
         rows = [
             {
                 "numeroCheque": self.numero_cheque,
@@ -188,7 +174,7 @@ class Cheque:
                     "causal": None,
                 }
             ]
-        return pd.DataFrame(rows)
+        return to_dataframe(rows)
 
 
 @dataclass

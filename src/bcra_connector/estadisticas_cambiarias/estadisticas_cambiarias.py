@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import Metadata, optional, require
+from ..models import Metadata, optional, require, to_dataframe
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -40,6 +40,10 @@ class Divisa:
             denominacion=require(data, "denominacion", str),
         )
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the Divisa instance to a dictionary."""
+        return {"codigo": self.codigo, "denominacion": self.denominacion}
+
 
 @dataclass
 class CotizacionDetalle:
@@ -66,6 +70,15 @@ class CotizacionDetalle:
             tipo_pase=require(data, "tipoPase", float),
             tipo_cotizacion=require(data, "tipoCotizacion", float),
         )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the CotizacionDetalle instance to a dictionary."""
+        return {
+            "codigoMoneda": self.codigo_moneda,
+            "descripcion": self.descripcion,
+            "tipoPase": self.tipo_pase,
+            "tipoCotizacion": self.tipo_cotizacion,
+        }
 
 
 @dataclass
@@ -94,15 +107,7 @@ class CotizacionFecha:
         """Convert the CotizacionFecha instance to a dictionary."""
         return {
             "fecha": self.fecha.isoformat() if self.fecha else None,
-            "detalle": [
-                {
-                    "codigoMoneda": d.codigo_moneda,
-                    "descripcion": d.descripcion,
-                    "tipoPase": d.tipo_pase,
-                    "tipoCotizacion": d.tipo_cotizacion,
-                }
-                for d in self.detalle
-            ],
+            "detalle": [d.to_dict() for d in self.detalle],
         }
 
     def to_dataframe(self) -> "pd.DataFrame":
@@ -117,13 +122,6 @@ class CotizacionFecha:
         :return: DataFrame with exchange rate data.
         :raises ImportError: If pandas is not installed.
         """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "pandas is required for to_dataframe(). "
-                "Install with: pip install bcra-connector[pandas]"
-            )
         rows = [
             {
                 "fecha": self.fecha,
@@ -134,7 +132,7 @@ class CotizacionFecha:
             }
             for d in self.detalle
         ]
-        return pd.DataFrame(rows)
+        return to_dataframe(rows)
 
 
 @dataclass
