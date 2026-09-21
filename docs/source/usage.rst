@@ -233,6 +233,42 @@ usual time-series work needs no conversion first:
    monthly = df.set_index("fecha")["valor"].resample("ME").mean()
    df["mes"] = df["fecha"].dt.month
 
+Statistics over a series
+------------------------
+
+``generate_variable_report()`` and ``get_variable_correlation()`` are deprecated and go
+away in 1.0: computing statistics is not a connector's job, and doing it in pandas makes
+explicit what is being computed.
+
+Everything the report returned is one call over the series:
+
+.. code-block:: python
+
+   df = connector.monetarias.series(1, desde="2024-01-01")[0].to_dataframe()
+
+   df["valor"].describe()          # count, mean, std, min, quartiles, max
+   df["valor"].iloc[-1]            # latest value
+   df["valor"].pct_change().iloc[-1] * 100
+
+Note that ``describe()`` reports the *sample* standard deviation, while the report used
+the population one (``std_dev``); ``df["valor"].std(ddof=0)`` is the old number.
+
+For a correlation, align the two series on their dates first — which is the step that
+decides what the number means:
+
+.. code-block:: python
+
+   from bcra_connector import to_dataframe
+
+   a = connector.monetarias.series(1, desde="2024-01-01")[0].to_dataframe()
+   b = connector.monetarias.series(4, desde="2024-01-01")[0].to_dataframe()
+   paired = a.set_index("fecha")["valor"].to_frame("a").join(
+       b.set_index("fecha")["valor"].to_frame("b"), how="inner"
+   )
+
+   paired.corr()                       # levels: both carry a trend
+   paired.pct_change().dropna().corr()  # returns, usually what you want
+
 Paged results
 -------------
 

@@ -136,8 +136,8 @@ To change these values, subclass `BCRAConnector`:
 Catalog Cache
 -------------
 
-Name-based helpers (``monetarias.find``, ``monetarias.history``,
-``generate_variable_report``, ``get_variable_correlation``) and ``cheques.is_reported`` look
+Name-based helpers (``monetarias.find``, ``monetarias.history``) and
+``cheques.is_reported`` look
 names up in reference catalogs: the variables catalog and the list of financial
 entities. Each connector instance reuses those catalogs for ``CATALOG_CACHE_TTL`` seconds
 (default: 300) instead of downloading them on every lookup.

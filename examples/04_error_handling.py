@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Callable, Type
 
-from bcra_connector import BCRAApiError, BCRAConnector
+from bcra_connector import BCRAApiError, BCRAConnector, BCRANotFoundError
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -126,17 +126,15 @@ def main() -> None:
     )
 
     test_case(
-        "Generate report for non-existent variable",
-        lambda: connector.generate_variable_report("This Variable Also Does Not Exist"),
+        "History for a non-existent variable name",
+        lambda: connector.monetarias.history("This Variable Also Does Not Exist"),
         expected_exception=ValueError,
     )
 
     test_case(
-        "Correlation between non-existent variables",
-        lambda: connector.get_variable_correlation(
-            "NonExistentVarAlpha", "NonExistentVarBeta"
-        ),
-        expected_exception=ValueError,
+        "Debts for an unknown identification",
+        lambda: connector.deudores.debts("20-00000000-0"),
+        expected_exception=BCRANotFoundError,
     )
 
     logger.info("\nError handling example script finished.")

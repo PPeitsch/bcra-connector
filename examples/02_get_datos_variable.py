@@ -8,7 +8,6 @@ import os
 from datetime import datetime, timedelta
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 from bcra_connector import BCRAApiError, BCRAConnector
 
@@ -103,7 +102,8 @@ def main() -> None:
         ]
         values = [dato.valor for dato in all_data_points]
 
-        ax.plot(np.array(dates), np.array(values), "-")
+        # matplotlib plots datetimes on a date axis; its stubs only admit numbers
+        ax.plot(dates, values, "-")  # type: ignore[arg-type]
         ax.set_title(
             f"'{display_variable_name}\\n(Page with limit={limit_param}, offset={offset_param} in last 90 days)"
         )
