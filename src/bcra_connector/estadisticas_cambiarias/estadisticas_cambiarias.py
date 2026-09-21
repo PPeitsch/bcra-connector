@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import Metadata
+from ..models import Metadata, optional, require
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -35,7 +35,10 @@ class Divisa:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Divisa":
         """Create a Divisa instance from a dictionary."""
-        return cls(codigo=data["codigo"], denominacion=data["denominacion"])
+        return cls(
+            codigo=require(data, "codigo", str),
+            denominacion=require(data, "denominacion", str),
+        )
 
 
 @dataclass
@@ -58,10 +61,10 @@ class CotizacionDetalle:
     def from_dict(cls, data: Dict[str, Any]) -> "CotizacionDetalle":
         """Create a CotizacionDetalle instance from a dictionary."""
         return cls(
-            codigo_moneda=data["codigoMoneda"],
-            descripcion=data["descripcion"],
-            tipo_pase=float(data["tipoPase"]),
-            tipo_cotizacion=float(data["tipoCotizacion"]),
+            codigo_moneda=require(data, "codigoMoneda", str),
+            descripcion=require(data, "descripcion", str),
+            tipo_pase=require(data, "tipoPase", float),
+            tipo_cotizacion=require(data, "tipoCotizacion", float),
         )
 
 
@@ -81,8 +84,10 @@ class CotizacionFecha:
     def from_dict(cls, data: Dict[str, Any]) -> "CotizacionFecha":
         """Create a CotizacionFecha instance from a dictionary."""
         return cls(
-            fecha=date.fromisoformat(data["fecha"]) if data["fecha"] else None,
-            detalle=[CotizacionDetalle.from_dict(d) for d in data["detalle"]],
+            fecha=optional(data, "fecha", date),
+            detalle=[
+                CotizacionDetalle.from_dict(d) for d in require(data, "detalle", list)
+            ],
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -148,8 +153,8 @@ class DivisaResponse:
     def from_dict(cls, data: Dict[str, Any]) -> "DivisaResponse":
         """Create a DivisaResponse instance from a dictionary."""
         return cls(
-            status=data["status"],
-            results=[Divisa.from_dict(d) for d in data["results"]],
+            status=require(data, "status", int),
+            results=[Divisa.from_dict(d) for d in require(data, "results", list)],
         )
 
 
@@ -169,7 +174,8 @@ class CotizacionResponse:
     def from_dict(cls, data: Dict[str, Any]) -> "CotizacionResponse":
         """Create a CotizacionResponse instance from a dictionary."""
         return cls(
-            status=data["status"], results=CotizacionFecha.from_dict(data["results"])
+            status=require(data, "status", int),
+            results=CotizacionFecha.from_dict(require(data, "results", dict)),
         )
 
 
@@ -191,9 +197,11 @@ class CotizacionesResponse:
     def from_dict(cls, data: Dict[str, Any]) -> "CotizacionesResponse":
         """Create a CotizacionesResponse instance from a dictionary."""
         return cls(
-            status=data["status"],
-            metadata=Metadata.from_dict(data["metadata"]),
-            results=[CotizacionFecha.from_dict(d) for d in data["results"]],
+            status=require(data, "status", int),
+            metadata=Metadata.from_dict(require(data, "metadata", dict)),
+            results=[
+                CotizacionFecha.from_dict(d) for d in require(data, "results", list)
+            ],
         )
 
 
@@ -212,4 +220,7 @@ class ErrorResponse:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ErrorResponse":
         """Create an ErrorResponse instance from a dictionary."""
-        return cls(status=data["status"], error_messages=data["errorMessages"])
+        return cls(
+            status=require(data, "status", int),
+            error_messages=require(data, "errorMessages", list),
+        )

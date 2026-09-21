@@ -37,9 +37,9 @@ class TestDivisa:
         assert divisa.denominacion == "DOLAR ESTADOUNIDENSE"
 
     def test_divisa_missing_fields(self) -> None:
-        """Test handling of missing required fields."""
+        """A missing field names itself instead of raising a bare KeyError."""
         incomplete_data: Dict[str, Any] = {"codigo": "USD"}
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError, match="field 'denominacion' is missing"):
             Divisa.from_dict(incomplete_data)
 
     def test_divisa_invalid_code(self) -> None:

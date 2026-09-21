@@ -50,19 +50,25 @@ class TestValidation:
         assert Resultset.from_dict(BLOCK).to_dict() == BLOCK
 
     @pytest.mark.parametrize(
-        "bad",
+        ("bad", "message"),
         [
-            {"count": "100", "offset": 0, "limit": 50},
-            {"count": 100, "offset": None, "limit": 50},
-            {"count": 100, "offset": 0},
+            ({"count": "many", "offset": 0, "limit": 50}, "'count' must be int"),
+            ({"count": 100, "offset": None, "limit": 50}, "'offset' must be int"),
+            ({"count": 100, "offset": 0}, "'limit' is missing"),
         ],
     )
-    def test_non_integer_fields_raise(self, bad: dict) -> None:
-        with pytest.raises(ValueError, match="Invalid types for Resultset fields"):
+    def test_unreadable_fields_name_themselves(self, bad: dict, message: str) -> None:
+        with pytest.raises(ValueError, match=message):
             CambiariasResultset.from_dict(bad)
 
+    def test_numeric_strings_are_read_as_numbers(self) -> None:
+        """The helpers convert, as the other models always did."""
+        assert CambiariasResultset.from_dict(
+            {"count": "100", "offset": "0", "limit": "50"}
+        ) == Resultset(count=100, offset=0, limit=50)
+
     def test_metadata_without_resultset_raises(self) -> None:
-        with pytest.raises(ValueError, match="Missing or invalid 'resultset'"):
+        with pytest.raises(ValueError, match="field 'resultset' is missing"):
             CambiariasMetadata.from_dict({})
 
     def test_metadata_parses_its_block(self) -> None:

@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from ..models import optional, require
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -39,18 +41,13 @@ class EntidadDeuda:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "EntidadDeuda":
         """Create an EntidadDeuda instance from a dictionary."""
-        # API returns 0 for "no situation", treat as None
-        situacion_raw = data.get("situacion")
-        situacion = None
-        if situacion_raw is not None and int(situacion_raw) != 0:
-            situacion = int(situacion_raw)
-
         return cls(
-            entidad=data["entidad"],
-            situacion=situacion,
-            monto=float(data["monto"]),
-            en_revision=bool(data.get("enRevision", False)),
-            proceso_jud=bool(data.get("procesoJud", False)),
+            entidad=require(data, "entidad", str),
+            # The API reports "no situation" as 0, which __post_init__ rejects
+            situacion=optional(data, "situacion", int) or None,
+            monto=require(data, "monto", float),
+            en_revision=optional(data, "enRevision", bool, default=False),
+            proceso_jud=optional(data, "procesoJud", bool, default=False),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -79,8 +76,11 @@ class Periodo:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Periodo":
         """Create a Periodo instance from a dictionary."""
-        entidades = [EntidadDeuda.from_dict(e) for e in data.get("entidades", [])]
-        return cls(periodo=data["periodo"], entidades=entidades)
+        entidades = [
+            EntidadDeuda.from_dict(e)
+            for e in optional(data, "entidades", list, default=[])
+        ]
+        return cls(periodo=require(data, "periodo", str), entidades=entidades)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the instance to a dictionary."""
@@ -107,10 +107,12 @@ class Deudor:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Deudor":
         """Create a Deudor instance from a dictionary."""
-        periodos = [Periodo.from_dict(p) for p in data.get("periodos", [])]
+        periodos = [
+            Periodo.from_dict(p) for p in optional(data, "periodos", list, default=[])
+        ]
         return cls(
-            identificacion=int(data["identificacion"]),
-            denominacion=data["denominacion"],
+            identificacion=require(data, "identificacion", int),
+            denominacion=require(data, "denominacion", str),
             periodos=periodos,
         )
 
@@ -203,25 +205,17 @@ class ChequeRechazado:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ChequeRechazado":
         """Create a ChequeRechazado instance from a dictionary."""
-        fecha_pago = None
-        if data.get("fechaPago"):
-            fecha_pago = date.fromisoformat(str(data["fechaPago"]))
-
-        fecha_pago_multa = None
-        if data.get("fechaPagoMulta"):
-            fecha_pago_multa = date.fromisoformat(str(data["fechaPagoMulta"]))
-
         return cls(
-            nro_cheque=int(data["nroCheque"]),
-            fecha_rechazo=date.fromisoformat(str(data["fechaRechazo"])),
-            monto=float(data["monto"]),
-            fecha_pago=fecha_pago,
-            fecha_pago_multa=fecha_pago_multa,
-            estado_multa=data.get("estadoMulta"),
-            cta_personal=bool(data.get("ctaPersonal", False)),
-            denom_juridica=data.get("denomJuridica"),
-            en_revision=bool(data.get("enRevision", False)),
-            proceso_jud=bool(data.get("procesoJud", False)),
+            nro_cheque=require(data, "nroCheque", int),
+            fecha_rechazo=require(data, "fechaRechazo", date),
+            monto=require(data, "monto", float),
+            fecha_pago=optional(data, "fechaPago", date),
+            fecha_pago_multa=optional(data, "fechaPagoMulta", date),
+            estado_multa=optional(data, "estadoMulta", str),
+            cta_personal=optional(data, "ctaPersonal", bool, default=False),
+            denom_juridica=optional(data, "denomJuridica", str),
+            en_revision=optional(data, "enRevision", bool, default=False),
+            proceso_jud=optional(data, "procesoJud", bool, default=False),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -257,8 +251,11 @@ class EntidadCheques:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "EntidadCheques":
         """Create an EntidadCheques instance from a dictionary."""
-        detalle = [ChequeRechazado.from_dict(c) for c in data.get("detalle", [])]
-        return cls(entidad=int(data["entidad"]), detalle=detalle)
+        detalle = [
+            ChequeRechazado.from_dict(c)
+            for c in optional(data, "detalle", list, default=[])
+        ]
+        return cls(entidad=require(data, "entidad", int), detalle=detalle)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the instance to a dictionary."""
@@ -283,8 +280,11 @@ class CausalCheques:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "CausalCheques":
         """Create a CausalCheques instance from a dictionary."""
-        entidades = [EntidadCheques.from_dict(e) for e in data.get("entidades", [])]
-        return cls(causal=data["causal"], entidades=entidades)
+        entidades = [
+            EntidadCheques.from_dict(e)
+            for e in optional(data, "entidades", list, default=[])
+        ]
+        return cls(causal=require(data, "causal", str), entidades=entidades)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the instance to a dictionary."""
@@ -311,10 +311,13 @@ class ChequesRechazados:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ChequesRechazados":
         """Create a ChequesRechazados instance from a dictionary."""
-        causales = [CausalCheques.from_dict(c) for c in data.get("causales", [])]
+        causales = [
+            CausalCheques.from_dict(c)
+            for c in optional(data, "causales", list, default=[])
+        ]
         return cls(
-            identificacion=int(data["identificacion"]),
-            denominacion=data["denominacion"],
+            identificacion=require(data, "identificacion", int),
+            denominacion=require(data, "denominacion", str),
             causales=causales,
         )
 

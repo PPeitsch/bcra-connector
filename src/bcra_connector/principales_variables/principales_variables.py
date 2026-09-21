@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import Metadata, install_legacy_names
+from ..models import Metadata, install_legacy_names, optional, require
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -47,41 +47,18 @@ class PrincipalesVariables:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PrincipalesVariables":
         """Create a PrincipalesVariables instance from a dictionary (v4.0 format)."""
-        try:
-            # Parse optional date fields
-            primer_fecha = None
-            if data.get("primerFechaInformada"):
-                primer_fecha = date.fromisoformat(str(data["primerFechaInformada"]))
-
-            ult_fecha = None
-            if data.get("ultFechaInformada"):
-                ult_fecha = date.fromisoformat(str(data["ultFechaInformada"]))
-
-            # Parse optional float field
-            ult_valor = None
-            if data.get("ultValorInformado") is not None:
-                ult_valor = float(data["ultValorInformado"])
-
-            return cls(
-                id_variable=int(data["idVariable"]),
-                descripcion=data.get("descripcion"),
-                categoria=data.get("categoria"),
-                tipo_serie=data.get("tipoSerie"),
-                periodicidad=data.get("periodicidad"),
-                unidad_expresion=data.get("unidadExpresion"),
-                moneda=data.get("moneda"),
-                primer_fecha_informada=primer_fecha,
-                ult_fecha_informada=ult_fecha,
-                ult_valor_informado=ult_valor,
-            )
-        except KeyError as e:
-            raise ValueError(f"Missing key in PrincipalesVariables data: {e}") from e
-        except (
-            ValueError
-        ) as e:  # Catch float/int conversion errors or date format errors
-            raise ValueError(
-                f"Invalid data type or format in PrincipalesVariables data: {e}"
-            ) from e
+        return cls(
+            id_variable=require(data, "idVariable", int),
+            descripcion=optional(data, "descripcion", str),
+            categoria=optional(data, "categoria", str),
+            tipo_serie=optional(data, "tipoSerie", str),
+            periodicidad=optional(data, "periodicidad", str),
+            unidad_expresion=optional(data, "unidadExpresion", str),
+            moneda=optional(data, "moneda", str),
+            primer_fecha_informada=optional(data, "primerFechaInformada", date),
+            ult_fecha_informada=optional(data, "ultFechaInformada", date),
+            ult_valor_informado=optional(data, "ultValorInformado", float),
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the PrincipalesVariables instance to a dictionary (v4.0 format)."""
@@ -154,17 +131,10 @@ class DetalleMonetaria:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DetalleMonetaria":
         """Create a DetalleMonetaria instance from a dictionary."""
-        try:
-            return cls(
-                fecha=date.fromisoformat(str(data["fecha"])),
-                valor=float(data["valor"]),
-            )
-        except KeyError as e:
-            raise ValueError(f"Missing key in DetalleMonetaria data: {e}") from e
-        except ValueError as e:
-            raise ValueError(
-                f"Invalid data type or format in DetalleMonetaria data: {e}"
-            ) from e
+        return cls(
+            fecha=require(data, "fecha", date),
+            valor=require(data, "valor", float),
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the DetalleMonetaria instance to a dictionary."""
@@ -217,23 +187,13 @@ class DatosVariable:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DatosVariable":
         """Create a DatosVariable instance from a dictionary."""
-        try:
-            detalle_list = []
-            if data.get("detalle"):
-                detalle_list = [
-                    DetalleMonetaria.from_dict(item) for item in data["detalle"]
-                ]
-
-            return cls(
-                id_variable=int(data["idVariable"]),
-                detalle=detalle_list,
-            )
-        except KeyError as e:
-            raise ValueError(f"Missing key in DatosVariable data: {e}") from e
-        except ValueError as e:
-            raise ValueError(
-                f"Invalid data type or format in DatosVariable data: {e}"
-            ) from e
+        return cls(
+            id_variable=require(data, "idVariable", int),
+            detalle=[
+                DetalleMonetaria.from_dict(item)
+                for item in optional(data, "detalle", list, default=[])
+            ],
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the DatosVariable instance to a dictionary."""
@@ -288,27 +248,12 @@ class DatosVariableResponse:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DatosVariableResponse":
         """Create a DatosVariableResponse instance from a dictionary."""
-        if "status" not in data:
-            raise ValueError("Missing 'status' in DatosVariableResponse data")
-        if "metadata" not in data or not isinstance(data.get("metadata"), dict):
-            raise ValueError(
-                "Missing or invalid 'metadata' in DatosVariableResponse data"
-            )
-        if "results" not in data or not isinstance(data.get("results"), list):
-            raise ValueError(
-                "Missing or invalid 'results' in DatosVariableResponse data"
-            )
-
-        try:
-            metadata_obj = Metadata.from_dict(data["metadata"])
-            results_list = [DatosVariable.from_dict(item) for item in data["results"]]
-        except ValueError as e:  # Catch errors from child model parsing
-            raise ValueError(
-                f"Error parsing components of DatosVariableResponse: {e}"
-            ) from e
-
         return cls(
-            status=int(data["status"]), metadata=metadata_obj, results=results_list
+            status=require(data, "status", int),
+            metadata=Metadata.from_dict(require(data, "metadata", dict)),
+            results=[
+                DatosVariable.from_dict(item) for item in require(data, "results", list)
+            ],
         )
 
     def to_dict(self) -> Dict[str, Any]:
