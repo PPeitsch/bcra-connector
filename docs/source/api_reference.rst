@@ -1,15 +1,14 @@
 API Reference
 =============
 
-This section provides a detailed reference for the BCRA API Connector's classes and methods.
-
-API Reference
-=============
-
-This section provides a detailed reference for the BCRA API Connector's classes and methods, automatically generated from the source code.
+This section provides a detailed reference for the BCRA API Connector's classes and
+methods, automatically generated from the source code.
 
 BCRAConnector
 -------------
+
+The facade: configuration, lifecycle and the four domain clients below. Its own
+``get_*`` methods are deprecated aliases kept until 1.0; new code calls the clients.
 
 .. automodule:: src.bcra_connector.bcra_connector
    :members:
@@ -19,7 +18,18 @@ BCRAConnector
 Domain Clients
 --------------
 
+One per BCRA API, reached as ``connector.monetarias``, ``connector.cheques``,
+``connector.cambiarias`` and ``connector.deudores``.
+
+.. automodule:: src.bcra_connector.clients.monetarias
+   :members:
+   :show-inheritance:
+
 .. automodule:: src.bcra_connector.clients.cheques
+   :members:
+   :show-inheritance:
+
+.. automodule:: src.bcra_connector.clients.cambiarias
    :members:
    :show-inheritance:
 

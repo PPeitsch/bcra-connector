@@ -70,6 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   delegate and emit a `DeprecationWarning` naming the replacement (#121)
 
 ### Fixed
+- The API reference documents all four domain clients: `monetarias` and `cambiarias`
+  were missing since they were introduced, so the reference described the deprecated
+  aliases better than the current API. The duplicated page title is gone too (#143)
 - The package now ships the PEP 561 `py.typed` marker. Without it type checkers
   ignored every annotation in the installed library — `Page[T]`, `DateLike` and all
   the models resolved to `Any` downstream — despite the README advertising full type
