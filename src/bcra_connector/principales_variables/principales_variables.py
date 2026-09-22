@@ -7,13 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import (
-    Metadata,
-    install_legacy_names,
-    optional,
-    require,
-    to_dataframe,
-)
+from ..models import Metadata, optional, require, to_dataframe
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -24,8 +18,8 @@ class PrincipalesVariables:
     """
     Represents a principal variable or monetary series from the BCRA API (v4.0).
 
-    The API's own camelCase names (``idVariable``, ``ultValorInformado``, ...)
-    still work, with a ``DeprecationWarning``, until 1.0.
+    Fields are snake_case; ``from_dict``/``to_dict`` speak the API's camelCase,
+    which is its wire format rather than a field name.
 
     :param id_variable: The ID of the variable/series.
     :param descripcion: The description of the variable/series.
@@ -101,18 +95,6 @@ class PrincipalesVariables:
         :raises ImportError: If pandas is not installed.
         """
         return to_dataframe([self])
-
-
-# The API's own camelCase names, until 1.0.
-install_legacy_names(
-    PrincipalesVariables,
-    idVariable="id_variable",
-    tipoSerie="tipo_serie",
-    unidadExpresion="unidad_expresion",
-    primerFechaInformada="primer_fecha_informada",
-    ultFechaInformada="ult_fecha_informada",
-    ultValorInformado="ult_valor_informado",
-)
 
 
 @dataclass
@@ -211,9 +193,6 @@ class DatosVariable:
             for d in self.detalle
         ]
         return to_dataframe(rows)
-
-
-install_legacy_names(DatosVariable, idVariable="id_variable")
 
 
 @dataclass
