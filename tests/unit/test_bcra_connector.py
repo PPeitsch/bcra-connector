@@ -73,7 +73,7 @@ class TestBCRAConnector:
         assert connector_instance.timeout.read == 30.0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_principales_variables_success_v3(
+    def test_monetarias_list_success_v3(
         self,
         mock_get: Mock,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
@@ -114,7 +114,7 @@ class TestBCRAConnector:
         assert pv.ult_valor_informado == 100.0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_principales_variables_empty_response_v3(
+    def test_monetarias_list_empty_response_v3(
         self,
         mock_get: Mock,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
@@ -128,7 +128,7 @@ class TestBCRAConnector:
         assert len(result) == 0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_datos_variable_success_v3(
+    def test_monetarias_series_success_v3(
         self,
         mock_get: Mock,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
@@ -182,9 +182,7 @@ class TestBCRAConnector:
         assert dv.detalle[1].fecha == date(2024, 3, 5)
         assert dv.detalle[1].valor == 100.0
 
-    def test_get_datos_variable_invalid_dates_v3(
-        self, connector: BCRAConnector
-    ) -> None:
+    def test_monetarias_series_invalid_dates_v3(self, connector: BCRAConnector) -> None:
         """Test handling of invalid date ranges (v4.0)."""
         with pytest.raises(
             ValueError,
@@ -192,10 +190,10 @@ class TestBCRAConnector:
         ):
             connector.monetarias.series(1, datetime(2024, 3, 5), datetime(2024, 3, 1))
 
-    def test_get_datos_variable_invalid_limit_offset_v3(
+    def test_monetarias_series_invalid_limit_offset_v3(
         self, connector: BCRAConnector
     ) -> None:
-        """Test validation for limit and offset in get_datos_variable (v4.0)."""
+        """Test validation for limit and offset in monetarias.series (v4.0)."""
         valid_date = datetime(2024, 1, 1)
         with pytest.raises(ValueError, match="Limit must be between 10 and 3000"):
             connector.monetarias.series(1, desde=valid_date, limit=5)
@@ -209,7 +207,7 @@ class TestBCRAConnector:
             pytest.fail("Valid limit/offset raised ValueError unexpectedly.")
 
     @patch("bcra_connector.clients.monetarias.MonetariasClient.series")
-    def test_get_latest_value_success_v3(
+    def test_monetarias_latest_success_v3(
         self, mock_series: Mock, connector: BCRAConnector
     ) -> None:
         """Test successful retrieval of latest value (using v4.0)."""
@@ -239,7 +237,7 @@ class TestBCRAConnector:
         assert result.valor == 100.0
 
     @patch("bcra_connector.clients.monetarias.MonetariasClient.series")
-    def test_get_latest_value_no_data_v3(
+    def test_monetarias_latest_no_data_v3(
         self, mock_series: Mock, connector: BCRAConnector
     ) -> None:
         """Test handling of no data for latest value (using v4.0)."""
@@ -256,7 +254,7 @@ class TestBCRAConnector:
         mock_series.assert_any_call(1, desde=ANY, hasta=ANY, limit=ANY)
 
     @patch("bcra_connector.clients.monetarias.MonetariasClient.series")
-    def test_get_latest_value_fallback_success(
+    def test_monetarias_latest_fallback_success(
         self, mock_series: Mock, connector: BCRAConnector
     ) -> None:
         """Test fallback scenario where first query is empty but 30-day query succeeds."""
@@ -297,7 +295,7 @@ class TestBCRAConnector:
         assert result.valor == 75.0
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_entidades_success(
+    def test_cheques_entities_success(
         self,
         mock_get: Mock,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
@@ -327,7 +325,7 @@ class TestBCRAConnector:
         assert result[0].codigo_entidad == 11
 
     @patch("bcra_connector.bcra_connector.requests.Session.get")
-    def test_get_cheque_denunciado_success(
+    def test_cheques_reported_success(
         self,
         mock_get: Mock,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],

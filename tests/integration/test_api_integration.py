@@ -29,7 +29,7 @@ class TestBCRAIntegration:
             debug=True,
         )
 
-    def test_get_principales_variables_v3(self, connector: BCRAConnector) -> None:
+    def test_monetarias_list_v3(self, connector: BCRAConnector) -> None:
         """Test retrieval of principal variables/monetary series (Monetarias v4.0)."""
         variables: List[PrincipalesVariables] = connector.monetarias.list()
 
@@ -45,7 +45,7 @@ class TestBCRAIntegration:
         assert hasattr(first_var, "ult_valor_informado")
         assert hasattr(first_var, "categoria")
 
-    def test_get_historical_data_v3(self, connector: BCRAConnector) -> None:
+    def test_monetarias_series_v3(self, connector: BCRAConnector) -> None:
         """Test retrieval of historical data for a variable (Monetarias v4.0)."""
         variables: List[PrincipalesVariables] = connector.monetarias.list()
         if not variables:
@@ -90,7 +90,7 @@ class TestBCRAIntegration:
         assert response_offset.offset == 5
         assert response_offset.limit == 15
 
-    def test_get_currencies(self, connector: BCRAConnector) -> None:
+    def test_cambiarias_currencies(self, connector: BCRAConnector) -> None:
         """Test retrieval of available currencies (Estadisticas Cambiarias)."""
         currencies: List[Divisa] = connector.cambiarias.currencies()
 
@@ -99,7 +99,7 @@ class TestBCRAIntegration:
         assert any(c.codigo == "USD" for c in currencies)
         assert all(isinstance(c, Divisa) for c in currencies)
 
-    def test_get_exchange_rates(self, connector: BCRAConnector) -> None:
+    def test_cambiarias_quotations(self, connector: BCRAConnector) -> None:
         """Test retrieval of exchange rates for today or latest (Estadisticas Cambiarias)."""
         rates: CotizacionFecha = connector.cambiarias.quotations()
 
@@ -116,7 +116,7 @@ class TestBCRAIntegration:
             assert len(rates.detalle) > 0
             assert any(d.codigo_moneda == "USD" for d in rates.detalle)
 
-    def test_get_financial_entities(self, connector: BCRAConnector) -> None:
+    def test_cheques_entities(self, connector: BCRAConnector) -> None:
         """Test retrieval of financial entities (Cheques API)."""
         entities: List[Entidad] = connector.cheques.entities()
 

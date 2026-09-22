@@ -11,11 +11,11 @@ from bcra_connector import BCRAApiError, BCRAConnector
 from bcra_connector._http import HttpClient
 
 
-class TestGetDeudas:
-    """Tests for get_deudas method."""
+class TestDeudoresDebts:
+    """Tests for deudores.debts."""
 
     @patch.object(HttpClient, "request")
-    def test_get_deudas_success(self, mock_request: MagicMock) -> None:
+    def test_deudores_debts_success(self, mock_request: MagicMock) -> None:
         """Test successful deudas retrieval."""
         mock_request.return_value = {
             "status": 200,
@@ -48,7 +48,7 @@ class TestGetDeudas:
         assert result.periodos[0].entidades[0].situacion == 1
 
     @patch.object(HttpClient, "request")
-    def test_get_deudas_strips_formatting(self, mock_request: MagicMock) -> None:
+    def test_deudores_debts_strips_formatting(self, mock_request: MagicMock) -> None:
         """Test that CUIT formatting is stripped."""
         mock_request.return_value = {
             "status": 200,
@@ -66,20 +66,20 @@ class TestGetDeudas:
         call_args = mock_request.call_args[0][0]
         assert "20123456789" in call_args
 
-    def test_get_deudas_invalid_length(self) -> None:
+    def test_deudores_debts_invalid_length(self) -> None:
         """Test validation of identificacion length."""
         connector = BCRAConnector()
         with pytest.raises(ValueError, match="exactly 11 digits"):
             connector.deudores.debts("12345")
 
-    def test_get_deudas_non_numeric(self) -> None:
+    def test_deudores_debts_non_numeric(self) -> None:
         """Test validation of non-numeric identificacion."""
         connector = BCRAConnector()
         with pytest.raises(ValueError, match="exactly 11 digits"):
             connector.deudores.debts("2012345678A")
 
     @patch.object(HttpClient, "request")
-    def test_get_deudas_invalid_response(self, mock_request: MagicMock) -> None:
+    def test_deudores_debts_invalid_response(self, mock_request: MagicMock) -> None:
         """Test handling of invalid API response."""
         mock_request.return_value = {"status": 200}
 
@@ -88,7 +88,7 @@ class TestGetDeudas:
             connector.deudores.debts("20123456789")
 
     @patch.object(HttpClient, "request")
-    def test_get_deudas_api_error(self, mock_request: MagicMock) -> None:
+    def test_deudores_debts_api_error(self, mock_request: MagicMock) -> None:
         """Test handling of API error."""
         mock_request.side_effect = BCRAApiError("API error")
 
@@ -97,11 +97,11 @@ class TestGetDeudas:
             connector.deudores.debts("20123456789")
 
 
-class TestGetDeudasHistoricas:
-    """Tests for get_deudas_historicas method."""
+class TestDeudoresHistorical:
+    """Tests for deudores.historical."""
 
     @patch.object(HttpClient, "request")
-    def test_get_deudas_historicas_success(self, mock_request: MagicMock) -> None:
+    def test_deudores_historical_success(self, mock_request: MagicMock) -> None:
         """Test successful historical deudas retrieval."""
         mock_request.return_value = {
             "status": 200,
@@ -131,18 +131,18 @@ class TestGetDeudasHistoricas:
         assert result.identificacion == 30987654321
         assert len(result.periodos) == 2
 
-    def test_get_deudas_historicas_invalid_length(self) -> None:
+    def test_deudores_historical_invalid_length(self) -> None:
         """Test validation of identificacion length."""
         connector = BCRAConnector()
         with pytest.raises(ValueError, match="exactly 11 digits"):
             connector.deudores.historical("123")
 
 
-class TestGetChequesRechazados:
-    """Tests for get_cheques_rechazados method."""
+class TestDeudoresRejectedChecks:
+    """Tests for deudores.rejected_checks."""
 
     @patch.object(HttpClient, "request")
-    def test_get_cheques_rechazados_success(self, mock_request: MagicMock) -> None:
+    def test_deudores_rejected_checks_success(self, mock_request: MagicMock) -> None:
         """Test successful rejected checks retrieval."""
         mock_request.return_value = {
             "status": 200,
@@ -184,7 +184,7 @@ class TestGetChequesRechazados:
         assert result.causales[0].causal == "SIN FONDOS"
 
     @patch.object(HttpClient, "request")
-    def test_get_cheques_rechazados_empty(self, mock_request: MagicMock) -> None:
+    def test_deudores_rejected_checks_empty(self, mock_request: MagicMock) -> None:
         """Test retrieval with no rejected checks."""
         mock_request.return_value = {
             "status": 200,
@@ -201,14 +201,14 @@ class TestGetChequesRechazados:
         assert result.identificacion == 20123456789
         assert len(result.causales) == 0
 
-    def test_get_cheques_rechazados_invalid_identificacion(self) -> None:
+    def test_deudores_rejected_checks_invalid_identificacion(self) -> None:
         """Test validation of invalid identificacion."""
         connector = BCRAConnector()
         with pytest.raises(ValueError, match="exactly 11 digits"):
             connector.deudores.rejected_checks("invalid")
 
     @patch.object(HttpClient, "request")
-    def test_get_cheques_rechazados_api_error(self, mock_request: MagicMock) -> None:
+    def test_deudores_rejected_checks_api_error(self, mock_request: MagicMock) -> None:
         """Test handling of API error."""
         mock_request.side_effect = BCRAApiError("Not found")
 
@@ -217,7 +217,7 @@ class TestGetChequesRechazados:
             connector.deudores.rejected_checks("20123456789")
 
     @patch.object(HttpClient, "request")
-    def test_get_cheques_rechazados_invalid_response(
+    def test_deudores_rejected_checks_invalid_response(
         self, mock_request: MagicMock
     ) -> None:
         """Test handling of invalid API response (missing results)."""
@@ -228,7 +228,7 @@ class TestGetChequesRechazados:
             connector.deudores.rejected_checks("20123456789")
 
     @patch.object(HttpClient, "request")
-    def test_get_cheques_rechazados_results_not_dict(
+    def test_deudores_rejected_checks_results_not_dict(
         self, mock_request: MagicMock
     ) -> None:
         """Test handling when results is not a dict."""
@@ -243,7 +243,7 @@ class TestConnectorExceptionHandling:
     """Tests for exception handling branches in Central de Deudores methods."""
 
     @patch.object(HttpClient, "request")
-    def test_get_deudas_key_error(self, mock_request: MagicMock) -> None:
+    def test_deudores_debts_key_error(self, mock_request: MagicMock) -> None:
         """Test KeyError handling when parsing response."""
         # Missing required 'identificacion' key
         mock_request.return_value = {
@@ -256,7 +256,7 @@ class TestConnectorExceptionHandling:
             connector.deudores.debts("20123456789")
 
     @patch.object(HttpClient, "request")
-    def test_get_deudas_historicas_invalid_response(
+    def test_deudores_historical_invalid_response(
         self, mock_request: MagicMock
     ) -> None:
         """Test handling when results is not a dict."""
@@ -267,7 +267,7 @@ class TestConnectorExceptionHandling:
             connector.deudores.historical("20123456789")
 
     @patch.object(HttpClient, "request")
-    def test_get_deudas_historicas_key_error(self, mock_request: MagicMock) -> None:
+    def test_deudores_historical_key_error(self, mock_request: MagicMock) -> None:
         """Test KeyError handling when parsing historical response."""
         mock_request.return_value = {
             "status": 200,
@@ -279,7 +279,7 @@ class TestConnectorExceptionHandling:
             connector.deudores.historical("20123456789")
 
     @patch.object(HttpClient, "request")
-    def test_get_cheques_rechazados_key_error(self, mock_request: MagicMock) -> None:
+    def test_deudores_rejected_checks_key_error(self, mock_request: MagicMock) -> None:
         """Test KeyError handling when parsing cheques response."""
         mock_request.return_value = {
             "status": 200,
