@@ -100,8 +100,8 @@ The BCRA API Connector requires only:
 - ``urllib3>=2.2.1,<3.0.0``
 
 Both are installed automatically by pip. The only optional extra is ``[pandas]``,
-for ``to_dataframe()``. The ``[analytics]`` extra is gone: it installed ``numpy``
-for ``get_variable_correlation()``, which no longer needs it.
+for ``to_dataframe()``. The ``[analytics]`` extra is gone: it installed ``numpy`` for
+the correlation helper, which the library no longer provides.
 
 Troubleshooting
 ---------------

@@ -51,16 +51,18 @@ def catalog(connector: BCRAConnector) -> Iterator[MagicMock]:
 
 
 class TestVariableCatalogCache:
-    def test_report_fetches_catalog_once(
+    def test_a_lookup_fetches_the_catalog_once(
         self, connector: BCRAConnector, catalog: MagicMock
     ) -> None:
-        connector.generate_variable_report("Reservas internacionales")
+        connector.monetarias.history("Reservas internacionales", days=10)
         assert catalog.call_count == 1
 
-    def test_correlation_fetches_catalog_once(
+    def test_two_different_names_share_one_fetch(
         self, connector: BCRAConnector, catalog: MagicMock
     ) -> None:
-        connector.get_variable_correlation("Reservas internacionales", "Base monetaria")
+        """The cache is keyed by catalog, not by name: a second name reuses it."""
+        connector.monetarias.find("Reservas internacionales")
+        connector.monetarias.find("Base monetaria")
         assert catalog.call_count == 1
 
     def test_repeated_lookups_reuse_catalog(
