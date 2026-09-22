@@ -25,31 +25,31 @@ class TestCentralDeDeudoresIntegration:
     TEST_CUIT = "20000000007"  # Sample test CUIT
 
     @pytest.mark.integration
-    def test_get_deudas_not_found(self, connector: BCRAConnector) -> None:
+    def test_deudores_debts_not_found(self, connector: BCRAConnector) -> None:
         """Test that querying unknown CUIT raises BCRAApiError."""
         with pytest.raises(BCRAApiError):
             connector.deudores.debts(self.TEST_CUIT)
 
     @pytest.mark.integration
-    def test_get_deudas_historicas_not_found(self, connector: BCRAConnector) -> None:
+    def test_deudores_historical_not_found(self, connector: BCRAConnector) -> None:
         """Test that querying unknown CUIT for historical debts raises error."""
         with pytest.raises(BCRAApiError):
             connector.deudores.historical(self.TEST_CUIT)
 
     @pytest.mark.integration
-    def test_get_cheques_rechazados_not_found(self, connector: BCRAConnector) -> None:
+    def test_deudores_rejected_checks_not_found(self, connector: BCRAConnector) -> None:
         """Test that querying unknown CUIT for rejected checks raises error."""
         with pytest.raises(BCRAApiError):
             connector.deudores.rejected_checks(self.TEST_CUIT)
 
     @pytest.mark.integration
-    def test_get_deudas_invalid_cuit_length(self, connector: BCRAConnector) -> None:
+    def test_deudores_debts_invalid_cuit_length(self, connector: BCRAConnector) -> None:
         """Test validation of CUIT length before API call."""
         with pytest.raises(ValueError, match="exactly 11 digits"):
             connector.deudores.debts("12345")
 
     @pytest.mark.integration
-    def test_get_deudas_strips_formatting(self, connector: BCRAConnector) -> None:
+    def test_deudores_debts_strips_formatting(self, connector: BCRAConnector) -> None:
         """Test that formatted CUIT is properly handled."""
         # This should not raise ValueError - it should strip formatting
         # and then hit the API (which will return 404)

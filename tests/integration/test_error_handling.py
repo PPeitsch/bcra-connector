@@ -55,7 +55,7 @@ class TestErrorHandling:
     def test_invalid_date_range_client_validation(
         self, strict_rate_limit_connector: BCRAConnector
     ) -> None:
-        """Test client-side handling of invalid date ranges for get_datos_variable (v3.0)."""
+        """Test client-side handling of invalid date ranges for monetarias.series (v3.0)."""
         earlier_date = datetime.now() - timedelta(days=1)
         later_date = datetime.now()
 
@@ -70,7 +70,7 @@ class TestErrorHandling:
     def test_invalid_variable_id_api_error(
         self, strict_rate_limit_connector: BCRAConnector
     ) -> None:
-        """Test API error for invalid variable ID with get_datos_variable (v3.0)."""
+        """Test API error for invalid variable ID with monetarias.series (v3.0)."""
         non_existent_id = 9999999
         with pytest.raises(BCRAApiError) as exc_info:
             strict_rate_limit_connector.monetarias.series(

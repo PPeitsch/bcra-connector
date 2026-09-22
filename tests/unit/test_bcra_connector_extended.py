@@ -193,49 +193,49 @@ class TestBCRAConnectorExtended:
             with pytest.raises(BCRAApiError, match="API Error"):
                 connector.monetarias.series(1)
 
-    # --- get_entidades edge cases ---
-    def test_get_entidades_invalid_format(self, connector: BCRAConnector):
+    # --- cheques.entities edge cases ---
+    def test_cheques_entities_invalid_format(self, connector: BCRAConnector):
         with patch.object(connector._http, "request", return_value={"no-results": []}):
             with pytest.raises(BCRAApiError, match="Invalid response format"):
                 connector.cheques.entities()
 
-    def test_get_entidades_parsing_error(self, connector: BCRAConnector):
+    def test_cheques_entities_parsing_error(self, connector: BCRAConnector):
         with patch.object(
             connector._http, "request", return_value={"results": [{"bad": "data"}]}
         ):
             with pytest.raises(BCRAApiError, match="Unexpected response format"):
                 connector.cheques.entities()
 
-    def test_get_entidades_pass_bcra_error(self, connector: BCRAConnector):
+    def test_cheques_entities_pass_bcra_error(self, connector: BCRAConnector):
         with patch.object(connector._http, "request", side_effect=BCRAApiError("Fail")):
             with pytest.raises(BCRAApiError, match="Fail"):
                 connector.cheques.entities()
 
-    def test_get_entidades_unexpected_error(self, connector: BCRAConnector):
+    def test_cheques_entities_unexpected_error(self, connector: BCRAConnector):
         with patch.object(connector._http, "request", side_effect=Exception("Fail")):
             with pytest.raises(BCRAApiError, match="Error fetching financial entities"):
                 connector.cheques.entities()
 
-    # --- get_cheque_denunciado edge cases ---
-    def test_get_cheque_denunciado_invalid_format(self, connector: BCRAConnector):
+    # --- cheques.reported edge cases ---
+    def test_cheques_reported_invalid_format(self, connector: BCRAConnector):
         with patch.object(
             connector._http, "request", return_value={"results": "not-a-dict"}
         ):
             with pytest.raises(BCRAApiError, match="Invalid response format"):
                 connector.cheques.reported(1, 123)
 
-    def test_get_cheque_denunciado_parsing_error(self, connector: BCRAConnector):
+    def test_cheques_reported_parsing_error(self, connector: BCRAConnector):
         # Missing keys
         with patch.object(connector._http, "request", return_value={"results": {}}):
             with pytest.raises(BCRAApiError, match="Unexpected response format"):
                 connector.cheques.reported(1, 123)
 
-    def test_get_cheque_denunciado_pass_bcra_error(self, connector: BCRAConnector):
+    def test_cheques_reported_pass_bcra_error(self, connector: BCRAConnector):
         with patch.object(connector._http, "request", side_effect=BCRAApiError("Fail")):
             with pytest.raises(BCRAApiError, match="Fail"):
                 connector.cheques.reported(1, 123)
 
-    def test_get_cheque_denunciado_unexpected_error(self, connector: BCRAConnector):
+    def test_cheques_reported_unexpected_error(self, connector: BCRAConnector):
         with patch.object(connector._http, "request", side_effect=Exception("Fail")):
             with pytest.raises(BCRAApiError, match="Error fetching reported check"):
                 connector.cheques.reported(1, 123)
@@ -438,8 +438,8 @@ class TestBCRAConnectorExtended:
 
         # Scenario 3: Success
         with patch.object(connector.monetarias, "find", return_value=mock_var):
-            with patch.object(connector.monetarias, "series") as mock_get_datos:
-                mock_get_datos.return_value = Page(
+            with patch.object(connector.monetarias, "series") as mock_series:
+                mock_series.return_value = Page(
                     count=1,
                     results=[
                         DatosVariable(
@@ -450,7 +450,7 @@ class TestBCRAConnectorExtended:
                 )
                 res = connector.monetarias.history("Var", days=10)
                 assert len(res) == 1
-                mock_get_datos.assert_called_once()
+                mock_series.assert_called_once()
 
     def test_cambiarias_evolution_helper(self, connector: BCRAConnector):
         with pytest.raises(ValueError, match="positive"):
