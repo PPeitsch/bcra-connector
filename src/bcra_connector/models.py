@@ -133,8 +133,9 @@ def _convert(value: Any, key: str, kind: type) -> Any:
 class Resultset:
     """The ``metadata.resultset`` block every paginated endpoint reports.
 
-    Kept for the deprecated ``*Response`` models; :class:`Page` carries the same
-    three numbers as plain attributes.
+    The clients do not build one: a :class:`Page` carries the same three numbers
+    as plain attributes. It is here for callers that parse a raw response
+    themselves, and is the single definition behind every import path.
     """
 
     count: int
