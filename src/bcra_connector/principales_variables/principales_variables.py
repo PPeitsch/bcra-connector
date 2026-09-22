@@ -141,9 +141,6 @@ class DatosVariable:
     """
     Represents historical data for a variable/series (v4.0 structure).
 
-    The API's own ``idVariable`` still works, with a ``DeprecationWarning``,
-    until 1.0.
-
     :param id_variable: The ID of the variable/series.
     :param detalle: List of DetalleMonetaria objects with historical data points.
     """
