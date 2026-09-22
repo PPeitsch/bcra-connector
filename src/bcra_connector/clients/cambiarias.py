@@ -186,7 +186,7 @@ class CambiariasClient(DomainClient):
 
             rows = self._http.collect_pages(
                 fetch_page,
-                self._http.config().fx_max_page_size,
+                self._http.config.fx_max_page_size,
                 f"{currency_code} quotations",
                 start=offset,
             )

@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The seven transport knobs are constructor arguments, and the class attributes are
+  gone.** `BASE_URL` → `base_url=`, `MAX_RETRIES` → `retries=`, `RETRY_DELAY` →
+  `retry_delay=`, `MAX_PAGES` → `max_pages=`, `CATALOG_CACHE_TTL` → `cache_ttl=`,
+  `MAX_PAGE_SIZE` → `page_size=`, `FX_MAX_PAGE_SIZE` → `fx_page_size=`, all with the
+  same defaults as before. Subclassing `BCRAConnector` to change them — which
+  `configuration.rst` used to document — no longer works:
+
+  ```python
+  # before
+  class Custom(BCRAConnector):
+      MAX_RETRIES = 5
+      RETRY_DELAY = 2
+
+  # 1.0
+  connector = BCRAConnector(retries=5, retry_delay=2)
+  ```
+
+  Configuration now happens once, at construction, so `HttpClient` holds its
+  (already frozen) `TransportConfig` directly instead of re-reading a callable on every
+  request, `cached()` and `collect_pages()` — that indirection existed only so a later
+  assignment to a class or instance attribute would still reach the transport.
+  `DEFAULT_RATE_LIMIT` and `DEFAULT_TIMEOUT` stay as they are: they are defaults for the existing `rate_limit=`
+  and `timeout=` arguments, not a second configuration channel (#161)
+
 ### Removed
 - The superseded response wrappers, deprecated in 0.13.0: `DatosVariableResponse`,
   `EntidadResponse`, `ChequeResponse`, `DivisaResponse`, `CotizacionResponse`,

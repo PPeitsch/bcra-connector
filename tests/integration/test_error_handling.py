@@ -43,10 +43,10 @@ class TestErrorHandling:
     def test_connection_error(self) -> None:
         """Test handling of connection errors when calling a v3.0 endpoint."""
         connector = BCRAConnector(
+            base_url="https://nonexistent.invalid.domain.for.test",
             timeout=TimeoutConfig(connect=0.1, read=0.1),
             rate_limit=RateLimitConfig(calls=5, period=1.0),
         )
-        connector.BASE_URL = "https://nonexistent.invalid.domain.for.test"
 
         with pytest.raises(BCRAApiError) as exc_info:
             connector.monetarias.list()
@@ -133,17 +133,20 @@ class TestErrorHandling:
 
     def test_retry_mechanism_for_v3_endpoint(
         self,
-        strict_rate_limit_connector: BCRAConnector,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test retry mechanism for failed requests on a v3.0 endpoint."""
         failure_count = 0
         successful_v3_response_content = json.dumps({"results": []}).encode()
+        connector_for_retry = BCRAConnector(
+            rate_limit=RateLimitConfig(calls=10, period=1.0)
+        )
+        retries = connector_for_retry._http.config.max_retries
 
         def mock_request_with_retries(*args: Any, **kwargs: Any) -> requests.Response:
             nonlocal failure_count
             failure_count += 1
-            if failure_count < strict_rate_limit_connector.MAX_RETRIES:
+            if failure_count < retries:
                 raise requests.ConnectionError(
                     "Simulated connection failure for retry test"
                 )
@@ -155,16 +158,13 @@ class TestErrorHandling:
             response.url = "mocked_url_retry_success"
             return response
 
-        connector_for_retry = BCRAConnector(
-            rate_limit=RateLimitConfig(calls=10, period=1.0)
-        )
         monkeypatch.setattr(
             connector_for_retry.session, "get", mock_request_with_retries
         )
 
         result: List[Any] = connector_for_retry.monetarias.list()
         assert result == []
-        assert failure_count == connector_for_retry.MAX_RETRIES
+        assert failure_count == retries
 
     def test_various_network_errors_on_v3_endpoint(
         self,

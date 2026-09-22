@@ -15,10 +15,12 @@ PAGE = 10  # smallest page size the APIs accept
 
 
 @pytest.fixture
-def connector(monkeypatch: pytest.MonkeyPatch) -> BCRAConnector:
-    monkeypatch.setattr(BCRAConnector, "MAX_PAGE_SIZE", PAGE)
-    monkeypatch.setattr(BCRAConnector, "FX_MAX_PAGE_SIZE", PAGE)
-    return BCRAConnector(rate_limit=RateLimitConfig(calls=1000, period=1.0))
+def connector() -> BCRAConnector:
+    return BCRAConnector(
+        page_size=PAGE,
+        fx_page_size=PAGE,
+        rate_limit=RateLimitConfig(calls=1000, period=1.0),
+    )
 
 
 def _catalog_page(params: Dict[str, Any], total: int) -> Dict[str, Any]:
@@ -199,12 +201,15 @@ class TestCurrencyEvolution:
 class TestSafetyCap:
     def test_stops_after_max_pages(
         self,
-        connector: BCRAConnector,
-        monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """An endpoint that ignores Offset must not page forever."""
-        monkeypatch.setattr(BCRAConnector, "MAX_PAGES", 3)
+        connector = BCRAConnector(
+            page_size=PAGE,
+            fx_page_size=PAGE,
+            max_pages=3,
+            rate_limit=RateLimitConfig(calls=1000, period=1.0),
+        )
         full_page = _catalog_page({"Offset": 0, "Limit": PAGE}, 10 * PAGE)
         with patch.object(
             connector._http, "request", return_value=full_page

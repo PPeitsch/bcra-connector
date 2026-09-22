@@ -50,18 +50,8 @@ class BCRAConnector:
     Principales Variables (Monetarias v4.0), Cheques, and Estadísticas Cambiarias.
     """
 
-    BASE_URL = "https://api.bcra.gob.ar"
-    MAX_RETRIES = 3
-    RETRY_DELAY = 1  # seconds
     DEFAULT_RATE_LIMIT = RateLimitConfig(calls=10, period=1.0, _burst=20)
     DEFAULT_TIMEOUT = TimeoutConfig.default()
-    # Largest page each API accepts; without an explicit limit they return 1000.
-    MAX_PAGE_SIZE = 3000  # Monetarias v4.0 (catalog and series)
-    FX_MAX_PAGE_SIZE = 1000  # Estadísticas Cambiarias v1.0
-    MAX_PAGES = 100  # safety cap for automatic pagination
-    # How long name lookups reuse the variables catalog and the cheque entities list
-    # (seconds). 0 disables the cache. Public fetch methods are never cached.
-    CATALOG_CACHE_TTL = 300.0
 
     def __init__(
         self,
@@ -71,6 +61,13 @@ class BCRAConnector:
         rate_limit: Optional[RateLimitConfig] = None,
         timeout: Optional[Union[TimeoutConfig, float]] = None,
         session: Optional[requests.Session] = None,
+        base_url: str = "https://api.bcra.gob.ar",
+        retries: int = 3,
+        retry_delay: float = 1,
+        max_pages: int = 100,
+        cache_ttl: float = 300.0,
+        page_size: int = 3000,
+        fx_page_size: int = 1000,
     ):
         """Initialize the BCRAConnector.
 
@@ -88,6 +85,22 @@ class BCRAConnector:
         :param session: A ``requests.Session`` to use instead of a new one, for
                       custom adapters, proxies or tests. The caller keeps ownership:
                       ``close()`` leaves it open.
+        :param base_url: Root of the BCRA API, defaults to
+                      "https://api.bcra.gob.ar". Point it elsewhere for a mock
+                      server or a proxy.
+        :param retries: Attempts per request before giving up, defaults to 3.
+        :param retry_delay: Base delay between retries in seconds, defaults to 1.
+                      It backs off exponentially: delay * 2 ** attempt.
+        :param max_pages: Safety cap on the pages the helpers that walk a whole
+                      range will fetch, defaults to 100.
+        :param cache_ttl: How long name lookups reuse the variables catalog and
+                      the entities list, in seconds, defaults to 300. 0 disables
+                      the cache. Public fetch methods are never cached.
+        :param page_size: Page size asked of Monetarias v4.0, defaults to 3000,
+                      the largest it accepts. Without an explicit limit the API
+                      returns 1000.
+        :param fx_page_size: Page size asked of Estadísticas Cambiarias v1.0,
+                      defaults to 1000, the largest it accepts.
         """
         # A library must not configure logging: handlers and levels belong to the
         # application. ``debug=True`` is the only, explicit, exception.
@@ -112,7 +125,15 @@ class BCRAConnector:
 
         self._http = HttpClient(
             logger=self.logger,
-            config=self._transport_config,
+            config=TransportConfig(
+                base_url=base_url,
+                max_retries=retries,
+                retry_delay=retry_delay,
+                max_pages=max_pages,
+                cache_ttl=cache_ttl,
+                max_page_size=page_size,
+                fx_max_page_size=fx_page_size,
+            ),
             language=language,
             verify_ssl=verify_ssl,
             timeout=resolved_timeout,
@@ -124,24 +145,7 @@ class BCRAConnector:
         self.cambiarias = CambiariasClient(self._http)
         self.deudores = DeudoresClient(self._http)
 
-    def _transport_config(self) -> TransportConfig:
-        """Snapshot of the transport knobs, read by the client on every call.
-
-        They stay class attributes so that overriding them on a subclass (the
-        documented way) or on an instance keeps working. In 1.0 they become
-        constructor arguments.
-        """
-        return TransportConfig(
-            base_url=self.BASE_URL,
-            max_retries=self.MAX_RETRIES,
-            retry_delay=self.RETRY_DELAY,
-            max_pages=self.MAX_PAGES,
-            cache_ttl=self.CATALOG_CACHE_TTL,
-            max_page_size=self.MAX_PAGE_SIZE,
-            fx_max_page_size=self.FX_MAX_PAGE_SIZE,
-        )
-
-    # The transport owns these; the attributes stay for backwards compatibility.
+    # The transport owns these; the properties read through to it.
     @property
     def session(self) -> requests.Session:
         """The underlying ``requests`` session."""
@@ -190,7 +194,7 @@ class BCRAConnector:
         self._http.clear_cache()
 
     def _cached(self, key: str, loader: Callable[[], T]) -> T:
-        """Return ``loader()``, reusing its last result for ``CATALOG_CACHE_TTL``."""
+        """Return ``loader()``, reusing its last result for ``cache_ttl`` seconds."""
         return self._http.cached(key, loader)
 
     def _collect_pages(

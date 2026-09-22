@@ -229,7 +229,7 @@ class MonetariasClient(DomainClient):
         :return: A PrincipalesVariables object if found, None otherwise.
         :raises BCRAApiError: If the variables catalog cannot be fetched.
 
-        The catalog is reused across lookups for ``CATALOG_CACHE_TTL`` seconds; call
+        The catalog is reused across lookups for ``cache_ttl`` seconds; call
         ``clear_cache()`` to force a refetch.
         """
         variables = self._http.cached("variables", self.list)
@@ -335,4 +335,4 @@ class MonetariasClient(DomainClient):
 
     def _page_size(self) -> int:
         """The largest page the Monetarias endpoints accept."""
-        return self._http.config().max_page_size
+        return self._http.config.max_page_size

@@ -98,17 +98,15 @@ class TestBCRAConnectorExtended:
                 connector._make_request("test")
             assert mock_get.call_count == 3
 
-    def test_make_request_max_retries_exceeded_loop_end(self, connector: BCRAConnector):
-        """Test falling through the retry loop without raising specific exception (unlikely path but covered)."""
-        # This effectively tests the raise BCRAApiError at the very end of _make_request
-        # We need to simulate a case where the loop finishes but doesn't return.
-        # Actually, the loop always catches exceptions or returns.
-        # The only way to reach end is if range(MAX_RETRIES) is 0, but it's hardcoded to 3.
-        # Or if we mock MAX_RETRIES to 0.
-        connector.MAX_RETRIES = 0
+    def test_make_request_max_retries_exceeded_loop_end(self):
+        """Falling out of the retry loop without returning or raising inside it.
+
+        The loop always returns or raises, so the only way to reach the final
+        ``raise`` is an empty range: ``retries=0``.
+        """
+        connector = BCRAConnector(retries=0)
         with pytest.raises(BCRAApiError, match="Maximum retry attempts"):
             connector._make_request("test")
-        connector.MAX_RETRIES = 3  # Reset
 
     def test_make_request_json_decode_error_on_success(self, connector: BCRAConnector):
         """Test invalid JSON response on successful status code."""

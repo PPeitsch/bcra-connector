@@ -76,7 +76,7 @@ class TestVariableCatalogCache:
         self, connector: BCRAConnector, catalog: MagicMock
     ) -> None:
         clock = "bcra_connector._http.time.monotonic"
-        ttl = connector.CATALOG_CACHE_TTL
+        ttl = connector._http.config.cache_ttl
         with patch(clock, return_value=1000.0):
             connector.monetarias.find("Base monetaria")
         with patch(clock, return_value=1000.0 + ttl - 1):
@@ -94,15 +94,13 @@ class TestVariableCatalogCache:
         connector.monetarias.find("Base monetaria")
         assert catalog.call_count == 2
 
-    def test_ttl_zero_disables_cache(
-        self,
-        connector: BCRAConnector,
-        catalog: MagicMock,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        monkeypatch.setattr(connector, "CATALOG_CACHE_TTL", 0)
-        connector.monetarias.find("Base monetaria")
-        connector.monetarias.find("Base monetaria")
+    def test_ttl_zero_disables_cache(self) -> None:
+        connector = BCRAConnector(cache_ttl=0)
+        with patch.object(
+            connector.monetarias, "list", return_value=Page(CATALOG)
+        ) as catalog:
+            connector.monetarias.find("Base monetaria")
+            connector.monetarias.find("Base monetaria")
         assert catalog.call_count == 2
 
     def test_errors_are_not_cached(self, connector: BCRAConnector) -> None:

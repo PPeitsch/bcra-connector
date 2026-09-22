@@ -13,14 +13,11 @@ def connector() -> BCRAConnector:
 
 
 class TestPageSize:
-    """The catalog page size still comes from the class attribute (until 1.0)."""
+    """``page_size`` reaches the client, which asks the API for that limit."""
 
-    def test_subclass_override_reaches_the_client(self) -> None:
-        class Small(BCRAConnector):
-            MAX_PAGE_SIZE = 10
-
-        connector = Small()
-        assert connector._http.config().max_page_size == 10
+    def test_the_argument_reaches_the_client(self) -> None:
+        connector = BCRAConnector(page_size=10)
+        assert connector._http.config.max_page_size == 10
         with patch.object(
             connector._http, "request", return_value={"results": []}
         ) as mock_req:

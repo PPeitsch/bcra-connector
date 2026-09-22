@@ -24,14 +24,11 @@ class TestTransportShims:
 
 
 class TestPageSize:
-    """The FX page size still comes from the class attribute (until 1.0)."""
+    """``fx_page_size`` reaches the client, which asks the API for that limit."""
 
-    def test_subclass_override_reaches_the_client(self) -> None:
-        class Small(BCRAConnector):
-            FX_MAX_PAGE_SIZE = 10
-
-        connector = Small()
-        assert connector._http.config().fx_max_page_size == 10
+    def test_the_argument_reaches_the_client(self) -> None:
+        connector = BCRAConnector(fx_page_size=10)
+        assert connector._http.config.fx_max_page_size == 10
         with patch.object(
             connector._http, "request", return_value={"results": []}
         ) as mock_req:

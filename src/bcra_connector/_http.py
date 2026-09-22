@@ -38,11 +38,7 @@ def _redact(text: str) -> str:
 
 @dataclass(frozen=True)
 class TransportConfig:
-    """Knobs the transport reads on every call.
-
-    ``BCRAConnector`` rebuilds this from its class attributes, so overriding them on a
-    subclass or on an instance keeps working. In 1.0 they become constructor arguments.
-    """
+    """The transport knobs, fixed when the connector is constructed."""
 
     base_url: str = "https://api.bcra.gob.ar"
     max_retries: int = 3
@@ -60,7 +56,7 @@ class HttpClient:
         self,
         *,
         logger: logging.Logger,
-        config: Callable[[], TransportConfig],
+        config: TransportConfig,
         language: str = "es-AR",
         verify_ssl: Union[bool, str, "os.PathLike[str]"] = True,
         timeout: Optional[TimeoutConfig] = None,
@@ -68,7 +64,7 @@ class HttpClient:
         session: Optional[requests.Session] = None,
     ) -> None:
         self.logger = logger
-        self._config = config
+        self.config = config
         self.owns_session = session is None
         self.session = session if session is not None else requests.Session()
         self.session.headers.update(
@@ -91,10 +87,6 @@ class HttpClient:
             )
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    def config(self) -> TransportConfig:
-        """Current snapshot of the transport knobs, re-read on every call."""
-        return self._config()
-
     def close(self) -> None:
         """Close the session, unless it was injected by the caller."""
         if self.owns_session:
@@ -104,7 +96,7 @@ class HttpClient:
         self, endpoint: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Make a request to the BCRA API with retry logic and rate limiting."""
-        config = self._config()
+        config = self.config
         url = f"{config.base_url}/{endpoint}"
         log_url = _redact(url)
         max_retries = config.max_retries
@@ -218,7 +210,7 @@ class HttpClient:
         Only successful results are stored: an exception propagates and the next
         call tries again.
         """
-        ttl = self._config().cache_ttl
+        ttl = self.config.cache_ttl
         now = time.monotonic()
         entry = self._cache.get(key)
         if entry is not None and now - entry[0] < ttl:
@@ -241,7 +233,7 @@ class HttpClient:
         results when the endpoint reports it reliably (``None`` otherwise). Paging
         stops on a short page or once the total is reached.
         """
-        max_pages = self._config().max_pages
+        max_pages = self.config.max_pages
         items: List[T] = []
         for page_number in range(max_pages):
             page, total = fetch_page(page_size, start + page_number * page_size)

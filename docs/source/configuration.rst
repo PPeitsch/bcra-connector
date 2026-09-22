@@ -116,40 +116,53 @@ CUIT/CUIL numbers are masked in log messages.
 Retry Behavior
 --------------
 
-The connector implements a retry mechanism with exponential backoff. You can modify this behavior by changing the following class variables:
+The connector retries transient failures (HTTP 429 and 5xx, timeouts and connection
+errors) with exponential backoff: the delay is ``retry_delay * 2 ** attempt``.
 
-- `MAX_RETRIES`: Maximum number of retry attempts (default: 3)
-- `RETRY_DELAY`: Initial delay between retries in seconds (default: 1)
-
-To change these values, subclass `BCRAConnector`:
+- ``retries``: attempts per request before giving up (default: 3)
+- ``retry_delay``: base delay between retries, in seconds (default: 1)
 
 .. code-block:: python
 
    from bcra_connector import BCRAConnector
 
-   class CustomBCRAConnector(BCRAConnector):
-       MAX_RETRIES = 5
-       RETRY_DELAY = 2
-
-   connector = CustomBCRAConnector()
+   connector = BCRAConnector(retries=5, retry_delay=2)
 
 Catalog Cache
 -------------
 
 Name-based helpers (``monetarias.find``, ``monetarias.history``) and
-``cheques.is_reported`` look
-names up in reference catalogs: the variables catalog and the list of financial
-entities. Each connector instance reuses those catalogs for ``CATALOG_CACHE_TTL`` seconds
-(default: 300) instead of downloading them on every lookup.
+``cheques.is_reported`` look names up in reference catalogs: the variables catalog and
+the list of financial entities. Each connector instance reuses those catalogs for
+``cache_ttl`` seconds (default: 300) instead of downloading them on every lookup.
 
 - ``connector.clear_cache()`` drops the cached catalogs so the next lookup refetches them.
-- ``CATALOG_CACHE_TTL = 0`` disables the cache.
+- ``cache_ttl=0`` disables the cache.
 - ``monetarias.list()`` and ``cheques.entities()`` are never cached: call them
   when you need fresh data (the catalog includes each series' latest value).
 
 .. code-block:: python
 
-   class NoCacheConnector(BCRAConnector):
-       CATALOG_CACHE_TTL = 0
+   connector = BCRAConnector(cache_ttl=0)
 
-This configuration provides more flexibility and control over the connector's behavior.
+Transport
+---------
+
+The remaining transport knobs, all constructor arguments with sensible defaults:
+
+- ``base_url``: root of the BCRA API (default: ``"https://api.bcra.gob.ar"``). Point it
+  at a mock server or a proxy when testing.
+- ``page_size``: page size asked of Monetarias v4.0 (default: 3000, the largest it
+  accepts; without an explicit limit the API returns 1000).
+- ``fx_page_size``: page size asked of Estadísticas Cambiarias v1.0 (default: 1000, the
+  largest it accepts).
+- ``max_pages``: safety cap on how many pages the helpers that walk a whole range will
+  fetch (default: 100). It stops a paging loop against an endpoint that ignores
+  ``Offset``.
+
+.. code-block:: python
+
+   connector = BCRAConnector(base_url="http://localhost:8080", page_size=100)
+
+Every setting is fixed when the connector is constructed: build another instance to
+configure it differently.

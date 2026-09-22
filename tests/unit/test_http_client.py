@@ -55,7 +55,7 @@ class TestInjectedSession:
 
 
 class TestTransportKnobs:
-    """The knobs stay class attributes: subclassing and assignment keep working."""
+    """The knobs are constructor arguments; each one reaches the transport."""
 
     def _attempts(self, connector: BCRAConnector) -> int:
         with (
@@ -68,32 +68,55 @@ class TestTransportKnobs:
             connector._make_request("test")
         return int(mock_get.call_count)
 
-    def test_instance_assignment_is_honoured(self) -> None:
-        connector = BCRAConnector()
-        assert self._attempts(connector) == 3
-        connector.MAX_RETRIES = 1
-        assert self._attempts(connector) == 1
+    def test_retries_defaults_to_three(self) -> None:
+        assert self._attempts(BCRAConnector()) == 3
 
-    def test_subclass_override_is_honoured(self) -> None:
-        class Patient(BCRAConnector):
-            MAX_RETRIES = 5
+    @pytest.mark.parametrize("retries", [1, 5])
+    def test_retries_is_honoured(self, retries: int) -> None:
+        assert self._attempts(BCRAConnector(retries=retries)) == retries
 
-        assert self._attempts(Patient()) == 5
-
-    def test_base_url_is_read_per_request(self) -> None:
-        connector = BCRAConnector()
-        connector.BASE_URL = "https://example.invalid"
+    def test_base_url_is_used(self) -> None:
+        connector = BCRAConnector(base_url="https://example.invalid")
         with patch.object(
             connector.session, "get", return_value=_ok_response()
         ) as mock_get:
             connector._make_request("some/endpoint")
         assert mock_get.call_args.args[0] == "https://example.invalid/some/endpoint"
 
-    def test_class_level_read_still_works(self) -> None:
-        # e.g. BCRAConnector.RETRY_DELAY, used by callers and tests
-        assert BCRAConnector.MAX_RETRIES == 3
-        assert BCRAConnector.RETRY_DELAY == 1
-        assert BCRAConnector.CATALOG_CACHE_TTL == 300.0
+    def test_the_defaults_are_the_documented_ones(self) -> None:
+        config = BCRAConnector()._http.config
+
+        assert config.base_url == "https://api.bcra.gob.ar"
+        assert config.max_retries == 3
+        assert config.retry_delay == 1
+        assert config.max_pages == 100
+        assert config.cache_ttl == 300.0
+        assert config.max_page_size == 3000
+        assert config.fx_max_page_size == 1000
+
+    def test_every_argument_reaches_the_transport(self) -> None:
+        config = BCRAConnector(
+            base_url="https://example.invalid",
+            retries=7,
+            retry_delay=0.5,
+            max_pages=9,
+            cache_ttl=0,
+            page_size=11,
+            fx_page_size=13,
+        )._http.config
+
+        assert config.base_url == "https://example.invalid"
+        assert config.max_retries == 7
+        assert config.retry_delay == 0.5
+        assert config.max_pages == 9
+        assert config.cache_ttl == 0
+        assert config.max_page_size == 11
+        assert config.fx_max_page_size == 13
+
+    def test_the_config_cannot_be_mutated_after_construction(self) -> None:
+        """Frozen on purpose: configuration happens once, at construction."""
+        with pytest.raises(AttributeError):
+            BCRAConnector()._http.config.max_retries = 1
 
 
 class TestDelegation:
