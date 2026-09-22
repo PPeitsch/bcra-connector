@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- `BCRAConnector.get_variable_correlation()` and
+  `BCRAConnector.generate_variable_report()`, deprecated in 0.13.0, are gone. Computing
+  statistics is not a connector's job: the correlation interpolated across series of
+  different periodicity and correlated *levels* of trending series, which comes out high
+  for almost any pair of BCRA series, and the report was `describe()` in a dict. The
+  equivalent pandas recipes are in the documentation (#152)
+
 ## [0.13.0] - 2026-09-21
 
 ### Added

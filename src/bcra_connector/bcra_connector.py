@@ -5,11 +5,8 @@ Handles rate limiting, retries, and error cases.
 """
 
 import logging
-import math
 import os
-import statistics
 import warnings
-from bisect import bisect_left
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import requests
@@ -45,63 +42,14 @@ from .timeout_config import TimeoutConfig
 T = TypeVar("T")
 
 
-def _deprecated(old: str, new: Optional[str] = None) -> None:
-    """Warn that ``BCRAConnector.<old>()`` is on its way out.
-
-    With ``new``, the method moved to ``connector.<new>()``. Without it, it is
-    going away for good: the analytics helpers have no replacement inside the
-    library, only a recipe in the docs.
-    """
+def _deprecated(old: str, new: str) -> None:
+    """Warn that ``BCRAConnector.<old>()`` moved to ``connector.<new>()``."""
     warnings.warn(
         f"BCRAConnector.{old}() is deprecated and will be removed in 1.0; "
-        + (
-            f"use connector.{new}() instead."
-            if new
-            else "it computes statistics, which is not a connector's job — see the "
-            "DataFrame recipe in the documentation."
-        ),
+        f"use connector.{new}() instead.",
         DeprecationWarning,
         stacklevel=3,
     )
-
-
-def _interpolate(xs: List[int], ys: List[float], at: List[int]) -> List[float]:
-    """Linear interpolation of ``ys`` over ``xs``, sampled at ``at``.
-
-    The semantics ``numpy.interp`` had here, written out so the deprecated
-    correlation keeps working without numpy: linear between the two surrounding
-    points, clamped to the first and last value outside the range. ``xs`` need not
-    be sorted — the API returns series newest-first — so they are sorted here.
-
-    :param xs: The x of each known point, as ordinal days.
-    :param ys: The value of each known point, in the same order as ``xs``.
-    :param at: The x to sample, ascending.
-    """
-    points = sorted(zip(xs, ys))
-    known_x = [x for x, _ in points]
-    known_y = [y for _, y in points]
-    out = []
-    for x in at:
-        if x <= known_x[0]:
-            out.append(known_y[0])
-        elif x >= known_x[-1]:
-            out.append(known_y[-1])
-        else:
-            hi = bisect_left(known_x, x)
-            if known_x[hi] == x:
-                out.append(known_y[hi])
-            else:
-                lo = hi - 1
-                span = known_x[hi] - known_x[lo]
-                weight = (x - known_x[lo]) / span
-                out.append(known_y[lo] + (known_y[hi] - known_y[lo]) * weight)
-    return out
-
-
-def _is_constant(values: List[float]) -> bool:
-    """Whether every value is the first one, to floating-point tolerance."""
-    first = values[0]
-    return all(math.isclose(v, first, rel_tol=1e-9, abs_tol=1e-12) for v in values)
 
 
 def _has_active_handler(logger: logging.Logger) -> bool:
@@ -449,173 +397,6 @@ class BCRAConnector:
         """
         _deprecated("get_currency_pair_evolution", "cambiarias.pair")
         return self.cambiarias.pair(base_currency, quote_currency, days)
-
-    def get_variable_correlation(
-        self, variable_name1: str, variable_name2: str, days: int = 30
-    ) -> float:
-        """
-        Calculate Pearson correlation between two variables/series over last n days (Monetarias v4.0).
-
-        Handles missing data by linear interpolation.
-
-        .. deprecated:: 0.13.0
-           Removed in 1.0. Correlating *levels* of two series that both carry a
-           trend says little — almost any two BCRA series come out strongly
-           correlated — and picking the right transformation is the caller's
-           call, not a connector's. Build a DataFrame and correlate there; the
-           documentation has the recipe.
-
-        :param variable_name1: Name of the first variable/series.
-        :param variable_name2: Name of the second variable/series.
-        :param days: Number of days to look back (must be > 1).
-        :return: Correlation coefficient (-1 to 1), or NaN if not calculable.
-        :raises ValueError: If variables not found or days invalid.
-        :raises BCRAApiError: If underlying API calls fail.
-        """
-        _deprecated("get_variable_correlation")
-        if days <= 1:
-            raise ValueError("Number of days must be greater than 1 for correlation.")
-        try:
-            data1 = self.monetarias.history(variable_name1, days)
-            data2 = self.monetarias.history(variable_name2, days)
-        except BCRAApiError as e:
-            self.logger.error(
-                f"Failed to get history for correlation between '{variable_name1}' and '{variable_name2}': {e}"
-            )
-            raise
-
-        if not data1 or not data2:
-            self.logger.warning(
-                f"Insufficient data for correlation: '{variable_name1}' ({len(data1)} pts), '{variable_name2}' ({len(data2)} pts)"
-            )
-            return math.nan
-
-        dates1 = [d.fecha for d in data1]
-        dates2 = [d.fecha for d in data2]
-        values1 = [float(d.valor) for d in data1]
-        values2 = [float(d.valor) for d in data2]
-
-        if (
-            len(set(dates1)) < 2 or len(set(dates2)) < 2
-        ):  # Need at least two distinct time points
-            self.logger.warning(
-                f"Insufficient unique dates for meaningful correlation between '{variable_name1}' and '{variable_name2}'"
-            )
-            return math.nan
-
-        all_dates_ord = sorted({d.toordinal() for d in dates1 + dates2})
-        interp_values1 = _interpolate(
-            [d.toordinal() for d in dates1], values1, all_dates_ord
-        )
-        interp_values2 = _interpolate(
-            [d.toordinal() for d in dates2], values2, all_dates_ord
-        )
-
-        # A constant series has no variance, so the correlation is undefined
-        if _is_constant(interp_values1) or _is_constant(interp_values2):
-            self.logger.warning(
-                f"One or both series ('{variable_name1}', '{variable_name2}') are constant after interpolation. Correlation is undefined."
-            )
-            return math.nan
-        try:
-            correlation = statistics.correlation(interp_values1, interp_values2)
-        except statistics.StatisticsError:
-            correlation = math.nan
-
-        if math.isnan(correlation):
-            self.logger.warning(
-                f"Correlation calculation resulted in NaN for '{variable_name1}' and '{variable_name2}'. Check data variability."
-            )
-            # This can happen if variance is zero for one of the series after interpolation
-        else:
-            self.logger.info(
-                f"Correlation between '{variable_name1}' and '{variable_name2}' ({days} days): {correlation:.4f}"
-            )
-        return correlation
-
-    def generate_variable_report(
-        self, variable_name: str, days: int = 30
-    ) -> Dict[str, Any]:
-        """
-        Generate a comprehensive report for a given variable/series (Monetarias v4.0).
-
-        .. deprecated:: 0.13.0
-           Removed in 1.0. Every number in it is one call to pandas over the
-           series — ``df["valor"].describe()`` and a couple of lines — which
-           also makes explicit what is being computed. See the documentation.
-
-        :param variable_name: The name of the variable/series.
-        :param days: The number of days to look back, defaults to 30. Must be positive.
-        :return: A dictionary containing various statistics and information.
-        :raises ValueError: If the variable is not found or days is invalid.
-        :raises BCRAApiError: If the API request fails.
-        """
-        _deprecated("generate_variable_report")
-        if days <= 0:
-            raise ValueError("Number of days must be positive.")
-        variable = self.monetarias.find(variable_name)
-        if not variable:
-            raise ValueError(f"Variable '{variable_name}' not found")
-        try:
-            data = self.monetarias.history(variable_name, days)
-        except BCRAApiError as e:
-            self.logger.error(
-                f"Failed to get history for report on '{variable_name}': {e}"
-            )
-            raise
-
-        report_base = {
-            "variable_name": variable_name,
-            "variable_id": variable.id_variable,
-            "description": variable.descripcion,
-            "category": getattr(
-                variable, "categoria", "N/A"
-            ),  # Uses updated PrincipalesVariables model
-            "period": f"Last {days} days",
-        }
-        if not data:
-            self.logger.warning(
-                f"No data available for report on '{variable_name}' for the last {days} days."
-            )
-            return {
-                **report_base,
-                "error": "No data available for the specified period",
-            }
-
-        # The API returns series newest-first; the statistics below assume the
-        # data runs from oldest to newest.
-        rows = sorted(data, key=lambda d: d.fecha)
-        values = [float(d.valor) for d in rows]
-        dates = [d.fecha for d in rows]
-
-        # Calculate statistics, handling cases where values might be empty.
-        # std_dev is the population standard deviation.
-        mean_val = statistics.fmean(values) if values else None
-        median_val = float(statistics.median(values)) if values else None
-        min_val = min(values) if values else None
-        max_val = max(values) if values else None
-        std_dev_val = statistics.pstdev(values) if values else None
-        latest_val = values[-1] if values else None
-        start_val = values[0] if values else None
-
-        percent_change_val = None
-        if latest_val is not None and start_val is not None and start_val != 0:
-            percent_change_val = (latest_val - start_val) / start_val * 100.0
-
-        return {
-            **report_base,
-            "start_date": dates[0].isoformat() if dates else None,
-            "end_date": dates[-1].isoformat() if dates else None,
-            "latest_value": latest_val,
-            "latest_date": dates[-1].isoformat() if dates else None,
-            "min_value": min_val,
-            "max_value": max_val,
-            "mean_value": mean_val,
-            "median_value": median_val,
-            "std_dev": std_dev_val,
-            "data_points": len(values),
-            "percent_change": percent_change_val,
-        }
 
     # Central de Deudores methods (v1.0)
     def get_deudas(self, identificacion: str) -> Deudor:
