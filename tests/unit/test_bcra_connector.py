@@ -100,8 +100,8 @@ class TestBCRAConnector:
         result: List[PrincipalesVariables] = connector.monetarias.list()
 
         mock_get.assert_called_once_with(
-            f"{BCRAConnector.BASE_URL}/estadisticas/v4.0/Monetarias",
-            params={"Limit": BCRAConnector.MAX_PAGE_SIZE, "Offset": 0},
+            f"{connector._http.config.base_url}/estadisticas/v4.0/Monetarias",
+            params={"Limit": connector._http.config.max_page_size, "Offset": 0},
             verify=False,
             timeout=ANY,
         )
@@ -157,7 +157,9 @@ class TestBCRAConnector:
             1, desde=start_date, hasta=end_date, limit=10, offset=0
         )
 
-        expected_url = f"{BCRAConnector.BASE_URL}/estadisticas/v4.0/Monetarias/1"
+        expected_url = (
+            f"{connector._http.config.base_url}/estadisticas/v4.0/Monetarias/1"
+        )
         expected_params = {
             "Desde": "2024-03-01",
             "Hasta": "2024-03-05",
@@ -315,7 +317,7 @@ class TestBCRAConnector:
         result: List[Entidad] = connector.cheques.entities()
 
         mock_get.assert_called_once_with(
-            f"{BCRAConnector.BASE_URL}/cheques/v1.0/entidades",
+            f"{connector._http.config.base_url}/cheques/v1.0/entidades",
             params=None,
             verify=False,
             timeout=ANY,
@@ -351,7 +353,7 @@ class TestBCRAConnector:
         result: Cheque = connector.cheques.reported(11, 20377516)
 
         mock_get.assert_called_once_with(
-            f"{BCRAConnector.BASE_URL}/cheques/v1.0/denunciados/11/20377516",
+            f"{connector._http.config.base_url}/cheques/v1.0/denunciados/11/20377516",
             params=None,
             verify=False,
             timeout=ANY,
@@ -397,7 +399,7 @@ class TestBCRAConnector:
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             variable_id_for_test = 99999
             mocked_api_url_path = f"estadisticas/v4.0/Monetarias/{variable_id_for_test}"
-            full_mocked_url = f"{BCRAConnector.BASE_URL}/{mocked_api_url_path}"
+            full_mocked_url = f"{connector._http.config.base_url}/{mocked_api_url_path}"
             api_error_content_message = "Recurso Especifico No Encontrado"
 
             mock_resp = mock_api_response(
@@ -496,7 +498,9 @@ class TestBCRAConnector:
         """
         mock_resp = Mock()
         mock_resp.status_code = 500
-        mock_resp.url = f"{BCRAConnector.BASE_URL}/estadisticas/v4.0/Monetarias"
+        mock_resp.url = (
+            f"{connector._http.config.base_url}/estadisticas/v4.0/Monetarias"
+        )
         mock_resp.reason = "Internal Server Error"
         # Simulate a server returning HTML instead of JSON
         mock_resp.json.side_effect = ValueError("No JSON object could be decoded")
@@ -538,14 +542,14 @@ class TestBCRAConnector:
 
                 assert result == []
                 assert mock_get.call_count == 2
-                mock_sleep.assert_called_once_with(BCRAConnector.RETRY_DELAY)
+                mock_sleep.assert_called_once_with(connector._http.config.retry_delay)
 
     def test_transient_http_error_raises_after_max_retries(
         self,
         connector: BCRAConnector,
         mock_api_response: Callable[[Dict[str, Any], int], Mock],
     ) -> None:
-        """A 5xx that never recovers raises only after MAX_RETRIES attempts."""
+        """A 5xx that never recovers raises only after ``retries`` attempts."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             with patch("bcra_connector._http.time.sleep"):
                 error_response: Mock = mock_api_response(
@@ -559,10 +563,9 @@ class TestBCRAConnector:
                 with pytest.raises(BCRAApiError) as exc_info:
                     connector.monetarias.list()
 
-                assert mock_get.call_count == BCRAConnector.MAX_RETRIES
-                assert f"tras {BCRAConnector.MAX_RETRIES} intentos" in str(
-                    exc_info.value
-                )
+                retries = connector._http.config.max_retries
+                assert mock_get.call_count == retries
+                assert f"tras {retries} intentos" in str(exc_info.value)
 
     def test_retry_mechanism(
         self,
