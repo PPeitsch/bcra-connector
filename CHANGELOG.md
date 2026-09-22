@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Removed
+- The superseded response wrappers, deprecated in 0.13.0: `DatosVariableResponse`,
+  `EntidadResponse`, `ChequeResponse`, `DivisaResponse`, `CotizacionResponse`,
+  `CotizacionesResponse` and both `ErrorResponse` classes (exported as
+  `ChequesErrorResponse` and `CambiariasErrorResponse`). `Page` replaced the first six,
+  and every API error has been raised as a `BCRAApiError` since 0.12.0, which left the
+  `ErrorResponse` pair with nothing constructing it. The
+  `EstadisticasCambiariasResultset` / `EstadisticasCambiariasMetadata` aliases go too:
+  `Resultset` and `Metadata` are the single pair, still exported from the package and
+  from both API subpackages. The `deprecated_exports()` shim and the module
+  `__getattr__` it installed are gone with them (#159)
 - The camelCase field names on `PrincipalesVariables` and `DatosVariable`
   (`idVariable`, `tipoSerie`, `unidadExpresion`, `primerFechaInformada`,
   `ultFechaInformada`, `ultValorInformado`), deprecated in 0.13.0, along with the

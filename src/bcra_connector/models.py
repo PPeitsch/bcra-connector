@@ -1,14 +1,11 @@
 """Types shared by every domain client."""
 
 import re
-import warnings
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from importlib import import_module
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Dict,
     Generic,
     Iterable,
@@ -172,32 +169,6 @@ class Metadata:
     def from_dict(cls, data: Dict[str, Any]) -> "Metadata":
         """Create a Metadata instance from a dictionary."""
         return cls(resultset=Resultset.from_dict(require(data, "resultset", dict)))
-
-
-def deprecated_exports(source: str, **replacements: str) -> Callable[[str], Any]:
-    """Build a module ``__getattr__`` that warns for names on their way out.
-
-    Takes the module the names really live in and ``Name="what to use instead"``
-    pairs, and returns a `PEP 562 <https://peps.python.org/pep-0562/>`_
-    ``__getattr__``: the name still imports and works, but doing so says so.
-
-    The names must not also be imported statically by the module installing
-    this, or the warning never fires. Code inside the library imports them from
-    their defining module, which is not deprecated — only the public export is.
-    """
-
-    def __getattr__(name: str) -> Any:
-        replacement = replacements.get(name)
-        if replacement is None:
-            raise AttributeError(f"cannot import name {name!r} from {source!r}")
-        warnings.warn(
-            f"{name} is deprecated and will be removed in 1.0; {replacement}.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return getattr(import_module(source), name)
-
-    return __getattr__
 
 
 @dataclass

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import Metadata, optional, require, to_dataframe
+from ..models import optional, require, to_dataframe
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -133,92 +133,3 @@ class CotizacionFecha:
             for d in self.detalle
         ]
         return to_dataframe(rows)
-
-
-@dataclass
-class DivisaResponse:
-    """
-    Represents the response for the Divisas endpoint.
-
-    :param status: The HTTP status code
-    :param results: List of Divisa objects
-    """
-
-    status: int
-    results: List[Divisa]
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DivisaResponse":
-        """Create a DivisaResponse instance from a dictionary."""
-        return cls(
-            status=require(data, "status", int),
-            results=[Divisa.from_dict(d) for d in require(data, "results", list)],
-        )
-
-
-@dataclass
-class CotizacionResponse:
-    """
-    Represents the response for the Cotizaciones endpoint.
-
-    :param status: The HTTP status code
-    :param results: CotizacionFecha object
-    """
-
-    status: int
-    results: CotizacionFecha
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "CotizacionResponse":
-        """Create a CotizacionResponse instance from a dictionary."""
-        return cls(
-            status=require(data, "status", int),
-            results=CotizacionFecha.from_dict(require(data, "results", dict)),
-        )
-
-
-@dataclass
-class CotizacionesResponse:
-    """
-    Represents the response for the Cotizaciones/{codMoneda} endpoint.
-
-    :param status: The HTTP status code
-    :param metadata: Metadata about the response
-    :param results: List of CotizacionFecha objects
-    """
-
-    status: int
-    metadata: Metadata
-    results: List[CotizacionFecha]
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "CotizacionesResponse":
-        """Create a CotizacionesResponse instance from a dictionary."""
-        return cls(
-            status=require(data, "status", int),
-            metadata=Metadata.from_dict(require(data, "metadata", dict)),
-            results=[
-                CotizacionFecha.from_dict(d) for d in require(data, "results", list)
-            ],
-        )
-
-
-@dataclass
-class ErrorResponse:
-    """
-    Represents an error response from the API.
-
-    :param status: The HTTP status code
-    :param error_messages: List of error messages
-    """
-
-    status: int
-    error_messages: List[str]
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ErrorResponse":
-        """Create an ErrorResponse instance from a dictionary."""
-        return cls(
-            status=require(data, "status", int),
-            error_messages=require(data, "errorMessages", list),
-        )

@@ -1,7 +1,7 @@
 """Unit tests for principal variables models (Monetarias v4.0)."""
 
 from datetime import date
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import pytest
 
@@ -10,11 +10,6 @@ from bcra_connector.principales_variables import (
     DatosVariable,
     DetalleMonetaria,
     PrincipalesVariables,
-)
-
-# Deprecated: imported from its module, since the package export warns (#140).
-from bcra_connector.principales_variables.principales_variables import (  # isort: skip
-    DatosVariableResponse,
 )
 
 
@@ -269,120 +264,3 @@ class TestDatosVariable:
             DatosVariable.from_dict(
                 {"detalle": [{"fecha": "2024-01-01", "valor": 10.0}]}
             )
-
-
-class TestDatosVariableResponse:
-    """Test suite for DatosVariableResponse model (v4.0)."""
-
-    @pytest.fixture
-    def sample_metadata_dict(self) -> Dict[str, Any]:
-        """Sample metadata dictionary."""
-        return {"resultset": {"count": 2, "offset": 0, "limit": 10}}
-
-    @pytest.fixture
-    def sample_results_list_dict(self) -> List[Dict[str, Any]]:
-        """Sample list of results dictionaries (v4.0 format)."""
-        return [
-            {
-                "idVariable": 1,
-                "detalle": [
-                    {"fecha": "2024-01-01", "valor": 10.0},
-                    {"fecha": "2024-01-02", "valor": 12.5},
-                ],
-            }
-        ]
-
-    @pytest.fixture
-    def sample_response_data_dict(
-        self,
-        sample_metadata_dict: Dict[str, Any],
-        sample_results_list_dict: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """Sample complete response dictionary (v4.0 format)."""
-        return {
-            "status": 200,
-            "metadata": sample_metadata_dict,
-            "results": sample_results_list_dict,
-        }
-
-    def test_datos_variable_response_from_dict(
-        self, sample_response_data_dict: Dict[str, Any]
-    ) -> None:
-        """Test creation of DatosVariableResponse from dictionary."""
-        response = DatosVariableResponse.from_dict(sample_response_data_dict)
-
-        assert response.status == 200
-        assert isinstance(response.metadata, Metadata)
-        assert response.metadata.resultset.count == 2
-        assert len(response.results) == 1
-        assert isinstance(response.results[0], DatosVariable)
-        assert len(response.results[0].detalle) == 2
-        assert response.results[0].detalle[0].valor == 10.0
-
-    def test_datos_variable_response_to_dict(
-        self, sample_response_data_dict: Dict[str, Any]
-    ) -> None:
-        """Test conversion of DatosVariableResponse to dictionary."""
-        response = DatosVariableResponse.from_dict(sample_response_data_dict)
-        result_dict = response.to_dict()
-
-        # Status
-        assert result_dict["status"] == 200
-        # Metadata part
-        assert (
-            result_dict["metadata"]
-            == sample_response_data_dict["metadata"]["resultset"]
-        )
-        # Results part
-        assert len(result_dict["results"]) == 1
-        assert result_dict["results"][0]["idVariable"] == 1
-        assert len(result_dict["results"][0]["detalle"]) == 2
-
-    def test_datos_variable_response_missing_keys(self) -> None:
-        """Test from_dict with missing required keys."""
-        with pytest.raises(ValueError, match="field 'status' is missing"):
-            DatosVariableResponse.from_dict({"metadata": {}, "results": []})
-        with pytest.raises(ValueError, match="field 'metadata' is missing"):
-            DatosVariableResponse.from_dict({"status": 200, "results": []})
-        with pytest.raises(ValueError, match="field 'results' is missing"):
-            DatosVariableResponse.from_dict(
-                {
-                    "status": 200,
-                    "metadata": {"resultset": {"count": 0, "offset": 0, "limit": 0}},
-                }
-            )
-
-    def test_datos_variable_response_invalid_types(self) -> None:
-        """Test from_dict with invalid types for fields."""
-        with pytest.raises(
-            ValueError, match="field 'metadata' must be an object, got str"
-        ):
-            DatosVariableResponse.from_dict(
-                {"status": 200, "metadata": "not a dict", "results": []}
-            )
-        with pytest.raises(ValueError, match="field 'results' must be a list, got str"):
-            DatosVariableResponse.from_dict(
-                {
-                    "status": 200,
-                    "metadata": {"resultset": {"count": 0, "offset": 0, "limit": 0}},
-                    "results": "not a list",
-                }
-            )
-
-    def test_datos_variable_response_parsing_error_in_children(self) -> None:
-        """Test error handling when child models fail to parse."""
-        invalid_results_data = [
-            {
-                "idVariable": "invalid",  # Should be int
-                "detalle": [{"fecha": "2024-01-01", "valor": 10.0}],
-            }
-        ]
-        data = {
-            "status": 200,
-            "metadata": {"resultset": {"count": 1, "offset": 0, "limit": 10}},
-            "results": invalid_results_data,
-        }
-        with pytest.raises(
-            ValueError, match="field 'idVariable' must be int, got 'invalid'"
-        ):
-            DatosVariableResponse.from_dict(data)
