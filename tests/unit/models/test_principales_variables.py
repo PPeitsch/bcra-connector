@@ -245,7 +245,7 @@ class TestDatosVariable:
     def test_datos_variable_equality(self) -> None:
         """Test equality comparison of DatosVariable instances.
 
-        Field by field since #135; see ``test_legacy_names.py`` for ``detalle``.
+        Field by field since #135: it used to compare only the id.
         """
         d1 = DatosVariable(id_variable=1, detalle=[])
         d2 = DatosVariable(id_variable=1, detalle=[])
@@ -254,6 +254,14 @@ class TestDatosVariable:
         assert d1 == d2
         assert d1 != d3
         assert d1 != "not a DatosVariable"
+
+    def test_same_id_different_detalle_differ(self) -> None:
+        """The case #135 fixed: comparing only the id made these equal."""
+        point = DetalleMonetaria(fecha=date(2024, 1, 1), valor=1.0)
+
+        assert DatosVariable(id_variable=1, detalle=[point]) != DatosVariable(
+            id_variable=1, detalle=[]
+        )
 
     def test_datos_variable_missing_id(self) -> None:
         """Test handling of missing idVariable key."""
