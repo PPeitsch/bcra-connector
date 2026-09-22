@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ..models import Metadata, optional, require, to_dataframe
+from ..models import optional, require, to_dataframe
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -193,41 +193,3 @@ class DatosVariable:
             for d in self.detalle
         ]
         return to_dataframe(rows)
-
-
-@dataclass
-class DatosVariableResponse:
-    """
-    Represents the full response for fetching historical data for a variable/series (v4.0).
-
-    :param status: HTTP status code.
-    :param metadata: Metadata object containing count, offset, and limit.
-    :param results: List of DatosVariable objects.
-    """
-
-    status: int
-    metadata: Metadata
-    results: List[DatosVariable]
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DatosVariableResponse":
-        """Create a DatosVariableResponse instance from a dictionary."""
-        return cls(
-            status=require(data, "status", int),
-            metadata=Metadata.from_dict(require(data, "metadata", dict)),
-            results=[
-                DatosVariable.from_dict(item) for item in require(data, "results", list)
-            ],
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the DatosVariableResponse instance to a dictionary."""
-        return {
-            "status": self.status,
-            "metadata": (
-                self.metadata.resultset.to_dict()
-                if self.metadata and self.metadata.resultset
-                else None
-            ),
-            "results": [item.to_dict() for item in self.results],
-        }

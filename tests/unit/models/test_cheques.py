@@ -7,13 +7,6 @@ import pytest
 
 from bcra_connector.cheques import Cheque, ChequeDetalle, Entidad
 
-# Deprecated: imported from their module, since the package export warns (#140).
-from bcra_connector.cheques.cheques import (  # isort: skip
-    ChequeResponse,
-    EntidadResponse,
-    ErrorResponse,
-)
-
 
 class TestEntidad:
     """Test suite for Entidad model."""
@@ -160,71 +153,6 @@ class TestCheque:
         assert isinstance(result["detalles"], list)
         assert len(result["detalles"]) == 1
         assert result["detalles"][0]["sucursal"] == 524
-
-
-class TestResponses:
-    """Test suite for API response models."""
-
-    def test_entidad_response(self) -> None:
-        """Test EntidadResponse model."""
-        data: Dict[str, Any] = {
-            "status": 200,
-            "results": [
-                {"codigoEntidad": 11, "denominacion": "BANCO DE LA NACION ARGENTINA"}
-            ],
-        }
-        response: EntidadResponse = EntidadResponse.from_dict(data)
-
-        assert response.status == 200
-        assert len(response.results) == 1
-        assert isinstance(response.results[0], Entidad)
-
-    @pytest.fixture
-    def sample_cheque_data(self) -> Dict[str, Any]:
-        """Fixture providing sample check data."""
-        return {
-            "numeroCheque": 20377516,
-            "denunciado": True,
-            "fechaProcesamiento": "2024-03-05",
-            "denominacionEntidad": "BANCO DE LA NACION ARGENTINA",
-            "detalles": [
-                {
-                    "sucursal": 524,
-                    "numeroCuenta": 5240055962,
-                    "causal": "Denunciado por tercero",
-                }
-            ],
-        }
-
-    def test_cheque_response(self, sample_cheque_data: Dict[str, Any]) -> None:
-        """Test ChequeResponse model."""
-        data: Dict[str, Any] = {"status": 200, "results": sample_cheque_data}
-        response: ChequeResponse = ChequeResponse.from_dict(data)
-
-        assert response.status == 200
-        assert isinstance(response.results, Cheque)
-
-    def test_error_response(self) -> None:
-        """Test ErrorResponse model."""
-        data: Dict[str, Any] = {
-            "status": 400,
-            "errorMessages": ["Invalid check number"],
-        }
-        response: ErrorResponse = ErrorResponse.from_dict(data)
-
-        assert response.status == 400
-        assert len(response.error_messages) == 1
-        assert response.error_messages[0] == "Invalid check number"
-
-    def test_error_response_multiple_messages(self) -> None:
-        """Test ErrorResponse with multiple error messages."""
-        data: Dict[str, Any] = {
-            "status": 400,
-            "errorMessages": ["Invalid check number", "Invalid entity code"],
-        }
-        response: ErrorResponse = ErrorResponse.from_dict(data)
-
-        assert len(response.error_messages) == 2
 
 
 class TestValidation:
