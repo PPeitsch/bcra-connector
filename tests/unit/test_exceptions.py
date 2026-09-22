@@ -1,4 +1,4 @@
-"""Typed API exceptions and the check_denunciado() behavior built on them."""
+"""Typed API exceptions and the cheques.is_reported() behavior built on them."""
 
 import json
 from datetime import date
@@ -17,7 +17,6 @@ from bcra_connector import (
     BCRAServerError,
 )
 from bcra_connector.cheques import Cheque, Entidad
-from bcra_connector.models import Page
 
 ENTITIES = [
     Entidad(codigo_entidad=7, denominacion="BANCO DE GALICIA Y BUENOS AIRES S.A."),
@@ -135,7 +134,7 @@ class TestCheckDenunciado:
     def _check(
         self, connector: BCRAConnector, name: str, cheque: Any = None
     ) -> List[int]:
-        """Run check_denunciado and return the entity codes it queried."""
+        """Run cheques.is_reported and return the entity codes it queried."""
         cheque = cheque if cheque is not None else _cheque(False)
         with (
             patch.object(connector.cheques, "entities", return_value=ENTITIES),
@@ -215,29 +214,6 @@ class TestCheckDenunciado:
     def test_unknown_entity(self, connector: BCRAConnector) -> None:
         with pytest.raises(ValueError, match="not found"):
             self._check(connector, "Banco Inexistente")
-
-
-class TestDeprecatedChequesAliases:
-    """The old cheques methods delegate and warn until 1.0."""
-
-    @pytest.mark.parametrize(
-        "old,new,args,paged",
-        [
-            ("get_entidades", "entities", (), True),
-            ("get_cheque_denunciado", "reported", (11, 123), False),
-            ("check_denunciado", "is_reported", ("Galicia", 123), False),
-        ],
-    )
-    def test_alias_warns_and_delegates(
-        self, connector: BCRAConnector, old: str, new: str, args: Any, paged: bool
-    ) -> None:
-        rows = [object()]
-        returned: Any = Page(rows, count=1) if paged else rows[0]
-        with patch.object(connector.cheques, new, return_value=returned) as mock_method:
-            with pytest.warns(DeprecationWarning, match=f"cheques.{new}"):
-                result = getattr(connector, old)(*args)
-        mock_method.assert_called_once_with(*args)
-        assert result == (rows if paged else rows[0])
 
 
 class TestFindEntity:

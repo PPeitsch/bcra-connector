@@ -297,9 +297,6 @@ page: the helpers that walk the whole range (``monetarias.list()``,
 them ``has_more`` is ``False``. When an endpoint reports nothing usable, ``count`` is
 ``None`` and ``has_more`` is ``False``.
 
-The deprecated ``get_*`` methods still return plain lists, so existing code is
-unaffected either way.
-
 Error Handling
 --------------
 
@@ -313,7 +310,7 @@ outcomes without parsing messages:
 - ``BCRAServerError``: HTTP 5xx that persisted after the retries.
 
 Invalid arguments raise ``ValueError`` instead: a negative ``days``, a CUIT that isn't
-11 digits, or an entity name in ``check_denunciado()`` that matches no entity or
+11 digits, or an entity name in ``cheques.is_reported()`` that matches no entity or
 several.
 
 .. code-block:: python

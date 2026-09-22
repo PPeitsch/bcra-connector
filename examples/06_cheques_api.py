@@ -40,18 +40,18 @@ def main():
             f"Checking check status {check_number} for {target_entity.denominacion} (Code: {target_entity.codigo_entidad})..."
         )
 
-        # Method A: check_denunciado helper (returns boolean)
+        # Method A: is_reported helper (returns boolean)
         try:
             is_denounced = connector.cheques.is_reported(
                 target_entity.denominacion, check_number
             )
             logger.info(
-                f"Check {check_number} denounced status (via check_denunciado): {is_denounced}"
+                f"Check {check_number} denounced status (via is_reported): {is_denounced}"
             )
         except Exception as e:
-            logger.warning(f"Helper check_denunciado failed: {e}")
+            logger.warning(f"Helper is_reported failed: {e}")
 
-        # Method B: get_cheque_denunciado (returns Cheque object or raises error)
+        # Method B: reported (returns Cheque object or raises error)
         try:
             cheque_info = connector.cheques.reported(
                 target_entity.codigo_entidad, check_number
@@ -60,7 +60,7 @@ def main():
         except BCRAApiError as e:
             # It is expected to fail with 404 if the check is not denounced/found
             logger.info(
-                f"get_cheque_denunciado result: {e} (This usually means the check is not denounced)"
+                f"reported() result: {e} (This usually means the check is not denounced)"
             )
 
     except Exception as e:

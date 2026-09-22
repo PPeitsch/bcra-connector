@@ -129,7 +129,7 @@ class TestVariableCatalogCache:
 
 
 class TestEntitiesCache:
-    def test_check_denunciado_reuses_entities(self, connector: BCRAConnector) -> None:
+    def test_is_reported_reuses_entities(self, connector: BCRAConnector) -> None:
         entities = [Entidad(codigo_entidad=11, denominacion="BANCO DE LA NACION")]
         cheque = Cheque(
             numero_cheque=1,
