@@ -6,50 +6,28 @@ Handles rate limiting, retries, and error cases.
 
 import logging
 import os
-import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import requests
 
 from ._http import _redact  # noqa: F401  (re-exported: used by the tests)
 from ._http import HttpClient, TransportConfig
-from .central_deudores import ChequesRechazados, Deudor
-from .cheques import Cheque, Entidad
 from .clients import (
     CambiariasClient,
     ChequesClient,
     DeudoresClient,
     MonetariasClient,
 )
-from .estadisticas_cambiarias import CotizacionFecha, Divisa
 from .exceptions import (  # noqa: F401  (re-exported for backwards compatibility)
     BCRAApiError,
     BCRANotFoundError,
     BCRARateLimitError,
     BCRAServerError,
 )
-from .models import DateLike, Metadata, Resultset
-from .principales_variables import DetalleMonetaria, PrincipalesVariables
-
-# Deprecated, and returned by a deprecated alias: imported from where it is
-# defined so that importing this module does not warn.
-from .principales_variables.principales_variables import (  # isort: skip
-    DatosVariableResponse,
-)
 from .rate_limiter import RateLimitConfig, RateLimiter
 from .timeout_config import TimeoutConfig
 
 T = TypeVar("T")
-
-
-def _deprecated(old: str, new: str) -> None:
-    """Warn that ``BCRAConnector.<old>()`` moved to ``connector.<new>()``."""
-    warnings.warn(
-        f"BCRAConnector.{old}() is deprecated and will be removed in 1.0; "
-        f"use connector.{new}() instead.",
-        DeprecationWarning,
-        stacklevel=3,
-    )
 
 
 def _has_active_handler(logger: logging.Logger) -> bool:
@@ -224,204 +202,3 @@ class BCRAConnector:
     ) -> List[T]:
         """Fetch consecutive pages until the results are exhausted."""
         return self._http.collect_pages(fetch_page, page_size, what, start)
-
-    # Principales Variables / Monetarias methods (v4.0)
-    def get_principales_variables(self) -> List[PrincipalesVariables]:
-        """Deprecated alias of :meth:`MonetariasClient.list`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.monetarias.list()``; removed in 1.0.
-        """
-        _deprecated("get_principales_variables", "monetarias.list")
-        return self.monetarias.list().results
-
-    def get_datos_variable(
-        self,
-        id_variable: int,
-        desde: Optional[DateLike] = None,
-        hasta: Optional[DateLike] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> DatosVariableResponse:
-        """Deprecated alias of :meth:`MonetariasClient.series`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.monetarias.series()``; removed in 1.0.
-        """
-        _deprecated("get_datos_variable", "monetarias.series")
-        page = self.monetarias.series(id_variable, desde, hasta, limit, offset)
-        return DatosVariableResponse(
-            status=200,
-            metadata=Metadata(
-                resultset=Resultset(
-                    count=page.count if page.count is not None else len(page),
-                    offset=page.offset,
-                    limit=page.limit if page.limit is not None else len(page),
-                )
-            ),
-            results=page.results,
-        )
-
-    def get_latest_value(self, id_variable: int) -> "DetalleMonetaria":
-        """Deprecated alias of :meth:`MonetariasClient.latest`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.monetarias.latest()``; removed in 1.0.
-        """
-        _deprecated("get_latest_value", "monetarias.latest")
-        return self.monetarias.latest(id_variable)
-
-    # Cheques methods
-    def get_entidades(self) -> List[Entidad]:
-        """Deprecated alias of :meth:`ChequesClient.entities`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cheques.entities()``; removed in 1.0.
-        """
-        _deprecated("get_entidades", "cheques.entities")
-        return self.cheques.entities().results
-
-    def get_cheque_denunciado(self, codigo_entidad: int, numero_cheque: int) -> Cheque:
-        """Deprecated alias of :meth:`ChequesClient.reported`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cheques.reported()``; removed in 1.0.
-        """
-        _deprecated("get_cheque_denunciado", "cheques.reported")
-        return self.cheques.reported(codigo_entidad, numero_cheque)
-
-    # Estadísticas Cambiarias methods
-    def get_divisas(self) -> List[Divisa]:
-        """Deprecated alias of :meth:`CambiariasClient.currencies`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cambiarias.currencies()``; removed in 1.0.
-        """
-        _deprecated("get_divisas", "cambiarias.currencies")
-        return self.cambiarias.currencies().results
-
-    def get_cotizaciones(self, fecha: Optional[DateLike] = None) -> CotizacionFecha:
-        """Deprecated alias of :meth:`CambiariasClient.quotations`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cambiarias.quotations()``; removed in 1.0.
-        """
-        _deprecated("get_cotizaciones", "cambiarias.quotations")
-        return self.cambiarias.quotations(fecha)
-
-    def get_evolucion_moneda(
-        self,
-        moneda: str,
-        fecha_desde: Optional[DateLike] = None,
-        fecha_hasta: Optional[DateLike] = None,
-        limit: int = 1000,
-        offset: int = 0,
-    ) -> List[CotizacionFecha]:
-        """Deprecated alias of :meth:`CambiariasClient.series`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cambiarias.series()``; removed in 1.0.
-        """
-        _deprecated("get_evolucion_moneda", "cambiarias.series")
-        return self.cambiarias.series(
-            moneda, fecha_desde, fecha_hasta, limit, offset
-        ).results
-
-    # --- Helper Methods ---
-    def get_variable_by_name(
-        self, variable_name: str
-    ) -> Optional[PrincipalesVariables]:
-        """Deprecated alias of :meth:`MonetariasClient.find`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.monetarias.find()``; removed in 1.0.
-        """
-        _deprecated("get_variable_by_name", "monetarias.find")
-        return self.monetarias.find(variable_name)
-
-    def get_variable_history(
-        self,
-        variable_name: str,
-        days: int = 30,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List["DetalleMonetaria"]:
-        """Deprecated alias of :meth:`MonetariasClient.history`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.monetarias.history()``; removed in 1.0.
-        """
-        _deprecated("get_variable_history", "monetarias.history")
-        return self.monetarias.history(variable_name, days, limit, offset).results
-
-    def get_currency_evolution(
-        self,
-        currency_code: str,
-        days: int = 30,
-        limit: Optional[int] = None,
-        offset: int = 0,
-    ) -> List[CotizacionFecha]:
-        """Deprecated alias of :meth:`CambiariasClient.evolution`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cambiarias.evolution()``; removed in 1.0.
-        """
-        _deprecated("get_currency_evolution", "cambiarias.evolution")
-        return self.cambiarias.evolution(currency_code, days, limit, offset).results
-
-    def check_denunciado(self, entity_name: str, check_number: int) -> bool:
-        """Deprecated alias of :meth:`ChequesClient.is_reported`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cheques.is_reported()``; removed in 1.0.
-        """
-        _deprecated("check_denunciado", "cheques.is_reported")
-        return self.cheques.is_reported(entity_name, check_number)
-
-    def get_latest_quotations(self) -> Dict[str, float]:
-        """Deprecated alias of :meth:`CambiariasClient.latest`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cambiarias.latest()``; removed in 1.0.
-        """
-        _deprecated("get_latest_quotations", "cambiarias.latest")
-        return self.cambiarias.latest()
-
-    def get_currency_pair_evolution(
-        self, base_currency: str, quote_currency: str, days: int = 30
-    ) -> List[Dict[str, Any]]:
-        """Deprecated alias of :meth:`CambiariasClient.pair`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.cambiarias.pair()``; removed in 1.0.
-        """
-        _deprecated("get_currency_pair_evolution", "cambiarias.pair")
-        return self.cambiarias.pair(base_currency, quote_currency, days)
-
-    # Central de Deudores methods (v1.0)
-    def get_deudas(self, identificacion: str) -> Deudor:
-        """Deprecated alias of :meth:`DeudoresClient.debts`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.deudores.debts()``; removed in 1.0.
-        """
-        _deprecated("get_deudas", "deudores.debts")
-        return self.deudores.debts(identificacion)
-
-    def get_deudas_historicas(self, identificacion: str) -> Deudor:
-        """Deprecated alias of :meth:`DeudoresClient.historical`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.deudores.historical()``; removed in 1.0.
-        """
-        _deprecated("get_deudas_historicas", "deudores.historical")
-        return self.deudores.historical(identificacion)
-
-    def get_cheques_rechazados(self, identificacion: str) -> ChequesRechazados:
-        """Deprecated alias of :meth:`DeudoresClient.rejected_checks`.
-
-        .. deprecated:: 0.13.0
-           Use ``connector.deudores.rejected_checks()``; removed in 1.0.
-        """
-        _deprecated("get_cheques_rechazados", "deudores.rejected_checks")
-        return self.deudores.rejected_checks(identificacion)

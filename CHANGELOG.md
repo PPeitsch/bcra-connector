@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Removed
+- The 17 deprecated `get_*` / `check_denunciado()` aliases on `BCRAConnector`. Every
+  call now goes through a domain client:
+  `monetarias.list/series/latest/find/history`, `cheques.entities/reported/is_reported`,
+  `cambiarias.currencies/quotations/latest/series/evolution/pair` and
+  `deudores.debts/historical/rejected_checks`. The `DeprecationWarning` each alias
+  emitted since 0.13.0 named its replacement (#154)
 - `BCRAConnector.get_variable_correlation()` and
   `BCRAConnector.generate_variable_report()`, deprecated in 0.13.0, are gone. Computing
   statistics is not a connector's job: the correlation interpolated across series of

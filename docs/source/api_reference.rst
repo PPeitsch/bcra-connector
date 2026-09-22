@@ -7,8 +7,8 @@ methods, automatically generated from the source code.
 BCRAConnector
 -------------
 
-The facade: configuration, lifecycle and the four domain clients below. Its own
-``get_*`` methods are deprecated aliases kept until 1.0; new code calls the clients.
+The facade: configuration, lifecycle and the four domain clients below. Every call
+goes through one of the clients.
 
 .. automodule:: src.bcra_connector.bcra_connector
    :members:

@@ -123,36 +123,6 @@ class TestCambiariasSeries:
             connector.cambiarias.series("USD", fecha_desde=20240102)
 
 
-class TestDeprecatedAliasesAcceptThemToo:
-    """The 0.12 methods widen along with the sub-clients."""
-
-    def test_get_datos_variable_takes_a_date(self, connector: BCRAConnector) -> None:
-        with patch.object(
-            connector._http, "request", return_value=EMPTY_LIST
-        ) as request:
-            with pytest.warns(DeprecationWarning):
-                connector.get_datos_variable(1, desde=DAY, hasta=DAY)
-        assert _params(request) == {"Desde": "2024-01-02", "Hasta": "2024-01-02"}
-
-    def test_get_cotizaciones_takes_a_date(self, connector: BCRAConnector) -> None:
-        with patch.object(
-            connector._http, "request", return_value=EMPTY_QUOTATION
-        ) as request:
-            with pytest.warns(DeprecationWarning):
-                connector.get_cotizaciones(DAY)
-        assert _params(request) == {"fecha": "2024-01-02"}
-
-    def test_get_evolucion_moneda_takes_dates(self, connector: BCRAConnector) -> None:
-        with patch.object(
-            connector._http, "request", return_value=EMPTY_LIST
-        ) as request:
-            with pytest.warns(DeprecationWarning):
-                connector.get_evolucion_moneda("USD", DAY, DAY)
-        params = _params(request) or {}
-        assert params["fechaDesde"] == "2024-01-02"
-        assert params["fechaHasta"] == "2024-01-02"
-
-
 class TestEvolutionRange:
     """``evolution`` builds its own range; it must send dates, not datetimes."""
 

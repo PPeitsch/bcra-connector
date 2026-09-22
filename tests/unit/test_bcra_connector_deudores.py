@@ -291,29 +291,6 @@ class TestConnectorExceptionHandling:
             connector.deudores.rejected_checks("20123456789")
 
 
-class TestDeprecatedAliases:
-    """The old connector methods delegate and warn until 1.0."""
-
-    @pytest.mark.parametrize(
-        "old,new,argument",
-        [
-            ("get_deudas", "debts", "20123456789"),
-            ("get_deudas_historicas", "historical", "20123456789"),
-            ("get_cheques_rechazados", "rejected_checks", "20123456789"),
-        ],
-    )
-    def test_alias_warns_and_delegates(self, old: str, new: str, argument: str) -> None:
-        connector = BCRAConnector()
-        sentinel = object()
-        with patch.object(
-            connector.deudores, new, return_value=sentinel
-        ) as mock_method:
-            with pytest.warns(DeprecationWarning, match=f"deudores.{new}"):
-                result = getattr(connector, old)(argument)
-        mock_method.assert_called_once_with(argument)
-        assert result is sentinel
-
-
 class TestSharedParsing:
     """DomainClient._object turns any parsing failure into a BCRAApiError."""
 
