@@ -4,7 +4,7 @@ description: checkout a PR, run ruff + black, push fixes automatically
 
 # Lint & Format PR
 
-Checks out a Pull Request branch, runs `ruff` and `black`, and force-pushes any
+Checks out a Pull Request branch, runs `ruff` and `black`, and pushes any
 auto-fixed formatting back to the PR branch.
 
 ## Prerequisites
@@ -14,15 +14,21 @@ auto-fixed formatting back to the PR branch.
 
 ## Steps
 
-// turbo
-1. Detect OS/shell:
+1. Check out the PR branch:
 ```bash
-python .skills/run_skill.py detect_os_and_terminal
+gh pr checkout <PR_NUMBER>
 ```
 
-2. Run linter and auto-fix on the target PR:
+2. Run the linter and the formatter:
 ```bash
-python .skills/run_skill.py lint_and_format_pr --pr <PR_NUMBER>
+ruff check --fix src/ tests/
+black src/ tests/
 ```
 
-> The skill will: checkout the PR branch → run `ruff --fix` + `black` → commit + force-push any changes.
+3. Push the fixes back, if there are any:
+```bash
+git diff --quiet || { git commit -am "style: apply ruff and black" && git push; }
+```
+
+> Never force-push someone else's PR branch: it discards work pushed in the
+> meantime. A plain `git push` is enough for a fast-forward.

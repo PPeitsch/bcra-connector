@@ -10,20 +10,17 @@ Optionally posts a summary comment on an open GitHub PR.
 ## Steps
 
 // turbo
-1. Detect OS and shell to ensure correct command formatting:
+1. Run the test suite and display results:
 ```bash
-python .skills/run_skill.py detect_os_and_terminal
+pytest tests/ -v --tb=short
 ```
 
-// turbo
-2. Run the test suite and display results:
+2. (Optional) If working on a PR and you want to comment the results, capture the
+   summary and post it:
 ```bash
-python .skills/run_skill.py run_tests_and_report --command "pytest tests/ -v --tb=short"
+pytest tests/ --tb=short -q > /tmp/pytest-report.txt 2>&1; tail -20 /tmp/pytest-report.txt
+gh pr comment <PR_NUMBER> --body "$(printf '```\n%s\n```' "$(tail -20 /tmp/pytest-report.txt)")"
 ```
 
-3. (Optional) If working on a PR and you want to comment results:
-```bash
-python .skills/run_skill.py run_tests_and_report --command "pytest tests/ -v --tb=short" --pr <PR_NUMBER>
-```
-
-> Use `--fail-only` to comment only if tests fail.
+> Only comment when it adds something the PR does not already show — CI already
+> reports its own result on every push.

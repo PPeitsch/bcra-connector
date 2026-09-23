@@ -8,24 +8,23 @@ Runs static analysis (`bandit`) and dependency scanning (`safety`) against the c
 
 ## Prerequisites
 
-Install optional security extras if not already present:
 ```bash
-pip install -e ".skills[all]"
+pip install bandit safety
 ```
 
 ## Steps
 
 // turbo
-1. Run the full security scan:
+1. Run the full security scan (SAST plus the dependency CVE check):
 ```bash
-python .skills/run_skill.py check_security_vulnerabilities --target-dir src/
+python "${CLAUDE_PLUGIN_ROOT}/run_skill.py" check_security_vulnerabilities --target-dir src/ --check-deps
 ```
 
 2. Review the report output. Common findings for this project:
    - `bandit`: flags `requests` calls without cert verification (expected — controlled via `verify_ssl` param).
    - `safety`: checks `requirements.txt` against known CVE database.
 
-3. (Optional) Scan dependencies specifically:
+3. (Optional) List outdated dependencies without touching anything:
 ```bash
-python .skills/run_skill.py update_dependencies --check-only
+pip list --outdated
 ```
