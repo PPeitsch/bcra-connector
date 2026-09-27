@@ -111,7 +111,8 @@ stderr.
 
    connector = BCRAConnector(debug=True)
 
-CUIT/CUIL numbers are masked in log messages.
+CUIT/CUIL numbers are masked in log messages and in the messages of the exceptions the
+connector raises.
 
 Retry Behavior
 --------------

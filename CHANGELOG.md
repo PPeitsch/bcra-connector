@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   second. The Central de Deudores answered 429 at about 5 req/s. The default is a
   client-side guess, not a BCRA limit, and the limiter is per process: both are now
   documented in `configuration.rst`. Pass `rate_limit=` to keep the old pace (#168).
+- **Exceptions no longer carry the unmasked CUIT/CUIL.** Every message built by the
+  transport masks it (`30********2`), including the error body echoed by the API and the
+  text taken from `requests`, so logging an error or sending it to Sentry doesn't leak
+  personal data (Ley 25.326). The `requests` exception is no longer chained
+  (`__cause__` and `__context__` are `None`): its message has the full URL. The class and
+  `status_code` still say what happened; generic request errors now name the masked URL
+  (#169).
 
 ## [1.0.0] - 2026-09-22
 
