@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `status_code` still say what happened; generic request errors now name the masked URL
   (#169).
 
+### Fixed
+- **An invalid JSON body fails right away with `Invalid JSON response`.** What
+  `response.json()` raises, `requests.exceptions.JSONDecodeError`, is also a
+  `RequestException`, so it was retried `retries` times and reported as a generic
+  `API request failed after N attempts` error. The tests had mocked it with
+  `json.JSONDecodeError` and never saw it (#172).
+
 ## [1.0.0] - 2026-09-22
 
 ### Changed

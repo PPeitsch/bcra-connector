@@ -243,6 +243,12 @@ class HttpClient:
                     else:
                         time.sleep(config.retry_delay * (2**attempt))
 
+            # Before RequestException: what ``response.json()`` raises is also one,
+            # and an invalid body won't get better by retrying (#172). Only the JSON
+            # errors: MissingSchema, InvalidURL... are ValueErrors too.
+            except (requests.exceptions.JSONDecodeError, json.JSONDecodeError):
+                failure = BCRAApiError(f"Invalid JSON response from {safe_url}")
+
             except requests.RequestException as e:
                 detail = _redact(str(e))
                 self.logger.error(
@@ -257,7 +263,7 @@ class HttpClient:
                 else:
                     time.sleep(config.retry_delay * (2**attempt))
 
-            except (ValueError, json.JSONDecodeError):
+            except ValueError:
                 failure = BCRAApiError(f"Invalid JSON response from {safe_url}")
 
             if failure is not None:
