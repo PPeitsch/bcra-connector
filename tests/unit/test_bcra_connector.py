@@ -37,6 +37,7 @@ class TestBCRAConnector:
 
         def _create_response(data: Dict[str, Any], status_code: int = 200) -> Mock:
             response = Mock()
+            response.headers = {}
             response.json.return_value = data
             response.status_code = status_code
             if status_code >= 400:

@@ -34,6 +34,7 @@ def isolated_logger() -> Iterator[logging.Logger]:
 
 def _response(data: dict, status_code: int = 200) -> Mock:
     response = Mock()
+    response.headers = {}
     response.status_code = status_code
     response.url = f"https://api.bcra.gob.ar/CentralDeDeudores/v1.0/Deudas/{CUIT}"
     response.reason = "Service Unavailable" if status_code >= 500 else "OK"

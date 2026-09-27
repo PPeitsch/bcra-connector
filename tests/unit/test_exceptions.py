@@ -34,6 +34,7 @@ def connector() -> BCRAConnector:
 
 def _http_error_response(status: int, body: Any = None) -> Mock:
     response = Mock()
+    response.headers = {}
     response.status_code = status
     response.url = "https://api.bcra.gob.ar/test"
     response.reason = "Reason"

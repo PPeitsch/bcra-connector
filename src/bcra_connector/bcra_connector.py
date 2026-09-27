@@ -50,7 +50,9 @@ class BCRAConnector:
     Principales Variables (Monetarias v4.0), Cheques, and Estadísticas Cambiarias.
     """
 
-    DEFAULT_RATE_LIMIT = RateLimitConfig(calls=10, period=1.0, _burst=20)
+    # A conservative client-side guess, not a limit published by the BCRA (it
+    # publishes none). The Central de Deudores has answered 429 at about 5 req/s.
+    DEFAULT_RATE_LIMIT = RateLimitConfig(calls=2, period=1.0)
     DEFAULT_TIMEOUT = TimeoutConfig.default()
 
     def __init__(
@@ -68,6 +70,7 @@ class BCRAConnector:
         cache_ttl: float = 300.0,
         page_size: int = 3000,
         fx_page_size: int = 1000,
+        max_retry_after: float = 30.0,
     ):
         """Initialize the BCRAConnector.
 
@@ -79,7 +82,12 @@ class BCRAConnector:
                       ``bcra_connector`` loggers to DEBUG and, if no handler is
                       configured, adds one writing to stderr. Without it the
                       library leaves logging configuration to the application.
-        :param rate_limit: Rate limiting configuration, defaults to DEFAULT_RATE_LIMIT
+        :param rate_limit: Client-side rate limiting, defaults to DEFAULT_RATE_LIMIT
+                      (2 calls per second). The BCRA doesn't publish its limits:
+                      the default is a conservative guess, not an official figure.
+                      The limiter is per connector, so several processes or
+                      workers don't coordinate: sharing a budget between them is
+                      up to the application.
         :param timeout: Request timeout configuration, can be TimeoutConfig or float,
                       defaults to DEFAULT_TIMEOUT
         :param session: A ``requests.Session`` to use instead of a new one, for
@@ -90,7 +98,12 @@ class BCRAConnector:
                       server or a proxy.
         :param retries: Attempts per request before giving up, defaults to 3.
         :param retry_delay: Base delay between retries in seconds, defaults to 1.
-                      It backs off exponentially: delay * 2 ** attempt.
+                      It backs off exponentially: delay * 2 ** attempt. A 429 or
+                      503 with a ``Retry-After`` header waits what the server asks
+                      instead, up to ``max_retry_after``.
+        :param max_retry_after: Longest wait honoured from a ``Retry-After``
+                      header, in seconds, defaults to 30. A longer value is cut
+                      down to it, so a bad header can't hang the caller.
         :param max_pages: Safety cap on the pages the helpers that walk a whole
                       range will fetch, defaults to 100.
         :param cache_ttl: How long name lookups reuse the variables catalog and
@@ -129,6 +142,7 @@ class BCRAConnector:
                 base_url=base_url,
                 max_retries=retries,
                 retry_delay=retry_delay,
+                max_retry_after=max_retry_after,
                 max_pages=max_pages,
                 cache_ttl=cache_ttl,
                 max_page_size=page_size,
