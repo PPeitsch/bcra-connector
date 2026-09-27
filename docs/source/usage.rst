@@ -332,6 +332,11 @@ several.
    except BCRAApiError as e:
        print(f"Request failed: {e}")
 
+Error messages mask CUIT/CUIL numbers (``30********2``), so they are safe to log or send
+to an error tracker. For the same reason the underlying ``requests`` exception is not
+chained to them: its message has the full URL. ``status_code`` and the exception class
+tell you what happened.
+
 Advanced Usage
 --------------
 

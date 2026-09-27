@@ -119,13 +119,20 @@ class HttpClient:
     def request(
         self, endpoint: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Make a request to the BCRA API with retry logic and rate limiting."""
+        """Make a request to the BCRA API with retry logic and rate limiting.
+
+        Every error message masks the CUIT/CUIL in the URL, and the exception is
+        raised without the ``requests`` one chained to it: that one carries the
+        full URL.
+        """
         config = self.config
         url = f"{config.base_url}/{endpoint}"
-        log_url = _redact(url)
+        safe_url = _redact(url)
         max_retries = config.max_retries
 
         for attempt in range(max_retries):
+            last_attempt = attempt == max_retries - 1
+            failure: Optional[BCRAApiError] = None
             try:
                 delay = self.rate_limiter.acquire()
                 if delay > 0:
@@ -134,7 +141,7 @@ class HttpClient:
                     )
                     time.sleep(delay)
 
-                self.logger.debug(f"Making request to {log_url} with params {params}")
+                self.logger.debug(f"Making request to {safe_url} with params {params}")
                 response = self.session.get(
                     url,
                     params=params,
@@ -155,18 +162,18 @@ class HttpClient:
                         error_msg += f": {str(error_data)}"
                 except (ValueError, json.JSONDecodeError):
                     error_msg += f": {e.response.reason}"
+                error_msg = _redact(error_msg)
 
                 if status_code == 404:
-                    raise BCRANotFoundError(
+                    failure = BCRANotFoundError(
                         f"Resource not found (404): {error_msg}", status_code
-                    ) from e
+                    )
                 # Server-side (5xx) and rate-limit (429) errors are transient: retry
                 # with exponential backoff before giving up.
-                if status_code == 429 or 500 <= status_code <= 599:
+                elif status_code == 429 or 500 <= status_code <= 599:
                     self.logger.warning(
-                        f"Transient HTTP {status_code} from {log_url} "
-                        f"(attempt {attempt + 1}/{max_retries}): "
-                        f"{_redact(error_msg)}"
+                        f"Transient HTTP {status_code} from {safe_url} "
+                        f"(attempt {attempt + 1}/{max_retries}): {error_msg}"
                     )
                     if status_code == 429:
                         # The BCRA doesn't document its limits: the headers of a 429
@@ -177,71 +184,91 @@ class HttpClient:
                             if k.lower() != "set-cookie"
                         }
                         self.logger.warning(f"HTTP 429 response headers: {headers}")
-                    if attempt == max_retries - 1:
+                    if last_attempt:
                         error_cls = (
                             BCRARateLimitError
                             if status_code == 429
                             else BCRAServerError
                         )
-                        raise error_cls(
+                        failure = error_cls(
                             f"El servidor del BCRA rechazó la conexión "
                             f"(HTTP {status_code}) tras {max_retries} intentos. "
                             f"El servidor puede estar caído o sobrecargado. "
                             f"Detalle: {error_msg}",
                             status_code,
-                        ) from e
-                    delay = config.retry_delay * (2**attempt)
-                    retry_after = (
-                        _retry_after(e.response) if status_code in (429, 503) else None
-                    )
-                    if retry_after is not None:
-                        # Honour the server, but a bad header must not hang the caller.
-                        delay = min(retry_after, config.max_retry_after)
-                        self.logger.debug(
-                            f"Retry-After: {retry_after:.0f}s, waiting {delay:.0f}s"
                         )
-                    time.sleep(delay)
-                    continue
-                raise BCRAApiError(error_msg, status_code) from e
+                    else:
+                        delay = config.retry_delay * (2**attempt)
+                        retry_after = (
+                            _retry_after(e.response)
+                            if status_code in (429, 503)
+                            else None
+                        )
+                        if retry_after is not None:
+                            # Honour the server, but a bad header must not hang the
+                            # caller.
+                            delay = min(retry_after, config.max_retry_after)
+                            self.logger.debug(
+                                f"Retry-After: {retry_after:.0f}s, waiting {delay:.0f}s"
+                            )
+                        time.sleep(delay)
+                else:
+                    failure = BCRAApiError(error_msg, status_code)
 
-            except requests.Timeout as e:
+            except requests.Timeout:
                 self.logger.error(
-                    f"Request timed out to {log_url} (attempt {attempt + 1}/{max_retries})"
+                    f"Request timed out to {safe_url} (attempt {attempt + 1}/{max_retries})"
                 )
-                if attempt == max_retries - 1:
-                    raise BCRAApiError(
-                        f"Request timed out after {max_retries} attempts to {url}"
-                    ) from e
-                time.sleep(config.retry_delay * (2**attempt))
+                if last_attempt:
+                    failure = BCRAApiError(
+                        f"Request timed out after {max_retries} attempts to {safe_url}"
+                    )
+                else:
+                    time.sleep(config.retry_delay * (2**attempt))
 
             except requests.ConnectionError as e:
-                if "SSL" in str(e).upper():
-                    raise BCRAApiError(f"SSL issue for {url}: {e}") from e
-                self.logger.warning(
-                    f"Connection error to {log_url} "
-                    f"(attempt {attempt + 1}/{max_retries}): {_redact(str(e))}"
-                )
-                if attempt == max_retries - 1:
-                    raise BCRAApiError(
-                        f"API request failed: Connection error to {url} after {max_retries} attempts"
-                    ) from e
-                time.sleep(config.retry_delay * (2**attempt))
+                detail = _redact(str(e))
+                if "SSL" in detail.upper():
+                    failure = BCRAApiError(f"SSL issue for {safe_url}: {detail}")
+                else:
+                    self.logger.warning(
+                        f"Connection error to {safe_url} "
+                        f"(attempt {attempt + 1}/{max_retries}): {detail}"
+                    )
+                    if last_attempt:
+                        failure = BCRAApiError(
+                            f"API request failed: Connection error to {safe_url} "
+                            f"after {max_retries} attempts"
+                        )
+                    else:
+                        time.sleep(config.retry_delay * (2**attempt))
 
             except requests.RequestException as e:
+                detail = _redact(str(e))
                 self.logger.error(
-                    f"API request exception for {log_url}: {_redact(str(e))} "
+                    f"API request exception for {safe_url}: {detail} "
                     f"(attempt {attempt+1}/{max_retries})"
                 )
-                if attempt == max_retries - 1:
-                    raise BCRAApiError(
-                        f"API request failed after {max_retries} attempts: {e}"
-                    ) from e
-                time.sleep(config.retry_delay * (2**attempt))
+                if last_attempt:
+                    failure = BCRAApiError(
+                        f"API request failed after {max_retries} attempts: "
+                        f"{detail} ({safe_url})"
+                    )
+                else:
+                    time.sleep(config.retry_delay * (2**attempt))
 
-            except (ValueError, json.JSONDecodeError) as e:
-                raise BCRAApiError(f"Invalid JSON response from {url}") from e
+            except (ValueError, json.JSONDecodeError):
+                failure = BCRAApiError(f"Invalid JSON response from {safe_url}")
 
-        raise BCRAApiError(f"Maximum retry attempts ({max_retries}) reached for {url}")
+            if failure is not None:
+                # Raised outside the ``except`` on purpose: inside it, Python would
+                # chain the ``requests`` exception as ``__context__``, and its message
+                # has the unmasked URL (#169).
+                raise failure
+
+        raise BCRAApiError(
+            f"Maximum retry attempts ({max_retries}) reached for {safe_url}"
+        )
 
     def clear_cache(self) -> None:
         """Drop the cached catalogs so the next name lookup fetches them again."""
