@@ -128,6 +128,32 @@ errors) with exponential backoff: the delay is ``retry_delay * 2 ** attempt``.
 
    connector = BCRAConnector(retries=5, retry_delay=2)
 
+When a 429 or 503 response carries a ``Retry-After`` header (in seconds or as an HTTP
+date), the connector waits what the server asks instead of the exponential delay, up to
+``max_retry_after`` seconds (default: 30). A longer value is cut down to that cap, so a
+malformed header can't hang your application.
+
+On a 429 the connector also logs the response headers at ``WARNING``: the BCRA doesn't
+document its limits, and those headers are the only hint of what it expects.
+
+Rate Limiting
+-------------
+
+The connector throttles its own requests on the client side. The BCRA doesn't publish
+rate limits, so ``DEFAULT_RATE_LIMIT`` (2 calls per second) is a conservative guess,
+not an official limit: the Central de Deudores has answered 429 at about 5 requests per
+second. Pass ``rate_limit`` to change it:
+
+.. code-block:: python
+
+   from bcra_connector import BCRAConnector, RateLimitConfig
+
+   connector = BCRAConnector(rate_limit=RateLimitConfig(calls=1, period=1.0))
+
+The limiter belongs to the connector instance and lives in the process. Several
+processes or workers, each with its own connector, don't coordinate with each other: if
+they share the BCRA's budget, splitting it between them is up to your application.
+
 Catalog Cache
 -------------
 

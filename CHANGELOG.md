@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`Retry-After` is honoured on 429 and 503.** The connector waits what the server asks
+  (in seconds or as an HTTP date) instead of the exponential backoff, up to the new
+  `max_retry_after=` constructor argument (default 30 s), so a malformed header can't
+  hang the caller. Without the header the backoff is unchanged (#168).
+- A 429 logs the response headers at `WARNING` (without `Set-Cookie`): the BCRA doesn't
+  document its limits, and they are the only hint of what it expects (#168).
+
+### Changed
+- **`DEFAULT_RATE_LIMIT` is now 2 calls per second** (`RateLimitConfig(calls=2,
+  period=1.0)`), down from `calls=10, _burst=20`, which let through about 21 requests per
+  second. The Central de Deudores answered 429 at about 5 req/s. The default is a
+  client-side guess, not a BCRA limit, and the limiter is per process: both are now
+  documented in `configuration.rst`. Pass `rate_limit=` to keep the old pace (#168).
+
 ## [1.0.0] - 2026-09-22
 
 ### Changed

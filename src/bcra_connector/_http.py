@@ -10,6 +10,8 @@ import os
 import re
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
 import requests
@@ -36,6 +38,27 @@ def _redact(text: str) -> str:
     return _IDENTIFICACION_RE.sub(r"\1********\2", text)
 
 
+def _retry_after(response: requests.Response) -> Optional[float]:
+    """Seconds the server asked to wait (``Retry-After``), or ``None`` if unusable.
+
+    The header is either a number of seconds or an HTTP date; a date in the past
+    means "now".
+    """
+    value = response.headers.get("Retry-After")
+    if value is None:
+        return None
+    value = value.strip()
+    if value.isdigit():
+        return float(value)
+    try:
+        when = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+
+
 @dataclass(frozen=True)
 class TransportConfig:
     """The transport knobs, fixed when the connector is constructed."""
@@ -43,6 +66,7 @@ class TransportConfig:
     base_url: str = "https://api.bcra.gob.ar"
     max_retries: int = 3
     retry_delay: float = 1
+    max_retry_after: float = 30.0
     max_pages: int = 100
     cache_ttl: float = 300.0
     max_page_size: int = 3000
@@ -144,6 +168,15 @@ class HttpClient:
                         f"(attempt {attempt + 1}/{max_retries}): "
                         f"{_redact(error_msg)}"
                     )
+                    if status_code == 429:
+                        # The BCRA doesn't document its limits: the headers of a 429
+                        # are the only hint of what it expects.
+                        headers = {
+                            k: v
+                            for k, v in e.response.headers.items()
+                            if k.lower() != "set-cookie"
+                        }
+                        self.logger.warning(f"HTTP 429 response headers: {headers}")
                     if attempt == max_retries - 1:
                         error_cls = (
                             BCRARateLimitError
@@ -157,7 +190,17 @@ class HttpClient:
                             f"Detalle: {error_msg}",
                             status_code,
                         ) from e
-                    time.sleep(config.retry_delay * (2**attempt))
+                    delay = config.retry_delay * (2**attempt)
+                    retry_after = (
+                        _retry_after(e.response) if status_code in (429, 503) else None
+                    )
+                    if retry_after is not None:
+                        # Honour the server, but a bad header must not hang the caller.
+                        delay = min(retry_after, config.max_retry_after)
+                        self.logger.debug(
+                            f"Retry-After: {retry_after:.0f}s, waiting {delay:.0f}s"
+                        )
+                    time.sleep(delay)
                     continue
                 raise BCRAApiError(error_msg, status_code) from e
 
