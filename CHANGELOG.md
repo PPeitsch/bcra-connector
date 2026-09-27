@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-27
+
 ### Added
 - **`Retry-After` is honoured on 429 and 503.** The connector waits what the server asks
   (in seconds or as an HTTP date) instead of the exponential backoff, up to the new
@@ -808,6 +810,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[1.0.1]: https://github.com/PPeitsch/bcra-connector/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.13.0...v1.0.0
 [0.13.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.11.0...v0.12.0
