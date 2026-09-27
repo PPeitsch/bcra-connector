@@ -16,12 +16,13 @@ A Python connector for the BCRA (Banco Central de la República Argentina) APIs,
 - **Central de Deudores**: Query debtor information, historical debts, and rejected checks by CUIT/CUIL.
 - **DataFrame Support**: Convert API responses to pandas DataFrames with `to_dataframe()` methods.
 - **Historical Data**: Easily retrieve and analyze historical time series for any variable.
-- **Robustness**: Built-in retry logic with exponential backoff and safe failure handling.
+- **Robustness**: Built-in retries with exponential backoff that honour `Retry-After` on 429/503, a client-side rate limiter, and typed exceptions (`BCRANotFoundError`, `BCRARateLimitError`, `BCRAServerError`).
+- **Privacy**: CUIT/CUIL numbers are masked (`30********2`) in the connector's logs and in the messages of the exceptions it raises, so they are safe to log or send to an error tracker.
 - **Developer Friendly**:
   - Full **Type Hinting** for better IDE support.
   - Bilingual context (Spanish API / English Wrapper).
   - Detailed debug logging.
-- **Configurable**: Options for SSL verification, retries, and timeouts.
+- **Configurable**: Options for SSL verification (or a CA bundle), retries, rate limiting, timeouts and a custom `requests.Session`.
 
 ## Documentation
 
@@ -67,6 +68,18 @@ for point in history[:5]:
 usd_ars = connector.cambiarias.pair("USD", "ARS", days=7)
 print(f"USD/ARS on {usd_ars[-1]['fecha']}: {usd_ars[-1]['tasa']}")
 ```
+
+## Rate Limits
+
+The BCRA doesn't publish rate limits, but it does enforce them: the Central de Deudores has
+answered `429 Too Many Requests` at about 5 requests per second. The connector throttles
+itself to **2 requests per second** by default, a conservative guess rather than an official
+limit, and on a 429 or 503 waits what the server's `Retry-After` asks (up to 30 seconds).
+
+The limiter lives in each connector instance: several processes or workers don't coordinate
+with each other, so if they share the API, splitting the budget is up to your application.
+See [Configuration](https://bcra-connector.readthedocs.io/en/latest/configuration.html) to
+change the limit (`rate_limit=`) or the cap (`max_retry_after=`).
 
 ## Contributing
 
