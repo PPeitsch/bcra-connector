@@ -8,7 +8,7 @@ traceback or an error tracker would print that one's message too.
 
 import json
 import traceback
-from typing import Union
+from typing import Callable, Dict, Tuple, Type, Union
 from unittest.mock import Mock, patch
 
 import pytest
@@ -50,7 +50,10 @@ def _bad_json(error: Exception) -> Mock:
     return response
 
 
-CASES = {
+Outcome = Union[Mock, Exception]
+
+# What ``session.get`` returns or raises, and the exception the connector must raise.
+CASES: Dict[str, Tuple[Callable[[], Outcome], Type[BCRAApiError]]] = {
     "404": (lambda: _http_error(404), BCRANotFoundError),
     "429 after retries": (lambda: _http_error(429), BCRARateLimitError),
     "5xx after retries": (lambda: _http_error(503), BCRAServerError),
@@ -86,7 +89,7 @@ CASES = {
 }
 
 
-def _error_from(outcome: Union[Mock, Exception], retries: int = 3) -> BCRAApiError:
+def _error_from(outcome: Outcome, retries: int = 3) -> BCRAApiError:
     """Run a request whose ``session.get`` returns ``outcome`` or raises it."""
     connector = BCRAConnector(
         retries=retries, rate_limit=RateLimitConfig(calls=1000, period=1.0)
