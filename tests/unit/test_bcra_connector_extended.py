@@ -116,6 +116,9 @@ class TestBCRAConnectorExtended:
             # which used to send it down the generic, retried path (#172).
             requests.exceptions.JSONDecodeError("Fail", "", 0),
             json.JSONDecodeError("Fail", "", 0),
+            # Any other ValueError while reading the body (e.g. from an injected
+            # session's response class) is reported the same way.
+            ValueError("No JSON object could be decoded"),
         ],
     )
     def test_make_request_json_decode_error_on_success(
