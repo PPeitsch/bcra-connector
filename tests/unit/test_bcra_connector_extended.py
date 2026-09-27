@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict
 from unittest.mock import Mock, patch
 
 import pytest
+import requests
 from requests.exceptions import ConnectionError, HTTPError, RequestException
 
 from bcra_connector import BCRAApiError, BCRAConnector
@@ -108,17 +109,40 @@ class TestBCRAConnectorExtended:
         with pytest.raises(BCRAApiError, match="Maximum retry attempts"):
             connector._make_request("test")
 
-    def test_make_request_json_decode_error_on_success(self, connector: BCRAConnector):
-        """Test invalid JSON response on successful status code."""
+    @pytest.mark.parametrize(
+        "error",
+        [
+            # What ``response.json()`` really raises. It is also a RequestException,
+            # which used to send it down the generic, retried path (#172).
+            requests.exceptions.JSONDecodeError("Fail", "", 0),
+            json.JSONDecodeError("Fail", "", 0),
+            # Any other ValueError while reading the body (e.g. from an injected
+            # session's response class) is reported the same way.
+            ValueError("No JSON object could be decoded"),
+        ],
+    )
+    def test_make_request_json_decode_error_on_success(
+        self, connector: BCRAConnector, error: ValueError
+    ):
+        """An invalid body on a 200 fails right away: retrying won't fix it."""
         with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
             mock_resp = Mock()
             mock_resp.status_code = 200
             mock_resp.raise_for_status.return_value = None
-            mock_resp.json.side_effect = json.JSONDecodeError("Fail", "", 0)
+            mock_resp.json.side_effect = error
             mock_get.return_value = mock_resp
 
             with pytest.raises(BCRAApiError, match="Invalid JSON response"):
                 connector._make_request("test")
+            assert mock_get.call_count == 1
+
+    def test_make_request_bad_url_is_not_invalid_json(self, connector: BCRAConnector):
+        """MissingSchema and friends are ValueErrors too, but not a JSON problem."""
+        with patch("bcra_connector.bcra_connector.requests.Session.get") as mock_get:
+            mock_get.side_effect = requests.exceptions.MissingSchema("No scheme")
+            with pytest.raises(BCRAApiError) as exc_info:
+                connector._make_request("test")
+        assert "Invalid JSON" not in str(exc_info.value)
 
     # --- monetarias.list() edge cases ---
     def test_monetarias_list_invalid_results_format(self, connector: BCRAConnector):

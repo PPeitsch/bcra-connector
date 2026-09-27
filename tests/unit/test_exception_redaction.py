@@ -78,8 +78,7 @@ CASES: Dict[str, Tuple[Callable[[], Outcome], Type[BCRAApiError]]] = {
         lambda: _bad_json(json.JSONDecodeError("Expecting value", "", 0)),
         BCRAApiError,
     ),
-    # What ``response.json()`` really raises: it is also a RequestException, so
-    # today it takes the generic path (retried) instead of "Invalid JSON".
+    # What ``response.json()`` really raises.
     "invalid JSON (requests)": (
         lambda: _bad_json(
             requests.exceptions.JSONDecodeError("Expecting value", "", 0)
