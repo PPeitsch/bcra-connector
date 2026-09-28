@@ -142,11 +142,13 @@ gh run list --branch <branch-name>
 Only when every check passes:
 
 ```bash
-gh pr merge --admin --merge --delete-branch
+gh pr merge --admin --merge
 ```
 
-**Always delete the branch on merge.** Use `--delete-branch`, or the "Delete branch"
-button when merging through the web UI. This is not housekeeping:
+**The repository deletes the branch on merge.** *Settings → General → Automatically
+delete head branches* is on (`delete_branch_on_merge: true`), so every merge removes the
+head branch, from the CLI or the web UI alike. Don't pass `--delete-branch`: the setting is
+the single place that decides it. The deletion is not housekeeping:
 
 - GitHub re-targets a **stacked** PR onto `main` only when its base branch is
   **deleted** on merge. If the base branch survives, the stacked PR keeps pointing at
@@ -161,9 +163,13 @@ gh pr view <N> --json baseRefName     # expect "main"
 gh pr edit <N> --base main            # if it did not re-target
 ```
 
-> **Repository setting:** enable **Settings -> General -> Automatically delete head
-> branches**. The `--delete-branch` flag only covers CLI merges; the setting also
-> covers merges done through the web UI, which is where this is most often missed.
+> **If the setting is ever turned off**, branches survive every merge and stacked PRs
+> stop re-targeting. Check it and turn it back on:
+>
+> ```bash
+> gh api repos/PPeitsch/bcra-connector --jq .delete_branch_on_merge   # expect true
+> gh api -X PATCH repos/PPeitsch/bcra-connector -F delete_branch_on_merge=true
+> ```
 
 ---
 
@@ -221,7 +227,7 @@ git push -u origin release/X.Y.Z
 gh pr create --title "[release]: Version X.Y.Z" --body "..."
 ```
 
-Wait for CI, then merge with `--delete-branch`.
+Wait for CI, then merge (§3.7: the repository deletes the branch).
 
 ### 5.4 Tag the merge commit
 
