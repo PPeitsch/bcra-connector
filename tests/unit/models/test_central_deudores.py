@@ -18,6 +18,30 @@ from bcra_connector.central_deudores import (
     Periodo,
 )
 
+# One entity of a real Deudas/{id} response (2026-09-28), issue #179
+DEUDA_ACTUAL = {
+    "entidad": "BANCO DE LA PROVINCIA DE BUENOS AIRES",
+    "situacion": 1,
+    "fechaSit1": "2025-12-30",
+    "monto": 27157.0,
+    "diasAtrasoPago": 0,
+    "refinanciaciones": False,
+    "recategorizacionOblig": False,
+    "situacionJuridica": False,
+    "irrecDisposicionTecnica": False,
+    "enRevision": False,
+    "procesoJud": False,
+}
+
+CLASSIFICATION_COLUMNS = [
+    "fechaSit1",
+    "diasAtrasoPago",
+    "refinanciaciones",
+    "recategorizacionOblig",
+    "situacionJuridica",
+    "irrecDisposicionTecnica",
+]
+
 
 class TestEntidadDeuda:
     """Tests for EntidadDeuda dataclass."""
@@ -103,6 +127,67 @@ class TestEntidadDeuda:
                 monto=-10.0,
                 en_revision=False,
                 proceso_jud=False,
+            )
+
+    def test_from_dict_reads_the_classification_fields(self) -> None:
+        """The six fields Deudas returns and 1.1 dropped (issue #179)."""
+        entidad = EntidadDeuda.from_dict(DEUDA_ACTUAL)
+        assert entidad.fecha_sit1 == date(2025, 12, 30)
+        assert entidad.dias_atraso_pago is None  # 0 means "not applicable"
+        assert entidad.refinanciaciones is False
+        assert entidad.recategorizacion_oblig is False
+        assert entidad.situacion_juridica is False
+        assert entidad.irrec_disposicion_tecnica is False
+
+    def test_from_dict_reads_flags_set_to_true(self) -> None:
+        data = {
+            **DEUDA_ACTUAL,
+            "situacion": 4,
+            "fechaSit1": None,
+            "diasAtrasoPago": 187,
+            "refinanciaciones": True,
+            "recategorizacionOblig": True,
+            "situacionJuridica": True,
+            "irrecDisposicionTecnica": True,
+        }
+        entidad = EntidadDeuda.from_dict(data)
+        assert entidad.fecha_sit1 is None
+        assert entidad.dias_atraso_pago == 187
+        assert entidad.refinanciaciones is True
+        assert entidad.recategorizacion_oblig is True
+        assert entidad.situacion_juridica is True
+        assert entidad.irrec_disposicion_tecnica is True
+
+    def test_from_dict_without_the_classification_fields(self) -> None:
+        """DeudasHistoricas (and older responses) don't send them: defaults."""
+        entidad = EntidadDeuda.from_dict(
+            {"entidad": "BANCO TEST", "situacion": 2, "monto": 100.0}
+        )
+        assert entidad.fecha_sit1 is None
+        assert entidad.dias_atraso_pago is None
+        assert entidad.refinanciaciones is False
+        assert entidad.recategorizacion_oblig is False
+        assert entidad.situacion_juridica is False
+        assert entidad.irrec_disposicion_tecnica is False
+
+    def test_to_dict_round_trips_the_api_payload(self) -> None:
+        assert EntidadDeuda.from_dict(DEUDA_ACTUAL).to_dict() == DEUDA_ACTUAL
+
+    def test_positional_construction_still_works(self) -> None:
+        """The new fields are trailing with defaults: 1.x callers keep working."""
+        entidad = EntidadDeuda("TEST", 1, 10.0, False, False)
+        assert entidad.fecha_sit1 is None
+        assert entidad.situacion_juridica is False
+
+    def test_negative_dias_atraso_pago(self) -> None:
+        with pytest.raises(ValueError, match="Dias atraso pago must be non-negative"):
+            EntidadDeuda(
+                entidad="TEST",
+                situacion=3,
+                monto=10.0,
+                en_revision=False,
+                proceso_jud=False,
+                dias_atraso_pago=-1,
             )
 
 
@@ -227,6 +312,24 @@ class TestDeudor:
         df = deudor.to_dataframe()
         assert len(df) == 1  # Single row with Nones
         assert df.iloc[0]["entidad"] is None
+        for column in CLASSIFICATION_COLUMNS:
+            assert df.iloc[0][column] is None, column
+
+    def test_to_dataframe_has_the_classification_columns(self) -> None:
+        pytest.importorskip("pandas")
+        deudor = Deudor.from_dict(
+            {
+                "identificacion": 30500010912,
+                "denominacion": "TEST SA",
+                "periodos": [{"periodo": "202608", "entidades": [DEUDA_ACTUAL]}],
+            }
+        )
+        df = deudor.to_dataframe()
+        for column in CLASSIFICATION_COLUMNS:
+            assert column in df.columns, column
+        row = df.iloc[0]
+        assert row["fechaSit1"].date() == date(2025, 12, 30)
+        assert not row["refinanciaciones"]
 
 
 class TestChequeRechazado:

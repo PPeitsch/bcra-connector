@@ -13,7 +13,7 @@ A Python connector for the BCRA (Banco Central de la República Argentina) APIs,
 ## Features
 
 - **Comprehensive Data Access**: Fetch Principal Variables, Monetary Statistics, Checks information, Exchange Rates, and Debtor Registry data.
-- **Central de Deudores**: Query debtor information, historical debts, and rejected checks by CUIT/CUIL.
+- **Central de Deudores**: Query current and historical debts and rejected checks by CUIT/CUIL. Current debts carry what explains each classification: normal since, days in arrears, refinancings and legal situation (concurso, quiebra).
 - **DataFrame Support**: Convert API responses to pandas DataFrames with `to_dataframe()` methods.
 - **Historical Data**: Easily retrieve and analyze historical time series for any variable.
 - **Robustness**: Built-in retries with exponential backoff that honour `Retry-After` on 429/503, a client-side rate limiter, and typed exceptions (`BCRANotFoundError`, `BCRARateLimitError`, `BCRAServerError`).
