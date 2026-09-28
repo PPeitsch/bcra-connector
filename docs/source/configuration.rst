@@ -151,6 +151,11 @@ second. Pass ``rate_limit`` to change it:
 
    connector = BCRAConnector(rate_limit=RateLimitConfig(calls=1, period=1.0))
 
+``calls`` per ``period`` is the sustained rate: a loop that keeps requesting gets one
+request every ``period / calls`` seconds. After an idle spell, up to ``calls`` requests
+go out back to back before the spacing starts (it is a token bucket), so no window of
+``period`` seconds carries more than about twice ``calls``.
+
 The limiter belongs to the connector instance and lives in the process. Several
 processes or workers, each with its own connector, don't coordinate with each other: if
 they share the BCRA's budget, splitting it between them is up to your application.
