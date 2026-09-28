@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-28
+
 ### Added
 - **`EntidadDeuda` keeps the classification fields of `Deudas/{id}`.** `fecha_sit1`
   (normal since), `dias_atraso_pago` (`0` from the API becomes `None`, as with
@@ -833,6 +835,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[1.2.0]: https://github.com/PPeitsch/bcra-connector/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/PPeitsch/bcra-connector/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/PPeitsch/bcra-connector/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.13.0...v1.0.0
