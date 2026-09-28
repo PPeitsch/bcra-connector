@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-28
+
 ### Changed
 - **`RateLimitConfig(calls, period)` is now the sustained rate.** The limiter is a token
   bucket: after an idle spell up to `burst` calls (default `calls`) go out back to back,
@@ -821,6 +823,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide
 
 
+[1.1.0]: https://github.com/PPeitsch/bcra-connector/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/PPeitsch/bcra-connector/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.13.0...v1.0.0
 [0.13.0]: https://github.com/PPeitsch/bcra-connector/compare/v0.12.0...v0.13.0
