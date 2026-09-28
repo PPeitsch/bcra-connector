@@ -189,6 +189,27 @@ information, historical debts, and rejected checks by CUIT/CUIL:
        for entidad in causal.entidades:
            print(f"  - Entity {entidad.entidad}: {len(entidad.detalle)} checks")
 
+Each entity in ``debts()`` also says why the debtor has that classification:
+
+- ``fecha_sit1``: since when the debtor is in situation 1 (normal) with the entity, or
+  ``None`` when the API doesn't report it.
+- ``dias_atraso_pago``: days of payment arrears. The BCRA reports them only for
+  consumer or housing debt in a non-normal situation; otherwise ``None``.
+- ``refinanciaciones``, ``recategorizacion_oblig``, ``situacion_juridica`` (concordato,
+  concurso preventivo, gestión judicial or quiebra) and ``irrec_disposicion_tecnica``:
+  flags, ``False`` when not set.
+
+.. code-block:: python
+
+   for entidad in deudor.periodos[0].entidades:
+       if entidad.situacion_juridica:
+           print(f"{entidad.entidad}: legal situation (concurso, quiebra...)")
+       elif entidad.refinanciaciones:
+           print(f"{entidad.entidad}: situation {entidad.situacion}, refinanced")
+
+``historical()`` doesn't return these fields: in its entities they keep their defaults.
+To follow them over time, store them from ``debts()`` every month.
+
 DataFrame Conversion
 --------------------
 

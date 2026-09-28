@@ -18,11 +18,24 @@ class EntidadDeuda:
     """
     Represents a debt record from a financial entity.
 
+    The fields after ``proceso_jud`` explain the classification. Only ``Deudas`` (the
+    current period) reports them: in ``DeudasHistoricas`` they keep their defaults.
+
     :param entidad: Name of the financial entity
     :param situacion: Debtor classification (1-5 scale, None if not applicable)
     :param monto: Amount in thousands of pesos
     :param en_revision: Whether the information is under review (Law 25.326)
     :param proceso_jud: Whether the information is under judicial process
+    :param fecha_sit1: Date since which the debtor is in situation 1 (normal) with the
+        entity, None if not reported
+    :param dias_atraso_pago: Days of payment arrears, None if not applicable (the API
+        reports it only for consumer or housing debt in a non-normal situation)
+    :param refinanciaciones: Whether the debt includes refinancings
+    :param recategorizacion_oblig: Whether the debtor was mandatorily recategorized
+    :param situacion_juridica: Whether the debtor is under a legal situation
+        (concordato, concurso preventivo, gestión judicial or quiebra)
+    :param irrec_disposicion_tecnica: Whether the debt is unrecoverable by technical
+        provision
     """
 
     entidad: str
@@ -30,6 +43,12 @@ class EntidadDeuda:
     monto: float
     en_revision: bool
     proceso_jud: bool
+    fecha_sit1: Optional[date] = None
+    dias_atraso_pago: Optional[int] = None
+    refinanciaciones: bool = False
+    recategorizacion_oblig: bool = False
+    situacion_juridica: bool = False
+    irrec_disposicion_tecnica: bool = False
 
     def __post_init__(self) -> None:
         """Validate instance after initialization."""
@@ -37,6 +56,8 @@ class EntidadDeuda:
             raise ValueError("Situacion must be between 1 and 5 when present")
         if self.monto < 0:
             raise ValueError("Monto must be non-negative")
+        if self.dias_atraso_pago is not None and self.dias_atraso_pago < 0:
+            raise ValueError("Dias atraso pago must be non-negative when present")
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "EntidadDeuda":
@@ -48,6 +69,17 @@ class EntidadDeuda:
             monto=require(data, "monto", float),
             en_revision=optional(data, "enRevision", bool, default=False),
             proceso_jud=optional(data, "procesoJud", bool, default=False),
+            fecha_sit1=optional(data, "fechaSit1", date),
+            # Same convention as situacion: 0 means "not applicable"
+            dias_atraso_pago=optional(data, "diasAtrasoPago", int) or None,
+            refinanciaciones=optional(data, "refinanciaciones", bool, default=False),
+            recategorizacion_oblig=optional(
+                data, "recategorizacionOblig", bool, default=False
+            ),
+            situacion_juridica=optional(data, "situacionJuridica", bool, default=False),
+            irrec_disposicion_tecnica=optional(
+                data, "irrecDisposicionTecnica", bool, default=False
+            ),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -55,7 +87,15 @@ class EntidadDeuda:
         return {
             "entidad": self.entidad,
             "situacion": self.situacion if self.situacion is not None else 0,
+            "fechaSit1": self.fecha_sit1.isoformat() if self.fecha_sit1 else None,
             "monto": self.monto,
+            "diasAtrasoPago": (
+                self.dias_atraso_pago if self.dias_atraso_pago is not None else 0
+            ),
+            "refinanciaciones": self.refinanciaciones,
+            "recategorizacionOblig": self.recategorizacion_oblig,
+            "situacionJuridica": self.situacion_juridica,
+            "irrecDisposicionTecnica": self.irrec_disposicion_tecnica,
             "enRevision": self.en_revision,
             "procesoJud": self.proceso_jud,
         }
@@ -129,7 +169,9 @@ class Deudor:
         Convert the debtor information to a pandas DataFrame.
 
         Returns a flattened DataFrame with columns: identificacion, denominacion,
-        periodo, entidad, situacion, monto, enRevision, procesoJud.
+        periodo, entidad, situacion, fechaSit1, monto, diasAtrasoPago,
+        refinanciaciones, recategorizacionOblig, situacionJuridica,
+        irrecDisposicionTecnica, enRevision, procesoJud.
 
         Requires pandas: ``pip install bcra-connector[pandas]``
 
@@ -146,7 +188,13 @@ class Deudor:
                         "periodo": periodo.periodo,
                         "entidad": entidad.entidad,
                         "situacion": entidad.situacion,
+                        "fechaSit1": entidad.fecha_sit1,
                         "monto": entidad.monto,
+                        "diasAtrasoPago": entidad.dias_atraso_pago,
+                        "refinanciaciones": entidad.refinanciaciones,
+                        "recategorizacionOblig": entidad.recategorizacion_oblig,
+                        "situacionJuridica": entidad.situacion_juridica,
+                        "irrecDisposicionTecnica": entidad.irrec_disposicion_tecnica,
                         "enRevision": entidad.en_revision,
                         "procesoJud": entidad.proceso_jud,
                     }
@@ -159,7 +207,13 @@ class Deudor:
                     "periodo": None,
                     "entidad": None,
                     "situacion": None,
+                    "fechaSit1": None,
                     "monto": None,
+                    "diasAtrasoPago": None,
+                    "refinanciaciones": None,
+                    "recategorizacionOblig": None,
+                    "situacionJuridica": None,
+                    "irrecDisposicionTecnica": None,
                     "enRevision": None,
                     "procesoJud": None,
                 }

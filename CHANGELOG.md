@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`EntidadDeuda` keeps the classification fields of `Deudas/{id}`.** `fecha_sit1`
+  (normal since), `dias_atraso_pago` (`0` from the API becomes `None`, as with
+  `situacion`), and the flags `refinanciaciones`, `recategorizacion_oblig`,
+  `situacion_juridica` (concordato, concurso, gestión judicial or quiebra) and
+  `irrec_disposicion_tecnica`. The API always sent them and `from_dict` dropped them.
+  They are trailing fields with defaults, so existing constructions keep working;
+  `to_dict()` and `Deudor.to_dataframe()` include them with the API names.
+  `DeudasHistoricas` doesn't return them: there they keep their defaults (#179).
+
 ## [1.1.0] - 2026-09-28
 
 ### Changed
