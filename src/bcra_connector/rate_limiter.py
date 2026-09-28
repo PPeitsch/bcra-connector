@@ -2,20 +2,23 @@
 Rate limiting functionality for API requests.
 """
 
-import time
-from collections import deque
+import math
 from dataclasses import dataclass
 from threading import Lock
-from typing import Deque, Optional
+from time import monotonic
+from typing import Optional
 
 
 @dataclass
 class RateLimitConfig:
     """Configuration for rate limiting.
 
-    :param calls: Number of calls allowed per period
+    ``calls`` per ``period`` is the sustained rate. ``_burst`` is how many calls can go
+    out back to back after the limiter has been idle; it defaults to ``calls``.
+
+    :param calls: Number of calls allowed per period, sustained
     :param period: Time period in seconds
-    :param _burst: Maximum number of calls allowed in burst (internal)
+    :param _burst: Calls allowed back to back after an idle spell (internal)
     """
 
     calls: int
@@ -43,95 +46,75 @@ class RateLimitConfig:
 
 
 class RateLimiter:
-    """Rate limiter using token bucket algorithm with sliding window."""
+    """Token bucket: holds up to ``burst`` tokens and earns ``calls`` per ``period``.
+
+    Each request takes a token. When none is left, :meth:`acquire` takes it anyway (the
+    balance goes negative) and returns how long the caller has to wait for it, so
+    concurrent callers line up one token apart instead of all waking at once.
+    """
 
     def __init__(self, config: RateLimitConfig):
-        """Initialize the rate limiter.
+        """Initialize the rate limiter with a full bucket.
 
         :param config: Rate limit configuration
         """
         self.config = config
-        self._window: Deque[float] = deque()
         self._lock = Lock()
-        self._last_check = time.monotonic()
+        self._tokens = float(config.burst)
+        self._updated = monotonic()
 
-    def _clean_old_timestamps(self) -> None:
-        """Remove timestamps outside the current window."""
-        now = time.monotonic()
-        while self._window and now - self._window[0] > self.config.period:
-            self._window.popleft()
+    @property
+    def _rate(self) -> float:
+        """Tokens earned per second."""
+        return self.config.calls / self.config.period
 
-    def _get_delay(self) -> float:
-        """Calculate the required delay before the next request.
-
-        :return: Required delay in seconds
-        """
-        now = time.monotonic()
-        self._clean_old_timestamps()
-
-        if len(self._window) < self.config.burst:
-            return 0.0
-
-        # Calculate delay based on the period and number of requests beyond burst
-        requests_over_burst = max(0, len(self._window) - self.config.calls)
-        if requests_over_burst > 0:
-            # Calculate delay that distributes requests evenly over the period
-            next_available = self._window[0] + (
-                self.config.period * requests_over_burst / self.config.calls
-            )
-            return max(0.0, next_available - now)
-
-        # Default delay when at burst limit
-        return max(0.0, self._window[0] + self.config.period - now)
+    def _refill(self) -> None:
+        """Add the tokens earned since the last update, up to ``burst``."""
+        now = monotonic()
+        earned = (now - self._updated) * self._rate
+        self._tokens = min(float(self.config.burst), self._tokens + earned)
+        self._updated = now
 
     def acquire(self) -> float:
-        """Acquire permission to make a request.
+        """Take a token for one request.
 
-        :return: Time spent waiting (in seconds)
+        The token is taken even when the caller has to wait for it: the caller must
+        sleep the returned delay before sending the request.
+
+        :return: Seconds to wait before sending the request (0 if a token was free)
         """
         with self._lock:
-            # Check if we need to delay
-            delay = self._get_delay()
-
-            # Add the new timestamp BEFORE waiting
-            now = time.monotonic()
-            self._window.append(now)
-
-            return delay
+            self._refill()
+            self._tokens -= 1
+            if self._tokens >= 0:
+                return 0.0
+            return -self._tokens / self._rate
 
     def reset(self) -> None:
-        """Reset the rate limiter state."""
+        """Reset the rate limiter to a full bucket."""
         with self._lock:
-            self._window.clear()
-            self._last_check = time.monotonic()
+            self._tokens = float(self.config.burst)
+            self._updated = monotonic()
 
     @property
     def current_usage(self) -> int:
-        """Get the current number of requests in the window."""
+        """Get the number of tokens taken and not earned back yet.
+
+        Includes the requests still waiting for theirs, so it can exceed ``burst``.
+        """
         with self._lock:
-            self._clean_old_timestamps()
-            return len(self._window)
+            self._refill()
+            return max(0, math.ceil(self.config.burst - self._tokens))
 
     @property
     def is_limited(self) -> bool:
-        """Check if rate limit is currently being enforced."""
+        """Check whether the next request would have to wait."""
         with self._lock:
-            self._clean_old_timestamps()
-            current_size = len(self._window)
-            return bool(
-                current_size >= self.config.burst
-                or (
-                    current_size >= self.config.calls
-                    and self._window
-                    and (time.monotonic() - self._window[0]) <= self.config.period
-                )
-            )
+            self._refill()
+            return self._tokens < 1
 
     def remaining_calls(self) -> int:
-        """Get the number of remaining calls allowed in the current window.
-
-        Based on the base rate limit (calls), not the burst limit.
-        """
+        """Get the number of requests that can go out right now without waiting."""
         with self._lock:
-            self._clean_old_timestamps()
-            return max(0, self.config.calls - len(self._window))
+            self._refill()
+            return max(0, math.floor(self._tokens))

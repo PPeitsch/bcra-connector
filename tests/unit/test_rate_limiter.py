@@ -1,13 +1,45 @@
 """Unit tests for the rate limiting functionality."""
 
-import queue
 import threading
-import time
-from typing import Tuple, Union
+from typing import List, Optional
 
 import pytest
 
 from bcra_connector.rate_limiter import RateLimitConfig, RateLimiter
+
+
+class FakeClock:
+    """A monotonic clock that only moves when told to."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
+@pytest.fixture
+def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
+    """Drive the limiter with a fake clock, so timing is exact and nothing sleeps."""
+    fake = FakeClock()
+    monkeypatch.setattr("bcra_connector.rate_limiter.monotonic", fake)
+    return fake
+
+
+def send_for(limiter: RateLimiter, clock: FakeClock, seconds: float) -> List[float]:
+    """Send requests back to back, sleeping what acquire() asks, for ``seconds``.
+
+    :return: The time each request went out
+    """
+    sent: List[float] = []
+    while True:
+        clock.sleep(limiter.acquire())
+        if clock.now >= seconds:
+            return sent
+        sent.append(clock.now)
 
 
 class TestRateLimitConfig:
@@ -43,151 +75,142 @@ class TestRateLimiter:
     """Test suite for RateLimiter class."""
 
     @pytest.fixture
-    def limiter(self) -> RateLimiter:
-        """Create a RateLimiter instance with default config."""
-        config: RateLimitConfig = RateLimitConfig(calls=10, period=1.0, _burst=20)
-        return RateLimiter(config)
+    def limiter(self, clock: FakeClock) -> RateLimiter:
+        """Create a RateLimiter with a burst above its rate, on the fake clock."""
+        return RateLimiter(RateLimitConfig(calls=10, period=1.0, _burst=20))
 
-    def test_basic_rate_limiting(self, limiter: RateLimiter) -> None:
-        """Test basic rate limiting functionality."""
-        # First calls within burst limit
+    def test_burst_goes_out_without_waiting(self, limiter: RateLimiter) -> None:
+        """The first ``burst`` calls don't wait; the next one waits one token."""
         for _ in range(limiter.config.burst):
-            initial_delay = limiter.acquire()
-            assert initial_delay == 0
+            assert limiter.acquire() == 0
 
-        # Next call should be rate limited
-        subsequent_delay = limiter.acquire()
-        assert subsequent_delay > 0
-        assert limiter.current_usage > 0
-        assert limiter.remaining_calls() < limiter.config.calls
+        assert limiter.acquire() == pytest.approx(0.1)
 
-    def test_sliding_window(self, limiter: RateLimiter) -> None:
-        """Test sliding window behavior."""
-        # Use up initial burst
-        for _ in range(20):
+    @pytest.mark.parametrize(
+        "calls,period,burst",
+        [
+            (2, 1.0, 4),  # measured at ~5 req/s before #170
+            (4, 1.0, None),
+            (1, 2.0, 3),
+        ],
+    )
+    def test_sustained_rate_is_calls_per_period(
+        self, clock: FakeClock, calls: int, period: float, burst: Optional[int]
+    ) -> None:
+        """After the burst, every period lets through ``calls``, not ``burst``."""
+        limiter = RateLimiter(RateLimitConfig(calls=calls, period=period, _burst=burst))
+        periods = 10
+
+        sent = send_for(limiter, clock, periods * period)
+
+        per_period = [
+            sum(1 for t in sent if k * period <= t < (k + 1) * period)
+            for k in range(periods)
+        ]
+        assert per_period[0] == limiter.config.burst + calls - 1
+        assert per_period[1:] == [calls] * (periods - 1)
+
+    def test_idle_refills_up_to_burst(
+        self, limiter: RateLimiter, clock: FakeClock
+    ) -> None:
+        """A long pause earns back the burst, and no more."""
+        send_for(limiter, clock, 3.0)
+
+        clock.sleep(60.0)
+
+        for _ in range(limiter.config.burst):
+            assert limiter.acquire() == 0
+        assert limiter.acquire() > 0
+
+    def test_partial_refill(self, limiter: RateLimiter, clock: FakeClock) -> None:
+        """Half a period earns half the calls."""
+        for _ in range(limiter.config.burst):
             limiter.acquire()
 
-        # Wait half the period
-        time.sleep(0.5)
+        clock.sleep(0.5)
 
-        # Should still be limited
-        first_delay: float = limiter.acquire()
-        assert first_delay > 0
+        for _ in range(5):
+            assert limiter.acquire() == 0
+        assert limiter.acquire() == pytest.approx(0.1)
 
-        # Wait full period
-        time.sleep(1.0)
-
-        # Should be allowed again
-        second_delay: float = limiter.acquire()
-        assert second_delay == 0
-
-    def test_reset(self, limiter: RateLimiter) -> None:
-        """Test reset functionality."""
-        # Use up some capacity
-        for _ in range(15):
-            limiter.acquire()
-
-        assert limiter.current_usage == 15
-
-        # Reset the limiter
-        limiter.reset()
-
-        # Should be back to initial state
-        assert limiter.current_usage == 0
-        delay: float = limiter.acquire()
-        assert delay == 0
-
-    import queue
-    import threading
-    from typing import Tuple, Union
-
-    def test_concurrent_access(self, limiter: RateLimiter) -> None:
-        """Test thread safety of rate limiter."""
-        THREAD_COUNT = limiter.config.burst + 5
-        results: queue.Queue[Tuple[str, Union[bool, str]]] = queue.Queue()
+    def test_concurrent_callers_line_up(self, limiter: RateLimiter) -> None:
+        """Callers past the burst each wait one token longer than the previous."""
+        extra = 5
+        delays: List[float] = []
+        delays_lock = threading.Lock()
 
         def worker() -> None:
-            try:
-                delay = limiter.acquire()
-                results.put(("success", delay == 0))
-            except Exception as e:
-                results.put(("error", str(e)))
+            delay = limiter.acquire()
+            with delays_lock:
+                delays.append(delay)
 
-        # Start all threads
-        threads = [threading.Thread(target=worker) for _ in range(THREAD_COUNT)]
+        threads = [
+            threading.Thread(target=worker) for _ in range(limiter.config.burst + extra)
+        ]
         for t in threads:
             t.start()
-
-        # Wait for completion
         for t in threads:
             t.join()
 
-        # Count results
-        immediate = sum(
-            1 for status, no_delay in results.queue if status == "success" and no_delay
+        delays.sort()
+        assert delays[: limiter.config.burst] == [0.0] * limiter.config.burst
+        assert delays[limiter.config.burst :] == pytest.approx(
+            [0.1 * (i + 1) for i in range(extra)]
         )
-        assert immediate == limiter.config.burst
 
-    def test_remaining_calls(self, limiter: RateLimiter) -> None:
-        """Test remaining calls calculation."""
-        assert limiter.remaining_calls() == 10  # Initial capacity
+    def test_reset(self, limiter: RateLimiter) -> None:
+        """Reset fills the bucket back up."""
+        for _ in range(25):
+            limiter.acquire()
 
-        # Use some capacity
+        limiter.reset()
+
+        assert limiter.current_usage == 0
+        assert limiter.remaining_calls() == limiter.config.burst
+        assert limiter.acquire() == 0
+
+    def test_current_usage(self, limiter: RateLimiter, clock: FakeClock) -> None:
+        """Usage counts taken tokens, including waiting calls, and decays with time."""
+        assert limiter.current_usage == 0
+
+        for _ in range(22):
+            limiter.acquire()
+        assert limiter.current_usage == 22
+
+        clock.sleep(1.0)
+        assert limiter.current_usage == 12
+
+    def test_remaining_calls(self, limiter: RateLimiter, clock: FakeClock) -> None:
+        """Remaining calls are the ones that can go out now, up to the burst."""
+        assert limiter.remaining_calls() == 20
+
         limiter.acquire()
-        assert limiter.remaining_calls() == 9
+        assert limiter.remaining_calls() == 19
 
-        # Use all remaining initial capacity
-        for _ in range(9):
+        for _ in range(21):
             limiter.acquire()
         assert limiter.remaining_calls() == 0
 
-    def test_is_limited_property(self, limiter: RateLimiter) -> None:
-        """Test is_limited property behavior."""
+        clock.sleep(0.45)
+        assert limiter.remaining_calls() == 2
+
+    def test_is_limited(self, limiter: RateLimiter, clock: FakeClock) -> None:
+        """Limited while the next call would wait."""
         assert not limiter.is_limited
 
-        # Use up initial capacity
         for _ in range(20):
             limiter.acquire()
-
         assert limiter.is_limited
 
-        # Wait for reset
-        time.sleep(1.1)
+        clock.sleep(0.1)
         assert not limiter.is_limited
 
-    @pytest.mark.timeout(5)
-    def test_burst_behavior(self) -> None:
-        """Test burst capacity behavior."""
-        # Create limiter with burst capacity
-        config: RateLimitConfig = RateLimitConfig(calls=5, period=1.0, _burst=10)
-        limiter: RateLimiter = RateLimiter(config)
 
-        # Should allow burst capacity immediately
-        for _ in range(10):
-            initial_delay: float = limiter.acquire()
-            assert initial_delay == 0
+def test_real_clock_smoke() -> None:
+    """On the real clock, the call past the burst waits about one token."""
+    limiter = RateLimiter(RateLimitConfig(calls=10, period=1.0))
 
-        # Next calls should be rate limited
-        subsequent_delay: float = limiter.acquire()
-        assert subsequent_delay > 0
+    for _ in range(10):
+        assert limiter.acquire() == 0
 
-    def test_rate_limit_precision(self, limiter: RateLimiter) -> None:
-        """Test precision of rate limiting delays."""
-        # Use up burst capacity
-        for _ in range(limiter.config.burst):
-            limiter.acquire()
-
-        # Get base time for relative comparisons
-        start_time = time.monotonic()
-        delays = []
-
-        # Test 3 subsequent requests
-        for _ in range(3):
-            _ = limiter.acquire()
-            elapsed = time.monotonic() - start_time
-            delays.append(elapsed)
-            start_time = time.monotonic()
-
-        # Verify delays are roughly consistent
-        for i in range(1, len(delays)):
-            assert abs(delays[i] - delays[i - 1]) < 1.5  # More lenient tolerance
+    assert 0.05 < limiter.acquire() <= 0.1

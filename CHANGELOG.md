@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`RateLimitConfig(calls, period)` is now the sustained rate.** The limiter is a token
+  bucket: after an idle spell up to `burst` calls (default `calls`) go out back to back,
+  and from then on one every `period / calls` seconds. It used to let through about
+  `burst + 1` calls per period, sustained: the 1.0.1 default (`calls=2`) ran at about
+  3 req/s and now runs at 2. A custom `rate_limit=` that relied on the old pace gets
+  slower; raise `calls` to keep it (#170).
+- `RateLimiter.current_usage`, `remaining_calls()` and `is_limited` report the bucket:
+  tokens not earned back yet (waiting calls included), calls that can go out now without
+  waiting (up to `burst`, not `calls`), and whether the next call would wait (#170).
+
 ## [1.0.1] - 2026-09-27
 
 ### Added

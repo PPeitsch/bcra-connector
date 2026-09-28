@@ -432,10 +432,7 @@ class TestBCRAConnector:
 
             delay_needed = connector.rate_limiter.acquire()
             assert delay_needed > 0.0
-            assert (
-                connector.rate_limiter.current_usage
-                == connector.rate_limiter.config.burst + 1
-            )
+            assert connector.rate_limiter.is_limited
 
     @pytest.mark.parametrize(
         "response_code,error_messages,expected_match",

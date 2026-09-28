@@ -76,6 +76,10 @@ answered `429 Too Many Requests` at about 5 requests per second. The connector t
 itself to **2 requests per second** by default, a conservative guess rather than an official
 limit, and on a 429 or 503 waits what the server's `Retry-After` asks (up to 30 seconds).
 
+`RateLimitConfig(calls, period)` is a sustained rate: once the first `calls` requests have
+gone out back to back, the rest are spaced `period / calls` seconds apart. With the default,
+a long loop sends one request every half second.
+
 The limiter lives in each connector instance: several processes or workers don't coordinate
 with each other, so if they share the API, splitting the budget is up to your application.
 See [Configuration](https://bcra-connector.readthedocs.io/en/latest/configuration.html) to
