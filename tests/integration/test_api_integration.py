@@ -59,7 +59,15 @@ class TestBCRAIntegration:
             f"Testing historical data for ID: {variable_id} ({variable_desc})"
         )
 
-        end_date: datetime = datetime.now()
+        # The window ends at the variable's last published date, not today: the BCRA
+        # can go more than a week without publishing, and then the last 7 days are
+        # empty (the API returns the variable with an empty `detalle`).
+        last_date = variables[0].ult_fecha_informada
+        end_date: datetime = (
+            datetime.combine(last_date, datetime.min.time())
+            if last_date
+            else datetime.now()
+        )
         start_date: datetime = end_date - timedelta(days=7)
 
         response_data: Page[DatosVariable] = connector.monetarias.series(
