@@ -18,8 +18,14 @@ class TestErrorHandling:
 
     @pytest.fixture
     def short_timeout_connector(self) -> BCRAConnector:
-        """Create a connector with very short timeouts."""
-        timeout_config = TimeoutConfig(connect=0.001, read=0.001)
+        """Create a connector that connects normally but times out reading.
+
+        Only the read timeout is short: a tiny connect timeout makes the result
+        depend on the network. The API resolves to IPv4 and IPv6, and where IPv6
+        is unreachable (GitHub runners) the last error is "Network is unreachable",
+        a connection error instead of a timeout.
+        """
+        timeout_config = TimeoutConfig(read=0.001)
         return BCRAConnector(
             timeout=timeout_config,
             rate_limit=RateLimitConfig(calls=5, period=1.0, _burst=10),
